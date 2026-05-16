@@ -111,7 +111,8 @@ export const BADGE_DEFINITIONS = [
 export function loadEarnedBadges() {
   try {
     const raw = localStorage.getItem(BADGES_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -122,6 +123,7 @@ export function loadEarnedBadges() {
  * @returns {{ newBadges: Array }} 이번에 새로 획득한 배지 목록
  */
 export function checkAndAwardBadges(stats) {
+  if (!stats || typeof stats !== "object") return { newBadges: [] };
   const earned = loadEarnedBadges();
   const earnedIds = new Set(earned.map(b => b.id));
   const newBadges = [];

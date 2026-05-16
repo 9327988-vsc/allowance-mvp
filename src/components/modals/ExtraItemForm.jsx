@@ -40,6 +40,7 @@ export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setReceiptLoading(true);
+    setErrors(prev => ({ ...prev, receipt: undefined }));
     try {
       const dataUrl = await resizeImage(file);
       setReceipt(dataUrl);
@@ -187,7 +188,6 @@ export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleFileChange}
               disabled={isS105Open || receiptLoading}
               style={{ display: "none" }}

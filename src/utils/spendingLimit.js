@@ -10,11 +10,12 @@ import { showToast } from "./toastManager";
  */
 export function checkSpendingLimit(currentTotal, settings) {
   const limit = settings?.spending_limit;
-  if (!limit || limit <= 0) return { exceeded: false, percent: 0, remaining: 0 };
+  if (!limit || limit <= 0) return { exceeded: false, percent: 0, remaining: null, limit: null };
 
-  const percent = Math.round((currentTotal / limit) * 100);
-  const remaining = limit - currentTotal;
-  const exceeded = currentTotal > limit;
+  const total = Number(currentTotal) || 0;
+  const percent = Math.round((total / limit) * 100);
+  const remaining = limit - total;
+  const exceeded = total > limit;
 
   return { exceeded, percent, remaining, limit };
 }
@@ -28,7 +29,11 @@ export function notifySpendingLimit(year, month, currentTotal, settings) {
   const result = checkSpendingLimit(currentTotal, settings);
   if (!result.limit) return result;
 
+  // 오래된 알림 키 정리 (현재 월 외 제거)
   const key = `${year}-${month}`;
+  for (const k of _notified) {
+    if (!k.startsWith(key)) _notified.delete(k);
+  }
 
   if (result.exceeded && !_notified.has(`${key}_over`)) {
     _notified.add(`${key}_over`);

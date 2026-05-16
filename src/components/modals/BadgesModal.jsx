@@ -52,7 +52,7 @@ export default function BadgesModal({ onClose }) {
             <div style={{
               height: "100%", borderRadius: 4,
               background: "var(--color-primary)",
-              width: `${summary.percent}%`,
+              width: `${summary.percent || 0}%`,
               transition: "width 0.3s",
             }} />
           </div>

@@ -1,5 +1,5 @@
 // src/components/modals/ChoresChildModal.jsx — 자녀용 미션 보드
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { loadChores, submitChoreCompletion, getRecentChoreLog, getMonthlyChoreReward } from "../../utils/chores";
 import { formatAmountShort } from "../../utils/formatAmount";
 
@@ -10,10 +10,20 @@ export default function ChoresChildModal({ childMemberId, childName, onClose }) 
   const [monthlyTotal, setMonthlyTotal] = useState(0);
   const [completingId, setCompletingId] = useState(null);
   const [message, setMessage] = useState(null);
+  const messageTimerRef = useRef(null);
+
+  const reload = useCallback(() => {
+    if (!childMemberId) return;
+    const all = loadChores().filter(c => c.enabled && (!c.child_member_id || c.child_member_id === childMemberId));
+    setChores(all);
+    setRecentLog(getRecentChoreLog(childMemberId, 14));
+    const now = new Date();
+    setMonthlyTotal(getMonthlyChoreReward(childMemberId, now.getFullYear(), now.getMonth() + 1));
+  }, [childMemberId]);
 
   useEffect(() => {
     reload();
-  }, [childMemberId]);
+  }, [reload]);
 
   useEffect(() => {
     function handleEsc(e) {
@@ -23,15 +33,13 @@ export default function ChoresChildModal({ childMemberId, childName, onClose }) 
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  function reload() {
-    const all = loadChores().filter(c => c.enabled && (!c.child_member_id || c.child_member_id === childMemberId));
-    setChores(all);
-    setRecentLog(getRecentChoreLog(childMemberId, 14));
-    const now = new Date();
-    setMonthlyTotal(getMonthlyChoreReward(childMemberId, now.getFullYear(), now.getMonth() + 1));
-  }
+  // 타이머 정리
+  useEffect(() => {
+    return () => { if (messageTimerRef.current) clearTimeout(messageTimerRef.current); };
+  }, []);
 
   function handleComplete(chore) {
+    if (completingId) return; // 더블클릭 방지
     setCompletingId(chore.id);
     const result = submitChoreCompletion(chore.id, childMemberId, childName);
     if (result.success) {
@@ -40,8 +48,10 @@ export default function ChoresChildModal({ childMemberId, childName, onClose }) 
     } else {
       setMessage({ type: "error", text: result.error });
     }
-    setCompletingId(null);
-    setTimeout(() => setMessage(null), 3000);
+    // 짧은 딜레이 후 completingId 해제 (더블클릭 방지)
+    setTimeout(() => setCompletingId(null), 500);
+    if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+    messageTimerRef.current = setTimeout(() => setMessage(null), 3000);
   }
 
   return (

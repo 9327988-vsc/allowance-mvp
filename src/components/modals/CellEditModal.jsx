@@ -63,6 +63,8 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
     function handleEsc(e) {
       if (e.key !== "Escape") return;
 
+      // 영수증 뷰어가 열려있으면 그것이 처리 (이중 발동 방지)
+      if (viewingReceipt) return;
       // S-106 변경 확인이 열려있으면 → 계속 편집 (ESC = 안전 방향)
       if (showDirtyConfirm) {
         e.stopPropagation();
@@ -87,7 +89,7 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
     }
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
-  }, [showDirtyConfirm, deleteConfirmId, showAddForm, editingItemId, handleClose]);
+  }, [showDirtyConfirm, deleteConfirmId, showAddForm, editingItemId, viewingReceipt, handleClose]);
 
   function handleSave() {
     const validation = validateMemo(memo);
@@ -109,6 +111,7 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
       amount: input.amount,
       created_at: new Date().toISOString(),
     };
+    if (input.receipt) newItem.receipt = input.receipt;
     setExtraItems(prev => [...prev, newItem]);
     setShowAddForm(false);
   }
@@ -118,7 +121,7 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
     setExtraItems(prev =>
       prev.map(item =>
         item.id === editingItemId
-          ? { ...item, type: input.type || "expense", category: input.category, name: input.name, amount: input.amount }
+          ? { ...item, type: input.type || "expense", category: input.category, name: input.name, amount: input.amount, receipt: input.receipt || item.receipt }
           : item
       )
     );
@@ -237,7 +240,7 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
                 <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "var(--space-1)", minWidth: 0 }}>
                   <span className="text-sm" style={{ whiteSpace: "nowrap" }}>
                     {getCategoryIcon(item.category)} {item.name}
-                    {item.receipt && <button type="button" onClick={() => setViewingReceipt(item)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 2 }}>📷</button>}
+                    {item.receipt && <button type="button" onClick={() => setViewingReceipt(item)} aria-label={`${item.name} 영수증 보기`} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", marginLeft: 2 }}>📷</button>}
                   </span>
                   <span className="text-sm" style={{ color: item.type === "income" ? "var(--color-income, #2e7d32)" : "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
                     {item.type === "income" ? "+" : ""}{formatAmountShort(item.amount)}<span className="amount-unit">원</span>

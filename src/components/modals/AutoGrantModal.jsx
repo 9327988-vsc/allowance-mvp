@@ -29,13 +29,15 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
   function handleAdd() {
     const errs = {};
     if (!form.child_member_id && childMembers.length > 1) errs.child = "자녀를 선택해주세요";
+    if (childMembers.length === 0) errs.child = "등록된 자녀가 없어요";
     if (!form.name.trim()) errs.name = "항목명을 입력해주세요";
     if (!form.amount || form.amount < 100) errs.amount = "100원 이상 입력해주세요";
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
-    const child = childMembers.find(m => m.member_id === form.child_member_id) || childMembers[0];
+    const childId = form.child_member_id || childMembers[0]?.member_id;
+    const child = childMembers.find(m => m.member_id === childId);
     addSchedule({
-      child_member_id: form.child_member_id || childMembers[0]?.member_id,
+      child_member_id: childId,
       child_name: child?.display_name || "자녀",
       name: form.name.trim(),
       amount: form.amount,

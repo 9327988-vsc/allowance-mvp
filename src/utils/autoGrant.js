@@ -38,10 +38,19 @@ export function saveSchedules(schedules) {
 }
 
 export function addSchedule(schedule) {
+  if (!schedule || !schedule.child_member_id || !schedule.name) {
+    return { success: false, error: "필수 필드 누락" };
+  }
+  if (!schedule.amount || typeof schedule.amount !== "number" || schedule.amount < 100) {
+    return { success: false, error: "금액이 유효하지 않음" };
+  }
+  if (!["weekly", "monthly"].includes(schedule.frequency)) {
+    return { success: false, error: "주기가 유효하지 않음" };
+  }
   const schedules = loadSchedules();
   schedules.push({
     ...schedule,
-    id: `sched_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `sched_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
     enabled: true,
     created_at: new Date().toISOString(),
   });
@@ -69,7 +78,8 @@ export function getDueSchedules() {
   const today = new Date();
   const dayOfWeek = today.getDay();
   const dayOfMonth = today.getDate();
-  const todayKey = today.toISOString().slice(0, 10);
+  // 로컬 날짜 키 사용 (UTC 대신)
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
   // 이미 실행된 기록
   const lastRun = getLastRunMap();
@@ -86,13 +96,19 @@ export function getDueSchedules() {
 
 /**
  * 스케줄 실행 완료 기록
+ * @returns {{ success: boolean }}
  */
 export function markScheduleRun(scheduleId) {
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const lastRun = getLastRunMap();
-  lastRun[scheduleId] = new Date().toISOString().slice(0, 10);
+  lastRun[scheduleId] = todayKey;
   try {
     localStorage.setItem(LAST_RUN_KEY, JSON.stringify(lastRun));
-  } catch { /* ignored */ }
+    return { success: true };
+  } catch {
+    return { success: false };
+  }
 }
 
 function getLastRunMap() {

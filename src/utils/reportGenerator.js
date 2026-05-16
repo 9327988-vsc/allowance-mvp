@@ -173,13 +173,16 @@ export function generateInsights(year, month) {
   }
 
   // 인사이트 5: 최다 지출일 강조
-  if (current.maxDay && current.maxDayAmount > current.avgDaily * 2) {
+  if (current.maxDay && current.avgDaily > 0 && current.maxDayAmount > current.avgDaily * 2) {
     const d = current.maxDay.split("-");
-    insights.push({
-      type: "spike_day",
-      icon: "⚡",
-      text: `${parseInt(d[2])}일에 평소의 ${Math.round(current.maxDayAmount / current.avgDaily)}배를 지출했어요`,
-    });
+    const dayNum = parseInt(d[2], 10);
+    if (!isNaN(dayNum)) {
+      insights.push({
+        type: "spike_day",
+        icon: "⚡",
+        text: `${dayNum}일에 평소의 ${Math.round(current.maxDayAmount / current.avgDaily)}배를 지출했어요`,
+      });
+    }
   }
 
   return insights;

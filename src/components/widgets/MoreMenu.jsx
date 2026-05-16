@@ -12,12 +12,16 @@ export default function MoreMenu({ items, onClose }) {
       if (ref.current && !ref.current.contains(e.target)) onClose();
     }
     function handleEsc(e) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
     }
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleEsc);
+    // 다음 틱에 리스너 등록 (오픈 클릭과 충돌 방지)
+    const timer = setTimeout(() => {
+      document.addEventListener("click", handleClick);
+      document.addEventListener("keydown", handleEsc);
+    }, 0);
     return () => {
-      document.removeEventListener("mousedown", handleClick);
+      clearTimeout(timer);
+      document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleEsc);
     };
   }, [onClose]);

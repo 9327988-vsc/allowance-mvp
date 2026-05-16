@@ -83,6 +83,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
       const due = getDueSchedules();
       if (due.length === 0) return;
       const adapter = getKVAdapter();
+      let successCount = 0;
       for (const schedule of due) {
         try {
           await adapter.submitGrant({
@@ -92,13 +93,16 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
             amount: schedule.amount,
             reason: `자동 지급 (${schedule.frequency === "weekly" ? "매주" : "매월"})`,
           });
-          markScheduleRun(schedule.id);
+          const markResult = markScheduleRun(schedule.id);
+          if (markResult.success) successCount++;
         } catch {
           // 개별 스케줄 실패 시 다음 것 계속
         }
       }
-      showToast({ type: "success", message: `🔄 자동 지급 ${due.length}건 완료` });
-      fetchClaims();
+      if (successCount > 0) {
+        showToast({ type: "success", message: `🔄 자동 지급 ${successCount}건 완료` });
+      }
+      await fetchClaims();
     }
     runDueSchedules();
   // eslint-disable-next-line react-hooks/exhaustive-deps

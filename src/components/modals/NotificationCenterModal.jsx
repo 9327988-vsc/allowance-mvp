@@ -29,7 +29,9 @@ export default function NotificationCenterModal({ onClose }) {
   }
 
   function formatTime(isoStr) {
+    if (!isoStr) return "";
     const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return "";
     const now = new Date();
     const diff = now - d;
     if (diff < 60000) return "방금";

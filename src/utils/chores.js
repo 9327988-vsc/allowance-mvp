@@ -109,11 +109,26 @@ export function submitChoreCompletion(choreId, childMemberId, childName) {
   if (!chore) return { success: false, error: "미션을 찾을 수 없어요" };
   if (!chore.enabled) return { success: false, error: "비활성화된 미션이에요" };
 
-  // 하루 최대 횟수 검증
-  const todayKey = new Date().toISOString().slice(0, 10);
+  // 권한 검사: 특정 자녀에게 할당된 미션인지 확인
+  if (chore.child_member_id && chore.child_member_id !== childMemberId) {
+    return { success: false, error: "이 미션은 다른 자녀에게 할당되어 있어요" };
+  }
+
   const log = loadChoreLog();
+
+  // 1회성 미션 검증: 이미 완료(승인)된 기록이 있으면 거부
+  if (chore.frequency === "once") {
+    const alreadyDone = log.some(
+      l => l.chore_id === choreId && l.child_member_id === childMemberId && l.status !== "rejected"
+    );
+    if (alreadyDone) return { success: false, error: "이미 완료한 1회성 미션이에요" };
+  }
+
+  // 하루 최대 횟수 검증 (로컬 날짜 사용)
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const todayCount = log.filter(
-    l => l.chore_id === choreId && l.child_member_id === childMemberId && l.completed_at.startsWith(todayKey)
+    l => l.chore_id === choreId && l.child_member_id === childMemberId && l.completed_at.slice(0, 10) === todayKey
   ).length;
   if (todayCount >= (chore.max_per_day || 1)) {
     return { success: false, error: "오늘 이미 최대 횟수를 달성했어요" };
@@ -144,6 +159,7 @@ export function approveChoreCompletion(entryId, approved) {
   const log = loadChoreLog();
   const entry = log.find(l => l.id === entryId);
   if (!entry) return { success: false, error: "기록을 찾을 수 없어요" };
+  if (entry.status !== "pending") return { success: false, error: "이미 처리된 항목이에요" };
   entry.status = approved ? "approved" : "rejected";
   entry.approved_at = approved ? new Date().toISOString() : null;
   return saveChoreLog(log);
