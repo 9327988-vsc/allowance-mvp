@@ -1,17 +1,22 @@
 // src/components/modals/ExtraItemForm.jsx — S-104 임시 항목 추가/수정
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DEFAULT_CATEGORIES } from "../../constants/categories";
 import { loadCustomCategories } from "../../utils/storage";
 import { validateExtraItem } from "../../utils/validators";
+import { resizeImage } from "../../utils/imageResize";
 import CurrencyInput from "../inputs/CurrencyInput";
 import NewCategoryModal from "./NewCategoryModal";
 
 export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
+  const [itemType, setItemType] = useState(defaultValues?.type ?? "expense");
   const [category, setCategory] = useState(defaultValues?.category ?? "");
   const [name, setName] = useState(defaultValues?.name ?? "");
   const [amount, setAmount] = useState(defaultValues?.amount ?? 0);
   const [errors, setErrors] = useState({});
   const [customCategories, setCustomCategories] = useState(() => loadCustomCategories());
+  const [receipt, setReceipt] = useState(defaultValues?.receipt || null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   // S-105 상태
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
@@ -21,21 +26,41 @@ export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
   const isS105Open = showNewCategoryModal;
 
   function handleSubmit() {
-    const input = { category, name: name.trim(), amount };
+    const input = { type: itemType, category, name: name.trim(), amount };
     const validation = validateExtraItem(input);
     if (!validation.valid) {
       setErrors(validation.errors);
       return;
     }
+    if (receipt) input.receipt = receipt;
     onSubmit(input);
   }
 
-  function handleKeyDown(e) {
-    if (e.key === "Escape" && !isS105Open) {
-      e.stopPropagation();
-      onClose();
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setReceiptLoading(true);
+    try {
+      const dataUrl = await resizeImage(file);
+      setReceipt(dataUrl);
+    } catch (err) {
+      setErrors(prev => ({ ...prev, receipt: err.message }));
+    } finally {
+      setReceiptLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "Escape" && !isS105Open) {
+        e.stopPropagation();
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, isS105Open]);
 
   function handleCategoryChange(e) {
     const value = e.target.value;
@@ -72,11 +97,12 @@ export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
       <div
         className="modal-backdrop"
         style={{ zIndex: "var(--z-modal-2)" }}
-        onKeyDown={handleKeyDown}
+        onClick={(e) => e.stopPropagation()}
       >
         <div
           className="modal-content"
           style={{ maxWidth: 400, width: "90%", opacity: isS105Open ? 0.6 : 1 }}
+          onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-label={isEdit ? "임시 항목 수정" : "임시 항목 추가"}
           aria-modal="true"
@@ -84,6 +110,28 @@ export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
           <h3 className="text-lg font-bold mb-4">
             {isEdit ? "임시 항목 수정" : "임시 항목 추가"}
           </h3>
+
+          {/* 지출/수입 토글 */}
+          <div className="mb-3">
+            <div className="extra-type-toggle">
+              <button
+                type="button"
+                className={`extra-type-toggle__btn extra-type-toggle__btn--expense${itemType === "expense" ? " extra-type-toggle__btn--active" : ""}`}
+                onClick={() => setItemType("expense")}
+                disabled={isS105Open}
+              >
+                📉 지출
+              </button>
+              <button
+                type="button"
+                className={`extra-type-toggle__btn extra-type-toggle__btn--income${itemType === "income" ? " extra-type-toggle__btn--active" : ""}`}
+                onClick={() => setItemType("income")}
+                disabled={isS105Open}
+              >
+                📈 수입
+              </button>
+            </div>
+          </div>
 
           {/* 카테고리 */}
           <div className="mb-3">
@@ -132,22 +180,62 @@ export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
             {errors.amount && <p className="text-sm mt-1" style={{ color: "var(--color-error)" }}>{errors.amount}</p>}
           </div>
 
+          {/* 영수증 사진 */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">영수증 (선택)</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileChange}
+              disabled={isS105Open || receiptLoading}
+              style={{ display: "none" }}
+            />
+            {receipt ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <img
+                  src={receipt}
+                  alt="영수증"
+                  style={{ width: 56, height: 56, objectFit: "cover", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn btn--sm btn--secondary"
+                  disabled={isS105Open || receiptLoading}
+                >
+                  변경
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReceipt(null)}
+                  className="btn btn--sm btn--danger"
+                  disabled={isS105Open}
+                >
+                  삭제
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="btn btn--sm btn--secondary"
+                disabled={isS105Open || receiptLoading}
+                style={{ width: "100%" }}
+              >
+                {receiptLoading ? "처리중..." : "📷 사진 첨부"}
+              </button>
+            )}
+            {errors.receipt && <p className="text-sm mt-1" style={{ color: "var(--color-error)" }}>{errors.receipt}</p>}
+          </div>
+
           {/* 버튼 */}
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={onClose}
-              disabled={isS105Open}
-              className="px-4 py-2 rounded-md border"
-              style={{ color: "var(--color-text-secondary)" }}
-            >
+          <div className="modal-footer modal-footer--end">
+            <button onClick={onClose} disabled={isS105Open} className="btn btn--secondary">
               취소
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={isS105Open}
-              className="px-4 py-2 rounded-md text-white"
-              style={{ background: "var(--color-primary)" }}
-            >
+            <button onClick={handleSubmit} disabled={isS105Open || receiptLoading} className="btn btn--primary">
               {isEdit ? "저장" : "추가"}
             </button>
           </div>
