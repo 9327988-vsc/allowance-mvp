@@ -11,6 +11,7 @@ export default function ImportModal({ onClose, onImported }) {
   const [importing, setImporting] = useState(false);
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
   const fileInputRef = useRef(null);
+  const validationSeqRef = useRef(0);
 
   // ESC 닫기
   useEffect(() => {
@@ -31,8 +32,12 @@ export default function ImportModal({ onClose, onImported }) {
     const f = e.target.files?.[0];
     if (!f) return;
     setFile(f);
+    setValidation(null);
+    const seq = ++validationSeqRef.current;
     const result = await validateImportFile(f);
-    setValidation(result);
+    if (validationSeqRef.current === seq) {
+      setValidation(result);
+    }
   }
 
   async function handleImport() {
@@ -77,9 +82,9 @@ export default function ImportModal({ onClose, onImported }) {
   }
 
   // S-115에서 확인
-  function handleOverwriteConfirmed() {
+  async function handleOverwriteConfirmed() {
     setShowOverwriteConfirm(false);
-    executeImport("overwrite");
+    await executeImport("overwrite");
   }
 
   const errorMessages = {
@@ -93,6 +98,7 @@ export default function ImportModal({ onClose, onImported }) {
     <div
       className="modal-backdrop"
       style={{ zIndex: "var(--z-modal-1)" }}
+      onClick={importing || showOverwriteConfirm ? undefined : onClose}
     >
       <div
         className="modal-content"
@@ -191,23 +197,14 @@ export default function ImportModal({ onClose, onImported }) {
           </div>
         )}
 
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            disabled={importing}
-            className="px-4 py-2 rounded-md border"
-          >
+        <div className="modal-footer modal-footer--end">
+          <button onClick={onClose} disabled={importing} className="btn btn--secondary">
             취소
           </button>
           <button
             onClick={handleImport}
             disabled={!validation?.valid || importing}
-            className="px-4 py-2 rounded-md text-white"
-            style={{
-              background: validation?.valid && !importing
-                ? "var(--color-primary)"
-                : "var(--color-text-disabled)"
-            }}
+            className="btn btn--primary"
           >
             {importing ? "가져오는 중..." : "가져오기"}
           </button>

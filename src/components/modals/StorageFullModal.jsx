@@ -35,20 +35,25 @@ export default function StorageFullModal({ pendingSave, onClose, onRetrySuccess 
         if (onRetrySuccess) onRetrySuccess();
         onClose();
       } else {
-        showToast({ type: "error", message: "정리 후에도 저장 실패. 관리자 모드에서 확인하세요" });
+        showToast({ type: "error", message: "정리 후에도 저장 실패. 관리자에게 문의하세요" });
       }
     } catch {
-      showToast({ type: "error", message: "정리 후에도 저장 실패. 관리자 모드에서 확인하세요" });
+      showToast({ type: "error", message: "정리 후에도 저장 실패. 관리자에게 문의하세요" });
     }
   }
 
   // [지금 정리]
   function handleCleanupNow() {
     setProcessing(true);
-    cleanupOldCalendars(6);
-    showToast({ type: "success", message: `✅ ${targets.length}개월 캘린더 정리 완료` });
-    retryPendingSave();
-    setProcessing(false);
+    try {
+      cleanupOldCalendars(6);
+      showToast({ type: "success", message: `✅ ${targets.length}개월 캘린더 정리 완료` });
+      retryPendingSave();
+    } catch {
+      showToast({ type: "error", message: "정리 중 오류가 발생했습니다" });
+    } finally {
+      setProcessing(false);
+    }
   }
 
   // [내보내기 후 정리]
@@ -99,7 +104,7 @@ export default function StorageFullModal({ pendingSave, onClose, onRetrySuccess 
           </div>
         ) : (
           <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
-            정리할 오래된 데이터가 없습니다. 관리자 모드에서 확인하세요.
+            정리할 오래된 데이터가 없습니다. 관리자에게 문의하세요.
           </p>
         )}
 

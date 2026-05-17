@@ -1,25 +1,26 @@
 // src/utils/exportImport.js
+import { APP_VERSION } from "../constants/appVersion";
 
 export async function exportData(options = {}) {
   const data = {
     export_version: 1,
     exported_at: new Date().toISOString(),
-    app_version: "1.0.0",
+    app_version: APP_VERSION,
     schema_version: 1,
     calendars: {}
   };
 
   if (options.includeSettings !== false) {
     const s = localStorage.getItem("settings_v1");
-    if (s) data.settings = JSON.parse(s);
+    if (s) { try { data.settings = JSON.parse(s); } catch (e) { console.warn("exportData: settings parse failed:", e); } }
   }
   if (options.includeMeta !== false) {
     const m = localStorage.getItem("meta_v1");
-    if (m) data.meta = JSON.parse(m);
+    if (m) { try { data.meta = JSON.parse(m); } catch (e) { console.warn("exportData: meta parse failed:", e); } }
   }
   if (options.includeCategories !== false) {
     const c = localStorage.getItem("custom_categories_v1");
-    if (c) data.custom_categories = JSON.parse(c);
+    if (c) { try { data.custom_categories = JSON.parse(c); } catch (e) { console.warn("exportData: categories parse failed:", e); } }
   }
   if (options.includeCalendars !== false) {
     Object.keys(localStorage)
@@ -27,10 +28,14 @@ export async function exportData(options = {}) {
       .forEach(k => {
         const m = k.match(/calendar_v1_(\d{4})_(\d{2})/);
         if (!m) return;
-        const ym = `${m[1]}-${m[2]}`;
-        data.calendars[ym] = JSON.parse(localStorage.getItem(k));
+        try { data.calendars[`${m[1]}-${m[2]}`] = JSON.parse(localStorage.getItem(k)); } catch (e) { console.warn(`exportData: calendar ${k} parse failed:`, e); }
       });
   }
+  // 2단계 데이터
+  try { const familyContext = JSON.parse(localStorage.getItem("family_context_v1") || "null"); if (familyContext) data.family_context = familyContext; } catch (e) { console.warn("exportData: family_context parse failed:", e); }
+  try { const submittedClaims = JSON.parse(localStorage.getItem("submitted_claims_v1") || "null"); if (submittedClaims) data.submitted_claims = submittedClaims; } catch (e) { console.warn("exportData: submitted_claims parse failed:", e); }
+  try { const userPrefs = JSON.parse(localStorage.getItem("user_prefs_v1") || "null"); if (userPrefs) data.user_prefs = userPrefs; } catch (e) { console.warn("exportData: user_prefs parse failed:", e); }
+
   if (options.includeBackups) {
     data.backups = {};
     Object.keys(localStorage)
@@ -76,7 +81,7 @@ export function downloadJSON(data, filename) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function defaultExportFilename() {
@@ -89,7 +94,8 @@ export async function importData(file, mode = "overwrite") {
   let data;
   try {
     data = JSON.parse(text);
-  } catch {
+  } catch (e) {
+    console.warn("importData: JSON parse failed:", e);
     return { success: false, error: "INVALID_JSON" };
   }
 
@@ -106,9 +112,9 @@ export async function importData(file, mode = "overwrite") {
     Object.keys(localStorage)
       .filter(k =>
         k === "settings_v1" || k === "meta_v1" || k === "custom_categories_v1" ||
-        k.startsWith("calendar_v1_") ||
-        k.includes("_corrupted_")
+        k.startsWith("calendar_v1_")
       )
+      .filter(k => !k.includes("_corrupted_"))
       .forEach(k => localStorage.removeItem(k));
   }
 
@@ -124,8 +130,9 @@ export async function importData(file, mode = "overwrite") {
       localStorage.setItem("custom_categories_v1", JSON.stringify(data.custom_categories));
       result.applied.categories = data.custom_categories.categories?.length ?? 0;
     } else {
-      const existing = JSON.parse(localStorage.getItem("custom_categories_v1") || '{"categories":[],"version":1}');
-      data.custom_categories.categories.forEach(c => {
+      let existing;
+      try { existing = JSON.parse(localStorage.getItem("custom_categories_v1") || '{"categories":[],"version":1}'); } catch (e) { console.warn("importData: categories parse failed:", e); existing = { categories: [], version: 1 }; }
+      (data.custom_categories.categories || []).forEach(c => {
         if (!existing.categories.some(e => e.name === c.name)) {
           existing.categories.push(c);
           result.applied.categories++;
@@ -134,6 +141,23 @@ export async function importData(file, mode = "overwrite") {
       localStorage.setItem("custom_categories_v1", JSON.stringify(existing));
     }
   }
+  // 2단계 데이터 복원
+  if (data.family_context) {
+    if (mode === "overwrite" || !localStorage.getItem("family_context_v1")) {
+      localStorage.setItem("family_context_v1", JSON.stringify(data.family_context));
+    }
+  }
+  if (data.submitted_claims) {
+    if (mode === "overwrite" || !localStorage.getItem("submitted_claims_v1")) {
+      localStorage.setItem("submitted_claims_v1", JSON.stringify(data.submitted_claims));
+    }
+  }
+  if (data.user_prefs) {
+    if (mode === "overwrite" || !localStorage.getItem("user_prefs_v1")) {
+      localStorage.setItem("user_prefs_v1", JSON.stringify(data.user_prefs));
+    }
+  }
+
   Object.entries(data.calendars).forEach(([ym, cal]) => {
     const [y, m] = ym.split("-");
     const key = `calendar_v1_${y}_${m}`;
@@ -154,7 +178,8 @@ export async function validateImportFile(file) {
   let data;
   try {
     data = JSON.parse(text);
-  } catch {
+  } catch (e) {
+    console.warn("validateImportFile: JSON parse failed:", e);
     return { valid: false, error: "INVALID_JSON" };
   }
 

@@ -18,23 +18,28 @@ export default function ConfirmOverwriteModal({ onCancel, onConfirm }) {
 
   async function handleConfirm() {
     setProcessing(true);
-    await onConfirm();
+    try { await onConfirm(); }
+    catch { setProcessing(false); }
   }
 
-  // 기존 데이터 카운트
-  const calendarCount = Object.keys(localStorage).filter(k =>
-    k.startsWith("calendar_v1_") && !k.includes("_corrupted_")
-  ).length;
-  const categoryData = localStorage.getItem("custom_categories_v1");
-  let categoryCount = 0;
-  try {
-    categoryCount = JSON.parse(categoryData)?.categories?.length || 0;
-  } catch { /* ignore */ }
+  // 기존 데이터 카운트 (초기 1회만 계산)
+  const [calendarCount] = useState(() =>
+    Object.keys(localStorage).filter(k =>
+      k.startsWith("calendar_v1_") && !k.includes("_corrupted_")
+    ).length
+  );
+  const [categoryCount] = useState(() => {
+    try {
+      const categoryData = localStorage.getItem("custom_categories_v1");
+      return JSON.parse(categoryData)?.categories?.length || 0;
+    } catch { return 0; }
+  });
 
   return (
     <div
       className="modal-backdrop"
       style={{ zIndex: "var(--z-modal-3)" }}
+      onClick={() => { if (!processing) onCancel(); }}
     >
       <div
         className="modal-content"

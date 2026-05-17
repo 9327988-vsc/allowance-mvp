@@ -28,7 +28,7 @@ export default function RadioGroup({ name, options, value, onChange, label, disa
               type="radio"
               name={name}
               value={String(opt.value)}
-              checked={value === opt.value}
+              checked={value != null && opt.value != null && String(value) === String(opt.value)}
               onChange={() => onChange(opt.value)}
               disabled={disabled}
               className="accent-[var(--color-primary)]"

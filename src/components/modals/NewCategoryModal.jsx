@@ -126,7 +126,7 @@ export default function NewCategoryModal({ onSuccess, onCancel }) {
           >
             {COMMON_EMOJIS.map((emoji, i) => (
               <button
-                key={i}
+                key={emoji}
                 role="radio"
                 aria-checked={icon === emoji}
                 aria-label={emoji}
@@ -150,7 +150,7 @@ export default function NewCategoryModal({ onSuccess, onCancel }) {
                   <span style={{
                     position: "absolute", bottom: 1, right: 2,
                     fontSize: 10, color: "white",
-                  }}>✓</span>
+                  }}>✔</span>
                 )}
               </button>
             ))}
@@ -159,19 +159,11 @@ export default function NewCategoryModal({ onSuccess, onCancel }) {
         </div>
 
         {/* 버튼 */}
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-md border"
-            style={{ color: "var(--color-text-secondary)" }}
-          >
+        <div className="modal-footer modal-footer--end">
+          <button onClick={onCancel} className="btn btn--secondary">
             취소
           </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 rounded-md text-white"
-            style={{ background: "var(--color-primary)" }}
-          >
+          <button onClick={handleSubmit} className="btn btn--primary">
             추가
           </button>
         </div>

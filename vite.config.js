@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig({
-  base: "/allowance-mvp/",
+export default defineConfig(({ mode }) => ({
+  base: process.env.VITE_BASE_PATH || "/allowance-mvp/",
   plugins: [react()],
   server: {
     port: 4090,
@@ -11,7 +11,7 @@ export default defineConfig({
   build: {
     target: "es2020",
     minify: "esbuild",
-    sourcemap: false
+    sourcemap: mode !== "production"
   },
   test: {
     globals: true,
@@ -21,4 +21,4 @@ export default defineConfig({
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(process.env.npm_package_version || "1.0.0")
   }
-});
+}));

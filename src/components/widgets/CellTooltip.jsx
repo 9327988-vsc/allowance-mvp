@@ -1,13 +1,17 @@
 // src/components/widgets/CellTooltip.jsx — S-402 셀 호버 툴팁
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getCategoryIcon } from "../../constants/categories";
 import { loadCustomCategories } from "../../utils/storage";
+import { formatAmountShort } from "../../utils/formatAmount";
 
 const MAX_WIDTH = 280;
 
 export default function CellTooltip({ cell, anchorRect, settings }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const extraCategories = cell?.extra_items?.map(i => i.category).join(",") || "";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const customCategories = useMemo(() => loadCustomCategories(), [extraCategories]);
 
   useEffect(() => {
     if (!ref.current || !anchorRect) return;
@@ -53,13 +57,11 @@ export default function CellTooltip({ cell, anchorRect, settings }) {
   // 빈 셀 체크
   const hasContent = school_fee > 0 || academy_fee > 0 || (extra_items && extra_items.length > 0);
   if (!hasContent) return null;
-
-  const customCategories = loadCustomCategories();
   const cellTotal = cell.total || 0;
 
   // 학교/학원 단가 계산
-  const busTrips = settings?.school?.bus_trips || 0;
-  const busFare = settings?.school?.bus_fare || 0;
+  const busTrips = settings?.school?.round_trip ? 2 : 1;
+  const busFare = settings?.school?.fare || 0;
   const schoolPerTrip = busFare * busTrips;
 
   const truncatedMemo = memo && memo.length > 50 ? memo.slice(0, 50) + "..." : memo;
@@ -85,25 +87,25 @@ export default function CellTooltip({ cell, anchorRect, settings }) {
         {school_fee > 0 && (
           <div className="cell-tooltip__row">
             🏫 학교: {schoolPerTrip > 0
-              ? `${busFare.toLocaleString()} × ${busTrips} = ${school_fee.toLocaleString()}`
-              : school_fee.toLocaleString()
+              ? `${formatAmountShort(busFare)} × ${busTrips} = ${formatAmountShort(school_fee)}`
+              : formatAmountShort(school_fee)
             }
           </div>
         )}
         {academy_fee > 0 && (
           <div className="cell-tooltip__row">
-            📚 학원: {academy_fee.toLocaleString()}
+            ✏️ 학원: {formatAmountShort(academy_fee)}
           </div>
         )}
         {extra_items && extra_items.map(item => (
           <div key={item.id} className="cell-tooltip__row">
-            {getCategoryIcon(item.category, customCategories)} {item.name}: {item.amount.toLocaleString()}
+            {getCategoryIcon(item.category, customCategories)} {item.name}: {formatAmountShort(item.amount)}
           </div>
         ))}
 
         <div className="cell-tooltip__divider" />
         <div className="cell-tooltip__total">
-          합계: {cellTotal.toLocaleString()}원
+          합계: {formatAmountShort(cellTotal)}<span className="amount-unit">원</span>
         </div>
       </div>
 

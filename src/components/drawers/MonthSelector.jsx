@@ -33,7 +33,6 @@ export default function MonthSelector({ currentYear, currentMonth, todayY, today
   return (
     <div
       className="month-selector-backdrop"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         className="month-selector"
@@ -51,7 +50,7 @@ export default function MonthSelector({ currentYear, currentMonth, todayY, today
           <button
             onClick={() => setDisplayYear(y => y - 1)}
             aria-label="이전 연도"
-            className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-100"
+            className="w-11 h-11 flex items-center justify-center rounded-full hover:opacity-80"
           >
             ◀
           </button>
@@ -61,7 +60,7 @@ export default function MonthSelector({ currentYear, currentMonth, todayY, today
             disabled={allDisabledInYear}
             aria-label="다음 연도"
             className={`w-11 h-11 flex items-center justify-center rounded-full
-              ${allDisabledInYear ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-100"}`}
+              ${allDisabledInYear ? "opacity-40 cursor-not-allowed" : "hover:opacity-80"}`}
           >
             ▶
           </button>

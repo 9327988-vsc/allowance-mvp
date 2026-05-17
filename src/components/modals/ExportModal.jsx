@@ -91,19 +91,14 @@ export default function ExportModal({ onClose }) {
           <p className="text-sm">형식: JSON, SHA-256 체크섬 포함</p>
         </div>
 
-        <div className="flex justify-end gap-2 mt-4">
-          <button
-            onClick={onClose}
-            disabled={exporting}
-            className="px-4 py-2 rounded-md border"
-          >
+        <div className="modal-footer modal-footer--end">
+          <button onClick={onClose} disabled={exporting} className="btn btn--secondary">
             취소
           </button>
           <button
             onClick={handleExport}
             disabled={!anyChecked || exporting}
-            className="px-4 py-2 rounded-md text-white"
-            style={{ background: anyChecked && !exporting ? "var(--color-primary)" : "var(--color-text-disabled)" }}
+            className="btn btn--primary"
           >
             {exporting ? "내보내는 중..." : "내보내기"}
           </button>

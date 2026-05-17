@@ -12,10 +12,13 @@ export default function ToastContainer() {
     return () => _unregisterToastContainer();
   }, []);
 
+  // 최대 5개 토스트만 표시 (오래된 것부터 자동 제거)
+  const visibleToasts = toasts.slice(-5);
+
   return (
     <div className="toast-container" role="region" aria-label="알림">
-      {toasts.map(t => (
-        <div key={t.id} role="status" aria-live="polite" className={`toast toast-${t.type}`}>
+      {visibleToasts.map(t => (
+        <div key={t.id} role="status" aria-live={t.type === "error" ? "assertive" : "polite"} className={`toast toast-${t.type}`}>
           <span>{t.message}</span>
           {t.action && (
             <button onClick={() => { t.action.onClick(); dismissToast(t.id); }}>

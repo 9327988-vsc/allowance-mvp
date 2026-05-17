@@ -1,4 +1,7 @@
 // src/hooks/useSwipeToClose.js — 모바일 바텀시트 스와이프 닫기
+// Usage: All drawer components should use this hook for consistent close behavior.
+// Currently used by: NotesDrawer.
+// TODO: Apply to CategoryManager, MonthSelector
 import { useRef, useCallback } from "react";
 
 const THRESHOLD = 100; // px

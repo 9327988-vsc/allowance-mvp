@@ -16,6 +16,7 @@ export const DEFAULT_CATEGORIES = [
   { id: "선물",         icon: "🎁", name: "선물" },
   { id: "의료비",       icon: "💊", name: "의료비" },
   { id: "교통(특별)",   icon: "🚇", name: "교통(특별)" },
+  { id: "환승 추가요금", icon: "🚌", name: "환승 추가요금" },
   { id: "기타",         icon: "✨", name: "기타" }
 ];
 
@@ -63,7 +64,7 @@ export function addCustomCategory(input) {
   const updated = [...existing, newCategory];
   const result = saveCustomCategories(updated);
   if (!result.success) {
-    return { success: false, error: result.error };
+    return { success: false, errors: { save: result.error } };
   }
 
   return { success: true, category: newCategory };

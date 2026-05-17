@@ -62,7 +62,7 @@ export default function CategoryManager({ onClose }) {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showNewCategory, cleanupPreview, deleteTarget, isEditing, onClose]);
+  }, [showNewCategory, cleanupPreview, deleteTarget, isEditing, cancelEdit, onClose]);
 
   // ── 인라인 편집 ──
   function startEdit(cat) {
@@ -73,13 +73,13 @@ export default function CategoryManager({ onClose }) {
     setShowEmojiPicker(false);
   }
 
-  function cancelEdit() {
+  const cancelEdit = useCallback(() => {
     setEditingId(null);
     setEditName("");
     setEditIcon("");
     setEditError("");
     setShowEmojiPicker(false);
-  }
+  }, []);
 
   function saveEdit() {
     const otherCustom = customCats.filter(c => c.id !== editingId);
@@ -134,7 +134,7 @@ export default function CategoryManager({ onClose }) {
 
   function executeCleanup() {
     const result = cleanupUnusedCategories();
-    showToast({ type: "success", message: `✅ ${result.deleted.length}개 카테고리가 정리되었습니다` });
+    showToast({ type: "success", message: `${result.deleted.length}개 카테고리 정리: ${result.deleted.join(", ")}` });
     setCleanupPreview(null);
     refreshData();
   }
@@ -281,7 +281,7 @@ export default function CategoryManager({ onClose }) {
                   삭제하면 해당 항목의 아이콘이 ✨로 표시됩니다 (이름은 유지).
                 </p>
               ) : (
-                <p className="mb-3">'{deleteTarget.name}' 카테고리를 삭제하시겠습니까?</p>
+                <p className="mb-3">&apos;{deleteTarget.name}&apos; 카테고리를 삭제하시겠습니까?</p>
               )}
               <div className="flex justify-end gap-2">
                 <button className="px-4 py-2 rounded-md border" onClick={() => setDeleteTarget(null)}>취소</button>

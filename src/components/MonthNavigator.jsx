@@ -4,29 +4,30 @@ export default function MonthNavigator({
   onPrev, onNext, onMonthClick,
 }) {
   return (
-    <div className="flex items-center justify-between" style={{ height: 56 }}>
+    <div className="flex items-center justify-between" style={{ height: 64, padding: "0 var(--space-2)" }}>
       <button
         onClick={onPrev}
         aria-label="이전 달"
-        className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-100 text-lg"
+        className="header-btn"
       >
         ◀
       </button>
 
       <button
         onClick={onMonthClick}
-        className="text-lg font-bold hover:underline"
+        className="month-nav__title"
         aria-label={`${year}년 ${month}월, 클릭하여 월 선택`}
       >
-        {year}년 {month}월
+        <span className="month-nav__year">{year}년</span>
+        <span className="month-nav__month">{month}월</span>
       </button>
+
 
       <button
         onClick={onNext}
         disabled={nextDisabled}
         aria-label="다음 달"
-        className={`w-11 h-11 flex items-center justify-center rounded-full text-lg
-          ${nextDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-100"}`}
+        className={`header-btn${nextDisabled ? " header-btn--disabled" : ""}`}
       >
         ▶
       </button>

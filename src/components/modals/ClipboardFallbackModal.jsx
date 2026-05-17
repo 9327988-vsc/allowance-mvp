@@ -34,7 +34,6 @@ export default function ClipboardFallbackModal({ text, onClose }) {
     <div
       className="modal-backdrop"
       style={{ zIndex: "var(--z-modal-1)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         className="modal-content"

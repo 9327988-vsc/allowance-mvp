@@ -1,5 +1,5 @@
 // src/components/inputs/CurrencyInput.jsx
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 /**
  * 금액 입력 컴포넌트
@@ -10,8 +10,13 @@ import { useState, useCallback } from "react";
 export default function CurrencyInput({ value, onChange, max = 10000000, label, error, disabled = false, id }) {
   const [displayValue, setDisplayValue] = useState(formatDisplay(value));
 
+  useEffect(() => {
+    setDisplayValue(formatDisplay(value));
+  }, [value]);
+
   function formatDisplay(num) {
-    if (num === 0 || num === null || num === undefined) return "";
+    if (num === null || num === undefined) return "";
+    if (num === 0) return "0";
     return num.toLocaleString("ko-KR");
   }
 
@@ -44,8 +49,9 @@ export default function CurrencyInput({ value, onChange, max = 10000000, label, 
           onChange={handleChange}
           onBlur={handleBlur}
           disabled={disabled}
-          className="w-full px-3 py-2 rounded-lg border text-right pr-8"
+          className="w-full px-3 py-2 rounded-lg border text-right"
           style={{
+            paddingRight: 48,
             borderColor: error ? "var(--color-error)" : "var(--color-border)",
             background: disabled ? "var(--color-bg-secondary)" : "var(--color-bg)",
             color: disabled ? "var(--color-text-tertiary)" : "var(--color-text-primary)"
@@ -53,7 +59,7 @@ export default function CurrencyInput({ value, onChange, max = 10000000, label, 
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
         />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--color-text-secondary)" }}>원</span>
+        <span className="absolute top-1/2 -translate-y-1/2" style={{ right: 14, color: "var(--color-text-tertiary)", fontSize: "0.85em", letterSpacing: "0.5px" }}>원</span>
       </div>
       {error && <p id={`${id}-error`} className="text-xs" style={{ color: "var(--color-error)" }}>{error}</p>}
     </div>

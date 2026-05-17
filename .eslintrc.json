@@ -19,20 +19,28 @@
   },
   "settings": {
     "react": {
-      "version": "18.2"
+      "version": "detect"
     }
   },
   "rules": {
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-    "no-console": ["warn", { "allow": ["warn", "error"] }]
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "react-hooks/exhaustive-deps": "error"
   },
   "overrides": [
     {
       "files": ["*.test.js", "*.test.jsx"],
-      "env": {
-        "vitest-globals/env": true
+      "globals": {
+        "describe": "readonly",
+        "it": "readonly",
+        "expect": "readonly",
+        "vi": "readonly",
+        "beforeEach": "readonly",
+        "afterEach": "readonly",
+        "beforeAll": "readonly",
+        "afterAll": "readonly"
       }
     }
   ]

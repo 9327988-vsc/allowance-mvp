@@ -29,7 +29,7 @@ describe("holidays.js", () => {
     await expect(loadHolidays()).rejects.toThrow(/404/);
   });
 
-  it("getHolidays: loadHolidays 호출 전 → throw", () => {
-    expect(() => getHolidays()).toThrow();
+  it("getHolidays: loadHolidays 호출 전 → 빈 객체 반환", () => {
+    expect(getHolidays()).toEqual({});
   });
 });

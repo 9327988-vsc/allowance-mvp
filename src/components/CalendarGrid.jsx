@@ -1,27 +1,35 @@
 // src/components/CalendarGrid.jsx — 월간 달력 그리드
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import CalendarCell from "./CalendarCell";
 import CellTooltip from "./widgets/CellTooltip";
 import { formatDate } from "../utils/calculator";
 
-const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
-const WEEKDAY_COLORS = [
-  "var(--color-holiday)", // 일
-  null, null, null, null, null,
-  "var(--color-saturday)" // 토
+const WEEKDAY_LABELS_SUN = ["일", "월", "화", "수", "목", "금", "토"];
+const WEEKDAY_LABELS_MON = ["월", "화", "수", "목", "금", "토", "일"];
+const WEEKDAY_COLORS_SUN = [
+  "var(--color-holiday)", null, null, null, null, null, "var(--color-saturday)"
+];
+const WEEKDAY_COLORS_MON = [
+  null, null, null, null, null, "var(--color-saturday)", "var(--color-holiday)"
 ];
 
-export default function CalendarGrid({ year, month, calc, todayY, todayM, onCellClick, settings }) {
+export default function CalendarGrid({ year, month, calc, todayY, todayM, onCellClick, settings, startDay = 0, mode = "child" }) {
   const daysInMonth = new Date(year, month, 0).getDate();
-  const firstDayOfWeek = new Date(year, month - 1, 1).getDay(); // 0=일
+  const rawFirstDay = new Date(year, month - 1, 1).getDay(); // 0=일
+  const firstDayOfWeek = (rawFirstDay - startDay + 7) % 7;
+  const WEEKDAY_LABELS = startDay === 1 ? WEEKDAY_LABELS_MON : WEEKDAY_LABELS_SUN;
+  const WEEKDAY_COLORS = startDay === 1 ? WEEKDAY_COLORS_MON : WEEKDAY_COLORS_SUN;
 
   // calc.cells를 date 기반 맵으로 변환
-  const cellMap = {};
-  if (calc?.cells) {
-    for (const c of calc.cells) {
-      cellMap[c.date] = c;
+  const cellMap = useMemo(() => {
+    const map = {};
+    if (calc?.cells) {
+      for (const c of calc.cells) {
+        map[c.date] = c;
+      }
     }
-  }
+    return map;
+  }, [calc]);
 
   const todayStr = formatDate(todayY, todayM, new Date().getDate());
 
@@ -30,6 +38,17 @@ export default function CalendarGrid({ year, month, calc, todayY, todayM, onCell
   const [tooltipRect, setTooltipRect] = useState(null);
   const hoverTimerRef = useRef(null);
   const longPressTimerRef = useRef(null);
+
+  const tooltipDismissRef = useRef(null);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      if (tooltipDismissRef.current) clearTimeout(tooltipDismissRef.current);
+    };
+  }, []);
 
   const showTooltip = useCallback((cell, rect) => {
     setTooltipCell(cell);
@@ -65,8 +84,9 @@ export default function CalendarGrid({ year, month, calc, todayY, todayM, onCell
 
   const handleCellTouchEnd = useCallback(() => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    if (tooltipDismissRef.current) clearTimeout(tooltipDismissRef.current);
     // 툴팁은 잠시 후 숨기기 (탭으로 셀 클릭 시 자연스럽게)
-    setTimeout(hideTooltip, 1500);
+    tooltipDismissRef.current = setTimeout(hideTooltip, 1500);
   }, [hideTooltip]);
 
   // 그리드 생성: placeholder + 실제 날짜
@@ -114,6 +134,7 @@ export default function CalendarGrid({ year, month, calc, todayY, todayM, onCell
               key={cell.date}
               cell={cell}
               isToday={isToday}
+              mode={mode}
               onClick={() => onCellClick(cell)}
               onMouseEnter={(e) => handleCellMouseEnter(cell, e)}
               onMouseLeave={handleCellMouseLeave}

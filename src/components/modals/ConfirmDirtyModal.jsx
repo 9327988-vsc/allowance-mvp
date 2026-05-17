@@ -18,11 +18,12 @@ export default function ConfirmDirtyModal({ onContinueEdit, onDiscard }) {
     <div
       className="modal-backdrop"
       style={{ zIndex: "var(--z-modal-3)" }}
-      // 외부 클릭 무시 (PRD 6.3)
+      onClick={onContinueEdit}
     >
       <div
         className="modal-content"
         style={{ maxWidth: 360, width: "90%", textAlign: "center" }}
+        onClick={e => e.stopPropagation()}
         role="alertdialog"
         aria-label="저장하지 않은 변경 사항"
         aria-modal="true"

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { resetAllData } from "../../utils/storage";
 import { showToast } from "../../utils/toastManager";
+import { logout } from "../../utils/accountSwitcher";
 
 const CONFIRM_TEXT = "초기화 동의";
 
@@ -31,9 +32,15 @@ export default function ResetAllDataModal({ onClose }) {
 
   function handleReset() {
     if (!isMatch) return;
-    resetAllData();
-    showToast({ type: "success", message: "✅ 모든 데이터가 초기화되었습니다" });
-    window.location.reload();
+    try {
+      resetAllData();
+      // L-14: 세션 상태도 클리어
+      try { logout(); } catch { /* ignored */ }
+      showToast({ type: "success", message: "✅ 모든 데이터가 초기화되었습니다" });
+      window.location.reload();
+    } catch (err) {
+      showToast({ type: "error", message: "초기화 실패: " + (err.message || "알 수 없는 오류"), duration: 5000 });
+    }
   }
 
   return (
@@ -113,7 +120,7 @@ export default function ResetAllDataModal({ onClose }) {
             {(input.length === 0 || isMatch) && <div className="mb-3" />}
 
             <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
-              ※ 한글 그대로 "초기화 동의" (공백 포함 5글자)
+              ※ 한글 그대로 &quot;초기화 동의&quot; (공백 포함 5글자)
             </p>
 
             <div className="flex justify-end gap-2">

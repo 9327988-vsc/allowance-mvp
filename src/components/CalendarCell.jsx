@@ -1,7 +1,8 @@
 // src/components/CalendarCell.jsx — 캘린더 개별 셀
-import { getCategoryIcon } from "../constants/categories";
+import { formatAmount, formatAmountShort } from "../utils/formatAmount";
+import { getMoodEmoji } from "../constants/moods";
 
-export default function CalendarCell({ cell, onClick, isToday, onMouseEnter, onMouseLeave, onTouchStart, onTouchEnd }) {
+export default function CalendarCell({ cell, onClick, isToday, mode = "child", onMouseEnter, onMouseLeave, onTouchStart, onTouchEnd }) {
   if (!cell) {
     // placeholder 셀 (이전/다음 달)
     return <div className="calendar-cell placeholder" aria-hidden="true" />;
@@ -16,21 +17,36 @@ export default function CalendarCell({ cell, onClick, isToday, onMouseEnter, onM
   else if (weekday === "sat") dateColor = "var(--color-saturday)";
 
   const hasExtra = extra_items && extra_items.length > 0;
+  const isGeneral = mode === "general";
+
+  // 일반계정: income/expense 분리 표시
+  const income = cell.income || 0;
+  const expense = cell.expense || 0;
+
+  // 자녀계정: 기존 로직
   const cellTotal = cell.total || 0;
+  const hasData = isGeneral
+    ? (income > 0 || expense > 0 || hasExtra || cell.memo)
+    : (school_fee > 0 || academy_fee > 0 || hasExtra);
+
+  const ariaLabel = isGeneral
+    ? `${date}${holiday_name ? ` ${holiday_name}` : ""}${income > 0 ? ` 수입 ${formatAmount(income)}` : ""}${expense > 0 ? ` 지출 ${formatAmount(expense)}` : ""}`
+    : `${date}${holiday_name ? ` ${holiday_name}` : ""}${cellTotal > 0 ? ` ${formatAmount(cellTotal)}` : ""}`;
 
   return (
     <button
-      className={`calendar-cell${isToday ? " calendar-cell--today" : ""}`}
+      className={`calendar-cell${isToday ? " calendar-cell--today" : ""}${hasData ? " calendar-cell--has-data" : ""}`}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      aria-label={`${date}${holiday_name ? ` ${holiday_name}` : ""}${cellTotal > 0 ? ` ${cellTotal.toLocaleString()}원` : ""}`}
+      aria-label={ariaLabel}
     >
-      {/* 날짜 */}
+      {/* 날짜 + 기분 */}
       <span className="calendar-cell__date" style={{ color: dateColor }}>
         {day}
+        {cell.mood && <span className="calendar-cell__mood">{getMoodEmoji(cell.mood)}</span>}
       </span>
 
       {/* 공휴일명 */}
@@ -38,18 +54,53 @@ export default function CalendarCell({ cell, onClick, isToday, onMouseEnter, onM
         <span className="calendar-cell__holiday">{holiday_name}</span>
       )}
 
-      {/* 아이콘 표시 */}
-      <div className="calendar-cell__icons">
-        {school_fee > 0 && <span title="학교 등교">🏫</span>}
-        {academy_fee > 0 && <span title="학원 등원">📚</span>}
-        {hasExtra && <span title="임시 항목">🎒</span>}
-      </div>
+      {isGeneral ? (
+        <>
+          {/* 일반계정: 수입/지출 금액 */}
+          <div className="calendar-cell__general-amounts">
+            {income > 0 && (
+              <span className="calendar-cell__income">+{formatAmountShort(income)}</span>
+            )}
+            {expense > 0 && (
+              <span className="calendar-cell__expense">-{formatAmountShort(expense)}</span>
+            )}
+          </div>
 
-      {/* 합계 금액 */}
-      {cellTotal > 0 && (
-        <span className="calendar-cell__amount">
-          {cellTotal.toLocaleString()}
-        </span>
+          {/* 데이터 dot */}
+          {hasData && (
+            <div className="calendar-cell__dots">
+              {income > 0 && <span className="calendar-cell__dot calendar-cell__dot--income" />}
+              {expense > 0 && <span className="calendar-cell__dot calendar-cell__dot--expense" />}
+              {cell.memo && <span className="calendar-cell__dot calendar-cell__dot--memo" />}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* 자녀계정: 아이콘 표시 */}
+          <div className="calendar-cell__icons">
+            {school_fee > 0 && <span title="학교 등교">🏫</span>}
+            {academy_fee > 0 && <span title="학원 등원">✏️</span>}
+            {hasExtra && <span title="임시 항목">🎒</span>}
+          </div>
+
+          {/* 합계 금액 */}
+          {cellTotal > 0 && (
+            <span className="calendar-cell__amount">
+              {formatAmountShort(cellTotal)}
+            </span>
+          )}
+
+          {/* 데이터 유무 점(dot) */}
+          {(school_fee > 0 || academy_fee > 0 || hasExtra || cell.memo) && (
+            <div className="calendar-cell__dots">
+              {school_fee > 0 && <span className="calendar-cell__dot calendar-cell__dot--school" />}
+              {academy_fee > 0 && <span className="calendar-cell__dot calendar-cell__dot--academy" />}
+              {hasExtra && <span className="calendar-cell__dot calendar-cell__dot--extra" />}
+              {cell.memo && <span className="calendar-cell__dot calendar-cell__dot--memo" />}
+            </div>
+          )}
+        </>
       )}
     </button>
   );

@@ -26,10 +26,15 @@ export default function CleanupConfirmModal({ onClose, onCleaned }) {
 
   function handleCleanup() {
     setCleaning(true);
-    const result = cleanupOldCalendars(6);
-    showToast({ type: "success", message: `✅ ${result.deletedCount}개월 캘린더가 정리되었습니다` });
-    if (onCleaned) onCleaned();
-    onClose();
+    try {
+      const result = cleanupOldCalendars(6);
+      showToast({ type: "success", message: `✅ ${result.deletedCount}개월 캘린더가 정리되었습니다` });
+      if (onCleaned) onCleaned();
+      onClose();
+    } catch (err) {
+      showToast({ type: "error", message: "정리 중 오류가 발생했습니다: " + (err.message || "알 수 없는 오류") });
+      setCleaning(false);
+    }
   }
 
   // 각 키에서 연-월 추출 + 항목수
@@ -64,6 +69,7 @@ export default function CleanupConfirmModal({ onClose, onCleaned }) {
     <div
       className="modal-backdrop"
       style={{ zIndex: "var(--z-modal-3)" }}
+      onClick={() => { if (!cleaning) onClose(); }}
     >
       <div
         className="modal-content"

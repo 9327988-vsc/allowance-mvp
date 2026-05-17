@@ -1,7 +1,9 @@
 // src/utils/storage.js
+import { APP_VERSION } from "../constants/appVersion";
 
 const KEYS = {
   SETTINGS: "settings_v1",
+  SETTINGS_USER: (userId) => `settings_v1_u_${userId}`,
   CALENDAR: (year, month) => `calendar_v1_${year}_${String(month).padStart(2, "0")}`,
   CUSTOM_CATEGORIES: "custom_categories_v1",
   META: "meta_v1"
@@ -31,7 +33,7 @@ function safeGet(key) {
   } catch (e) {
     backupCorrupted(key);
     if (_onCorruptedCallback) {
-      try { _onCorruptedCallback(key); } catch {}
+      try { _onCorruptedCallback(key); } catch (e) { console.warn("safeGet: corrupted callback failed:", e); }
     }
     return null;
   }
@@ -41,7 +43,11 @@ function backupCorrupted(key) {
   const value = localStorage.getItem(key);
   if (!value) return;
   const backupKey = `${key}_corrupted_${Date.now()}`;
-  localStorage.setItem(backupKey, value);
+  try {
+    localStorage.setItem(backupKey, value);
+  } catch (e) {
+    // quota exceeded — skip backup, just remove corrupted key
+  }
   localStorage.removeItem(key);
 }
 
@@ -51,8 +57,37 @@ export function loadSettings() {
 }
 
 export function saveSettings(settings) {
-  settings.updated_at = new Date().toISOString();
-  return safeSet(KEYS.SETTINGS, settings);
+  const toSave = { ...settings, updated_at: new Date().toISOString() };
+  return safeSet(KEYS.SETTINGS, toSave);
+}
+
+// 유저별 설정 (다중 계정 지원)
+export function loadSettingsForUser(userId) {
+  if (userId) {
+    const userSettings = safeGet(KEYS.SETTINGS_USER(userId));
+    if (userSettings) return userSettings;
+    // 유저별 설정 없음 → 글로벌 설정 마이그레이션 (최초 1회만)
+    // 이미 다른 유저가 settings_v1_u_* 키를 가지고 있으면 마이그레이션 완료 상태
+    const anyUserScoped = listAllAppKeys().some(k => k.startsWith("settings_v1_u_"));
+    if (anyUserScoped) return null; // 다른 유저 존재 → 새 유저는 초기 설정부터
+    const globalSettings = safeGet(KEYS.SETTINGS);
+    if (globalSettings) {
+      // 레거시 글로벌 설정 → 첫 유저가 소유권 획득
+      globalSettings._owner_id = userId;
+      safeSet(KEYS.SETTINGS_USER(userId), globalSettings);
+      return globalSettings;
+    }
+    return null;
+  }
+  return safeGet(KEYS.SETTINGS);
+}
+
+export function saveSettingsForUser(userId, settings) {
+  const toSave = { ...settings, updated_at: new Date().toISOString() };
+  if (userId) {
+    return safeSet(KEYS.SETTINGS_USER(userId), toSave);
+  }
+  return safeSet(KEYS.SETTINGS, toSave);
 }
 
 // calendar_v1_YYYY_MM
@@ -71,8 +106,8 @@ export function loadCalendarMonth(year, month) {
 
 export function saveCalendarMonth(calendar) {
   const key = KEYS.CALENDAR(calendar.year, calendar.month);
-  calendar.updated_at = new Date().toISOString();
-  return safeSet(key, calendar);
+  const toSave = { ...calendar, updated_at: new Date().toISOString() };
+  return safeSet(key, toSave);
 }
 
 // custom_categories_v1
@@ -100,7 +135,7 @@ export function initMetaIfNeeded() {
       first_used_at: new Date().toISOString(),
       last_used_at: new Date().toISOString(),
       current_view_month: getTodayYearMonth(),
-      app_version: "1.0.0",
+      app_version: APP_VERSION,
       schema_version: 1
     });
   }
@@ -113,8 +148,8 @@ function getTodayYearMonth() {
 
 // 키 관리
 export const APP_KEY_PATTERNS = {
-  exact: ["settings_v1", "custom_categories_v1", "meta_v1"],
-  prefix: ["calendar_v1_"],
+  exact: ["settings_v1", "custom_categories_v1", "meta_v1", "family_context_v1", "family_accounts_v1", "device_id_v1", "submitted_claims_v1", "theme_v1", "user_accounts_v1", "auth_migrated_v1", "user_prefs_v1", "pin_reset_requests_v1", "migration_done_v1"],
+  prefix: ["calendar_v1_", "mock_kv:", "settings_v1_u_"],
   contains: ["_corrupted_"]
 };
 
@@ -130,6 +165,7 @@ export function listAllAppKeys() {
 }
 
 export function cleanupOldCalendars(retainMonths = 6, { dryRun = false } = {}) {
+  if (retainMonths < 1) retainMonths = 1;
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() - retainMonths, 1);
 
@@ -158,6 +194,8 @@ export function getStorageUsage() {
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key) continue;
+    // Only count app-specific keys to avoid inflating usage with third-party data
+    if (!isAppKey(key)) continue;
     used += key.length + (localStorage.getItem(key)?.length ?? 0);
   }
   const TOTAL = 5 * 1024 * 1024;
