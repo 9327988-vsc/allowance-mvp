@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useModalBase } from "../../hooks/useModalBase";
 import { loadPinResetRequests, approvePinReset, rejectPinReset, clearResolvedPinResets } from "../../utils/authStore";
 
-export default function PinResetModal({ onClose }) {
+export default function PinResetModal({ onClose, currentUserId }) {
   const [requests, setRequests] = useState(() => loadPinResetRequests());
   const [confirmApproveId, setConfirmApproveId] = useState(null);
 
@@ -16,7 +16,7 @@ export default function PinResetModal({ onClose }) {
 
   function executeApprove() {
     try {
-      approvePinReset(confirmApproveId);
+      approvePinReset(confirmApproveId, currentUserId);
       setRequests(loadPinResetRequests());
     } catch (err) {
       console.error("PIN reset approve failed:", err);

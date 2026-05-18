@@ -181,7 +181,7 @@ export default function App() {
         )}
         {showReset && <ResetAllDataModal onClose={() => setShowReset(false)} />}
         {showCategoryManager && <CategoryManager onClose={() => setShowCategoryManager(false)} />}
-        {showPinManage && <PinResetModal onClose={() => setShowPinManage(false)} />}
+        {showPinManage && <PinResetModal onClose={() => setShowPinManage(false)} currentUserId={getActiveUser()} />}
         <ToastContainer />
       </>
     );

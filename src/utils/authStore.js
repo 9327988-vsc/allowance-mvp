@@ -318,7 +318,12 @@ export function requestPinReset(userId) {
 }
 
 /** PIN 초기화 요청 승인 → pin_reset_pending 플래그 설정 (기존 해시 유지) */
-export function approvePinReset(userId) {
+export function approvePinReset(userId, approverUserId) {
+  // 승인자 역할 검증: 부모만 PIN 초기화 승인 가능
+  if (approverUserId) {
+    const approver = findUserById(approverUserId);
+    if (!approver || approver.role !== "parent") return false;
+  }
   const accounts = loadUserAccounts();
   const idx = accounts.findIndex(a => a.user_id === userId);
   if (idx < 0) return false;
