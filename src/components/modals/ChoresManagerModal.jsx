@@ -1,11 +1,13 @@
 // src/components/modals/ChoresManagerModal.jsx — 부모용 집안일/미션 관리
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { loadChores, addChore, removeChore, toggleChore, getPendingChoreApprovals, approveChoreCompletion } from "../../utils/chores";
 import CurrencyInput from "../inputs/CurrencyInput";
 
 const ICONS = ["🧹", "🍽️", "🧺", "🐕", "📚", "🛏️", "🗑️", "🌱", "🚿", "✨"];
 
 export default function ChoresManagerModal({ childMembers = [], onClose }) {
+  const contentRef = useModalBase(onClose);
   const [tab, setTab] = useState("list"); // "list" | "pending"
   const [chores, setChores] = useState(() => loadChores());
   const [pending, setPending] = useState(() => getPendingChoreApprovals());
@@ -20,13 +22,6 @@ export default function ChoresManagerModal({ childMembers = [], onClose }) {
   });
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   function reload() {
     setChores(loadChores());
@@ -66,6 +61,7 @@ export default function ChoresManagerModal({ childMembers = [], onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 480, width: "92%", padding: 0 }}
         onClick={e => e.stopPropagation()}
@@ -125,6 +121,7 @@ export default function ChoresManagerModal({ childMembers = [], onClose }) {
                     onClick={() => { toggleChore(c.id); reload(); }}
                     className="btn btn--sm"
                     style={{ minWidth: 36, fontSize: "0.8rem" }}
+                    aria-label={c.enabled ? "일시정지" : "재개"}
                   >
                     {c.enabled ? "⏸" : "▶️"}
                   </button>
@@ -132,6 +129,7 @@ export default function ChoresManagerModal({ childMembers = [], onClose }) {
                     onClick={() => { removeChore(c.id); reload(); }}
                     className="btn btn--sm btn--danger"
                     style={{ minWidth: 36, fontSize: "0.8rem" }}
+                    aria-label="삭제"
                   >
                     🗑
                   </button>

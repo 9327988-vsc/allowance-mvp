@@ -1,5 +1,6 @@
 // src/components/modals/ExtraItemForm.jsx — S-104 임시 항목 추가/수정
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { DEFAULT_CATEGORIES } from "../../constants/categories";
 import { loadCustomCategories } from "../../utils/storage";
 import { validateExtraItem } from "../../utils/validators";
@@ -8,6 +9,7 @@ import CurrencyInput from "../inputs/CurrencyInput";
 import NewCategoryModal from "./NewCategoryModal";
 
 export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
+  const contentRef = useModalBase(onClose);
   const [itemType, setItemType] = useState(defaultValues?.type ?? "expense");
   const [category, setCategory] = useState(defaultValues?.category ?? "");
   const [name, setName] = useState(defaultValues?.name ?? "");
@@ -52,16 +54,6 @@ export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
     }
   }
 
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape" && !isS105Open) {
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, isS105Open]);
 
   function handleCategoryChange(e) {
     const value = e.target.value;
@@ -98,9 +90,10 @@ export default function ExtraItemForm({ onClose, onSubmit, defaultValues }) {
       <div
         className="modal-backdrop"
         style={{ zIndex: "var(--z-modal-2)" }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={onClose}
       >
         <div
+          ref={contentRef}
           className="modal-content"
           style={{ maxWidth: 400, width: "90%", opacity: isS105Open ? 0.6 : 1 }}
           onClick={(e) => e.stopPropagation()}

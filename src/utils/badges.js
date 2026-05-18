@@ -1,6 +1,12 @@
 // src/utils/badges.js — 성취 배지 시스템
 
-const BADGES_KEY = "badges_earned_v1";
+import { getActiveUser } from "./authStore";
+
+function getBadgesKey() {
+  const userId = getActiveUser();
+  if (!userId) return null;
+  return "badges_earned_v1_u_" + userId;
+}
 
 /**
  * 배지 정의 목록
@@ -109,8 +115,10 @@ export const BADGE_DEFINITIONS = [
  * 획득한 배지 목록 로드
  */
 export function loadEarnedBadges() {
+  const key = getBadgesKey();
+  if (!key) return [];
   try {
-    const raw = localStorage.getItem(BADGES_KEY);
+    const raw = localStorage.getItem(key);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -122,8 +130,12 @@ export function loadEarnedBadges() {
  * 배지 획득 기록
  * @returns {{ newBadges: Array }} 이번에 새로 획득한 배지 목록
  */
+// NOTE: checkAndAwardBadges is currently exported but not called from anywhere.
+// It should be wired into chore completion and claim approval flows once badge criteria are finalized.
 export function checkAndAwardBadges(stats) {
   if (!stats || typeof stats !== "object") return { newBadges: [] };
+  const key = getBadgesKey();
+  if (!key) return { newBadges: [] };
   const earned = loadEarnedBadges();
   const earnedIds = new Set(earned.map(b => b.id));
   const newBadges = [];
@@ -146,7 +158,7 @@ export function checkAndAwardBadges(stats) {
 
   if (newBadges.length > 0) {
     try {
-      localStorage.setItem(BADGES_KEY, JSON.stringify(earned));
+      localStorage.setItem(key, JSON.stringify(earned));
     } catch { /* ignored */ }
   }
 
@@ -157,6 +169,8 @@ export function checkAndAwardBadges(stats) {
  * 배지 통계 요약
  */
 export function getBadgeSummary() {
+  const key = getBadgesKey();
+  if (!key) return { total: BADGE_DEFINITIONS.length, earned: 0, percent: 0, badges: BADGE_DEFINITIONS.map(def => ({ ...def, earned: false, earned_at: null })) };
   const earned = loadEarnedBadges();
   return {
     total: BADGE_DEFINITIONS.length,

@@ -2,7 +2,7 @@
 import { loadCalendarMonth, loadCustomCategories, saveCustomCategories, listAllAppKeys } from "./storage";
 
 export function getCategoryUsage() {
-  const usage = new Map();
+  const usage = new Map(); // key: category id or name, value: count
   listAllAppKeys()
     .filter(k => k.match(/^calendar_v1_(\d{4})_(\d{2})$/))
     .forEach(k => {
@@ -11,7 +11,9 @@ export function getCategoryUsage() {
       const cal = loadCalendarMonth(parseInt(match[1]), parseInt(match[2]));
       Object.values(cal.cells || {}).forEach(cell => {
         (cell.extra_items || []).forEach(item => {
-          usage.set(item.category, (usage.get(item.category) || 0) + 1);
+          // Track by category_id if available, fallback to category name
+          const key = item.category_id || item.category;
+          usage.set(key, (usage.get(key) || 0) + 1);
         });
       });
     });
@@ -25,8 +27,9 @@ export function cleanupUnusedCategories() {
   // 삭제 직전에 usage를 확인 — 다른 탭에서 데이터가 추가됐을 수 있음
   const freshUsage = getCategoryUsage();
 
-  const remaining = existing.filter(c => freshUsage.has(c.name));
-  const deleted = existing.filter(c => !freshUsage.has(c.name)).map(c => c.name);
+  // ID 기반 비교 (fallback: name)
+  const remaining = existing.filter(c => freshUsage.has(c.id) || freshUsage.has(c.name));
+  const deleted = existing.filter(c => !freshUsage.has(c.id) && !freshUsage.has(c.name)).map(c => c.name);
   saveCustomCategories(remaining);
   return { deleted };
 }

@@ -1,10 +1,12 @@
 // src/components/modals/StorageFullModal.jsx — S-108 스토리지 부족 안내
 import { useState, useEffect } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { cleanupOldCalendars } from "../../utils/storage";
 import { exportData, downloadJSON, defaultExportFilename } from "../../utils/exportImport";
 import { showToast } from "../../utils/toastManager";
 
 export default function StorageFullModal({ pendingSave, onClose, onRetrySuccess }) {
+  const contentRef = useModalBase(onClose);
   const [targets, setTargets] = useState([]);
   const [processing, setProcessing] = useState(false);
 
@@ -12,18 +14,6 @@ export default function StorageFullModal({ pendingSave, onClose, onRetrySuccess 
     const result = cleanupOldCalendars(6, { dryRun: true });
     setTargets(result.deletedKeys);
   }, []);
-
-  // ESC = 취소
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape" && !processing) {
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, processing]);
 
   // 정리 후 자동 재시도
   function retryPendingSave() {
@@ -78,13 +68,15 @@ export default function StorageFullModal({ pendingSave, onClose, onRetrySuccess 
   }
 
   return (
-    <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-1)" }}>
+    <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-1)" }} onClick={processing ? undefined : onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 440, width: "90%" }}
         onClick={e => e.stopPropagation()}
         role="alertdialog"
         aria-modal="true"
+        aria-label="저장 공간 부족"
       >
         <h2 className="modal-title mb-3">⚠ 저장 공간이 부족합니다</h2>
 

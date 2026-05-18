@@ -1,11 +1,13 @@
 // src/components/modals/RecurringExtrasModal.jsx — 정기 추가 용돈 관리
 import { useState, useEffect, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { loadSettingsForUser, saveSettingsForUser } from "../../utils/storage";
 import { getActiveUser } from "../../utils/authStore";
 import { showToast } from "../../utils/toastManager";
 import CurrencyInput from "../inputs/CurrencyInput";
 
 export default function RecurringExtrasModal({ onClose, onSaved }) {
+  const contentRef = useModalBase(onClose);
   const [items, setItems] = useState([]);
   const [newName, setNewName] = useState("");
   const [newAmount, setNewAmount] = useState(0);
@@ -19,14 +21,6 @@ export default function RecurringExtrasModal({ onClose, onSaved }) {
     }
   }, []);
 
-  // ESC 닫기
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
 
   const handleAdd = useCallback(() => {
     const trimmed = newName.trim();
@@ -77,8 +71,8 @@ export default function RecurringExtrasModal({ onClose, onSaved }) {
   const total = items.reduce((sum, item) => sum + item.amount, 0);
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="정기 추가 용돈">
-      <div className="modal-content" style={{ maxWidth: 440, width: "90%", padding: 0 }}>
+    <div className="modal-backdrop" onClick={onClose}>
+      <div ref={contentRef} className="modal-content" style={{ maxWidth: 440, width: "90%", padding: 0 }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="정기 추가 용돈">
         <div className="modal-header">
           <h2 className="modal-title">💵 정기 추가 용돈</h2>
           <button onClick={onClose} className="modal-close" aria-label="닫기">×</button>

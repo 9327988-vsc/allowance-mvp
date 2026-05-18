@@ -1,6 +1,7 @@
 // src/components/modals/JoinFamilyModal.jsx — S-2-202 가족 참여
 
 import { useState, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
 import { getKVAdapter } from "../../utils/kvAdapter";
@@ -19,6 +20,7 @@ export default function JoinFamilyModal({ onBack, onComplete }) {
   const [role, setRole] = useState("");
   const [codeError, setCodeError] = useState("");
   const { showToast } = useToast();
+  const modalRef = useModalBase(onBack);
 
   // Step 1: 코드 확인
   const checkFn = useCallback(async () => {
@@ -109,8 +111,8 @@ export default function JoinFamilyModal({ onBack, onComplete }) {
   const hasChild = familyInfo?.has_child;
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="가족 참여">
-      <div className="modal-content" style={{ maxWidth: 420, width: "90%", padding: 0 }}>
+    <div className="modal-backdrop" onClick={onBack}>
+      <div ref={modalRef} tabIndex={-1} className="modal-content" style={{ maxWidth: 420, width: "90%", padding: 0 }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="가족 참여">
         <div className="modal-header">
           <h2 className="modal-title">가족 참여</h2>
           <button onClick={onBack} className="modal-close" aria-label="뒤로">←</button>

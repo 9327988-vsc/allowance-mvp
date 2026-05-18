@@ -1,9 +1,11 @@
 // src/components/modals/ChoresChildModal.jsx — 자녀용 미션 보드
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { loadChores, submitChoreCompletion, getRecentChoreLog, getMonthlyChoreReward } from "../../utils/chores";
 import { formatAmountShort } from "../../utils/formatAmount";
 
 export default function ChoresChildModal({ childMemberId, childName, onClose }) {
+  const contentRef = useModalBase(onClose);
   const [tab, setTab] = useState("available"); // "available" | "history"
   const [chores, setChores] = useState([]);
   const [recentLog, setRecentLog] = useState([]);
@@ -11,6 +13,7 @@ export default function ChoresChildModal({ childMemberId, childName, onClose }) 
   const [completingId, setCompletingId] = useState(null);
   const [message, setMessage] = useState(null);
   const messageTimerRef = useRef(null);
+  const completingTimerRef = useRef(null);
 
   const reload = useCallback(() => {
     if (!childMemberId) return;
@@ -25,17 +28,13 @@ export default function ChoresChildModal({ childMemberId, childName, onClose }) 
     reload();
   }, [reload]);
 
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   // 타이머 정리
   useEffect(() => {
-    return () => { if (messageTimerRef.current) clearTimeout(messageTimerRef.current); };
+    return () => {
+      if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+      if (completingTimerRef.current) clearTimeout(completingTimerRef.current);
+    };
   }, []);
 
   function handleComplete(chore) {
@@ -49,7 +48,7 @@ export default function ChoresChildModal({ childMemberId, childName, onClose }) 
       setMessage({ type: "error", text: result.error });
     }
     // 짧은 딜레이 후 completingId 해제 (더블클릭 방지)
-    setTimeout(() => setCompletingId(null), 500);
+    completingTimerRef.current = setTimeout(() => setCompletingId(null), 500);
     if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
     messageTimerRef.current = setTimeout(() => setMessage(null), 3000);
   }
@@ -57,6 +56,7 @@ export default function ChoresChildModal({ childMemberId, childName, onClose }) 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 440, width: "92%", padding: 0 }}
         onClick={e => e.stopPropagation()}

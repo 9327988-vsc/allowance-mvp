@@ -1,7 +1,8 @@
 // src/components/modals/ExportModal.jsx — S-113 데이터 내보내기
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { exportData, downloadJSON, defaultExportFilename } from "../../utils/exportImport";
 import { showToast } from "../../utils/toastManager";
+import { useModalBase } from "../../hooks/useModalBase";
 
 export default function ExportModal({ onClose }) {
   const [includeSettings, setIncludeSettings] = useState(true);
@@ -9,18 +10,7 @@ export default function ExportModal({ onClose }) {
   const [includeCategories, setIncludeCategories] = useState(true);
   const [includeBackups, setIncludeBackups] = useState(false);
   const [exporting, setExporting] = useState(false);
-
-  // ESC 닫기
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape" && !exporting) {
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, exporting]);
+  const modalRef = useModalBase(onClose, { active: !exporting });
 
   const anyChecked = includeSettings || includeCalendars || includeCategories || includeBackups;
 
@@ -48,9 +38,11 @@ export default function ExportModal({ onClose }) {
     <div
       className="modal-backdrop"
       style={{ zIndex: "var(--z-modal-1)" }}
-      /* PRD 6.3: S-113 ❌ 외부 클릭 */
+      onClick={exporting ? undefined : onClose}
     >
       <div
+        ref={modalRef}
+        tabIndex={-1}
         className="modal-content"
         style={{ maxWidth: 480, width: "95%" }}
         onClick={e => e.stopPropagation()}

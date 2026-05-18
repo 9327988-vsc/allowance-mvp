@@ -1,7 +1,7 @@
 // src/components/modals/ChildClaimDetailModal.jsx — S-2-102 자녀 청구 상세 + [받았어요]
 
 import { useState, useEffect, useCallback } from "react";
-import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useClaim } from "../../hooks/useClaim";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
@@ -23,11 +23,6 @@ import { formatAmountShort } from "../../utils/formatAmount";
 export default function ChildClaimDetailModal({ claimSummary, onClose }) {
   const { claim, fetchClaim } = useClaim(claimSummary.claim_id);
   const { showToast } = useToast();
-  const trapRef = useFocusTrap(true);
-
-  useEffect(() => {
-    fetchClaim();
-  }, [fetchClaim]);
 
   // 수령 확인
   const receiveAction = useAsyncAction(useCallback(async () => {
@@ -43,14 +38,11 @@ export default function ChildClaimDetailModal({ claimSummary, onClose }) {
     onClose();
   }, [claim, showToast, onClose]));
 
-  // ESC 키 핸들러
+  const contentRef = useModalBase(onClose, { active: !receiveAction.loading });
+
   useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === "Escape" && !receiveAction.loading) onClose();
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose, receiveAction.loading]);
+    fetchClaim();
+  }, [fetchClaim]);
 
   // 30초 폴링 — 부모가 승인/거절/지급했을 때 반영 (터미널 상태에서는 중지)
   useEffect(() => {
@@ -78,8 +70,8 @@ export default function ChildClaimDetailModal({ claimSummary, onClose }) {
 
   if (!claim) {
     return (
-      <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-2)" }}>
-        <div className="modal-content" style={{ maxWidth: 440, padding: 0 }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-2)" }} onClick={onClose}>
+        <div ref={contentRef} className="modal-content" style={{ maxWidth: 440, padding: 0 }} onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
             <h2 className="modal-title">청구 상세</h2>
             <button onClick={onClose} className="modal-close" aria-label="닫기">×</button>
@@ -125,9 +117,10 @@ export default function ChildClaimDetailModal({ claimSummary, onClose }) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="child-detail-title"
+      onClick={receiveAction.loading ? undefined : onClose}
     >
       <div
-        ref={trapRef}
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 440, maxHeight: "90vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}

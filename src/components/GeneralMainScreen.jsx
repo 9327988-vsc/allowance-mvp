@@ -1,5 +1,5 @@
 // src/components/GeneralMainScreen.jsx — 일반계정 메인 화면
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { logout } from "../utils/accountSwitcher";
 import { findUserById, getActiveUser } from "../utils/authStore";
 import { loadTheme, toggleTheme } from "../utils/theme";
@@ -20,7 +20,7 @@ export default function GeneralMainScreen({ onLogout }) {
   const [showStats, setShowStats] = useState(false);
   const [editingCell, setEditingCell] = useState(null);
 
-  const activeUser = findUserById(getActiveUser());
+  const activeUser = findUserById(getActiveUser()) || {};
   const userId = activeUser?.user_id;
 
   // 유저 설정 (예산 포함)
@@ -34,14 +34,14 @@ export default function GeneralMainScreen({ onLogout }) {
     saveCell, refresh,
   } = useGeneralCalendar();
 
-  function handleCellClick(cell) {
+  const handleCellClick = useCallback((cell) => {
     setEditingCell(cell);
-  }
+  }, []);
 
-  function handleCellSave(date, cellData) {
+  const handleCellSave = useCallback((date, cellData) => {
     saveCell(date, cellData);
     setEditingCell(null);
-  }
+  }, [saveCell]);
 
   function handleBudgetSave(newSettings) {
     setUserSettings(newSettings);

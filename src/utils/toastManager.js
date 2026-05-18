@@ -16,6 +16,7 @@ let _setState = null;          // ToastContainer가 등록한 setState
 let _idCounter = Date.now();
 let _pendingQueue = [];        // ToastContainer 마운트 전 큐
 const _flushedIds = new Set(); // HMR 중복 방지
+const MAX_FLUSHED_IDS = 1000;
 
 /**
  * 외부에서 호출하는 imperative API
@@ -78,6 +79,10 @@ function _flushPendingQueue() {
   for (const toast of queued) {
     _flushedIds.add(toast.id);
     _dispatchToast(toast);
+  }
+  // 무한 증가 방지
+  if (_flushedIds.size > MAX_FLUSHED_IDS) {
+    _flushedIds.clear();
   }
 }
 

@@ -1,5 +1,6 @@
 // src/components/modals/ResetAllDataModal.jsx — S-117 모든 데이터 초기화 (2단계 type-to-confirm)
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { resetAllData } from "../../utils/storage";
 import { showToast } from "../../utils/toastManager";
 import { logout } from "../../utils/accountSwitcher";
@@ -7,25 +8,9 @@ import { logout } from "../../utils/accountSwitcher";
 const CONFIRM_TEXT = "초기화 동의";
 
 export default function ResetAllDataModal({ onClose }) {
+  const contentRef = useModalBase(onClose);
   const [step, setStep] = useState(1);
   const [input, setInput] = useState("");
-
-  // ESC 처리: 1단계 → 닫기, 2단계 → 1단계 복귀
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        if (step === 2) {
-          setStep(1);
-          setInput("");
-        } else {
-          onClose();
-        }
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, step]);
 
   const trimmed = input.trim();
   const isMatch = trimmed === CONFIRM_TEXT;
@@ -49,18 +34,20 @@ export default function ResetAllDataModal({ onClose }) {
       style={{ zIndex: "var(--z-modal-3)" }}
     >
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 440, width: "95%" }}
         onClick={e => e.stopPropagation()}
         role="alertdialog"
         aria-label="모든 데이터 초기화"
         aria-modal="true"
+        aria-describedby="modal-desc"
       >
         {step === 1 ? (
           <>
             <h2 className="modal-title mb-3">🗑 모든 데이터 초기화 — 1/2</h2>
 
-            <p className="mb-2" style={{ color: "var(--color-danger)" }}>⚠ 다음이 영구 삭제됩니다:</p>
+            <p id="modal-desc" className="mb-2" style={{ color: "var(--color-danger)" }}>⚠ 다음이 영구 삭제됩니다:</p>
             <ul className="text-sm mb-3" style={{ paddingLeft: "1.2em", listStyle: "disc" }}>
               <li>자녀 설정</li>
               <li>캘린더 데이터 (전체 기간)</li>

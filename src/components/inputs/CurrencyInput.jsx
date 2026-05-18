@@ -1,5 +1,5 @@
 // src/components/inputs/CurrencyInput.jsx
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 /**
  * 금액 입력 컴포넌트
@@ -9,9 +9,12 @@ import { useState, useCallback, useEffect } from "react";
  */
 export default function CurrencyInput({ value, onChange, max = 10000000, label, error, disabled = false, id }) {
   const [displayValue, setDisplayValue] = useState(formatDisplay(value));
+  const focusedRef = useRef(false);
 
   useEffect(() => {
-    setDisplayValue(formatDisplay(value));
+    if (!focusedRef.current) {
+      setDisplayValue(formatDisplay(value));
+    }
   }, [value]);
 
   function formatDisplay(num) {
@@ -33,7 +36,12 @@ export default function CurrencyInput({ value, onChange, max = 10000000, label, 
     onChange(num);
   }, [max, onChange]);
 
+  const handleFocus = useCallback(() => {
+    focusedRef.current = true;
+  }, []);
+
   const handleBlur = useCallback(() => {
+    focusedRef.current = false;
     setDisplayValue(formatDisplay(value));
   }, [value]);
 
@@ -47,6 +55,7 @@ export default function CurrencyInput({ value, onChange, max = 10000000, label, 
           inputMode="numeric"
           value={displayValue}
           onChange={handleChange}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           disabled={disabled}
           className="w-full px-3 py-2 rounded-lg border text-right"

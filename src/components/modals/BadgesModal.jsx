@@ -1,5 +1,6 @@
 // src/components/modals/BadgesModal.jsx — 성취 배지 모달
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { getBadgeSummary } from "../../utils/badges";
 
 const CATEGORY_LABELS = {
@@ -11,15 +12,8 @@ const CATEGORY_LABELS = {
 };
 
 export default function BadgesModal({ onClose }) {
+  const contentRef = useModalBase(onClose);
   const [summary, setSummary] = useState(() => getBadgeSummary());
-
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   // 카테고리별 그룹
   const groups = {};
@@ -31,6 +25,7 @@ export default function BadgesModal({ onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 420, width: "92%", padding: 0 }}
         onClick={e => e.stopPropagation()}

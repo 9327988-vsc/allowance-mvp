@@ -8,6 +8,7 @@ const MAX_WIDTH = 280;
 
 export default function CellTooltip({ cell, anchorRect, settings }) {
   const ref = useRef(null);
+  const prevRect = useRef(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const extraCategories = cell?.extra_items?.map(i => i.category).join(",") || "";
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -15,6 +16,10 @@ export default function CellTooltip({ cell, anchorRect, settings }) {
 
   useEffect(() => {
     if (!ref.current || !anchorRect) return;
+    if (prevRect.current &&
+        prevRect.current.top === anchorRect.top &&
+        prevRect.current.left === anchorRect.left) return;
+    prevRect.current = anchorRect;
     const tt = ref.current.getBoundingClientRect();
     const vw = window.innerWidth;
     const isMobile = vw < 768;

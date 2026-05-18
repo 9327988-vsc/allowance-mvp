@@ -1,5 +1,6 @@
 // src/components/modals/CopyOptionsModal.jsx — 복사 옵션 선택 팝업
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 
 const COPY_OPTIONS = [
   { id: "text", icon: "📝", label: "청구서 복사", desc: "텍스트 청구서만 복사" },
@@ -9,24 +10,14 @@ const COPY_OPTIONS = [
 
 export default function CopyOptionsModal({ onSelect, onClose }) {
   const [selected, setSelected] = useState("text");
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  const contentRef = useModalBase(onClose);
 
   return (
     <div
       className="modal-backdrop"
       onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="복사 옵션"
     >
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 360, width: "85%", padding: 0 }}>
+      <div ref={contentRef} className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 360, width: "85%", padding: 0 }} role="dialog" aria-modal="true" aria-label="복사 옵션">
         <div className="modal-header">
           <h2 className="modal-title">📋 복사 옵션</h2>
           <button onClick={onClose} className="modal-close" aria-label="닫기">×</button>

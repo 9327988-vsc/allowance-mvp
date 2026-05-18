@@ -16,15 +16,15 @@ const STORAGE_KEY = "family_context_v1";
  * @returns {FamilyContextData|null}
  */
 export function loadFamilyContext() {
+  let raw = null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (e) {
     console.warn("loadFamilyContext: parse failed:", e);
-    // 손상된 데이터 백업 후 제거
+    // 손상된 데이터 백업 후 제거 (raw를 재사용하여 이중 읽기 방지)
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         localStorage.setItem(`${STORAGE_KEY}_corrupted_${Date.now()}`, raw);
         localStorage.removeItem(STORAGE_KEY);

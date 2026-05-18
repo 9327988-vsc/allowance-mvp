@@ -1,11 +1,13 @@
 // src/components/modals/GeneralItemForm.jsx — 일반계정 수입/지출 항목 폼
 import { useState, useEffect } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { GENERAL_EXPENSE_CATEGORIES, GENERAL_INCOME_CATEGORIES } from "../../constants/generalCategories";
 import { loadCustomCategories } from "../../utils/storage";
 import CurrencyInput from "../inputs/CurrencyInput";
 import NewCategoryModal from "./NewCategoryModal";
 
 export default function GeneralItemForm({ onClose, onSubmit, defaultValues }) {
+  const contentRef = useModalBase(onClose);
   const [type, setType] = useState(defaultValues?.type ?? "expense");
   const [category, setCategory] = useState(defaultValues?.category ?? "");
   const [name, setName] = useState(defaultValues?.name ?? "");
@@ -43,16 +45,6 @@ export default function GeneralItemForm({ onClose, onSubmit, defaultValues }) {
     onSubmit({ type, category, name: name.trim(), amount });
   }
 
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape" && !showNewCategoryModal) {
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, showNewCategoryModal]);
 
   function handleCategoryChange(e) {
     const value = e.target.value;
@@ -89,9 +81,10 @@ export default function GeneralItemForm({ onClose, onSubmit, defaultValues }) {
       <div
         className="modal-backdrop"
         style={{ zIndex: "var(--z-modal-2)" }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={onClose}
       >
         <div
+          ref={contentRef}
           className="modal-content"
           style={{ maxWidth: 400, width: "90%", opacity: showNewCategoryModal ? 0.6 : 1 }}
           onClick={(e) => e.stopPropagation()}

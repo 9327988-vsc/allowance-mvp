@@ -13,6 +13,8 @@ export function useAsyncAction(asyncFn) {
   const [error, setError] = useState(null);
   const runningRef = useRef(false);
   const mountedRef = useRef(true);
+  const asyncFnRef = useRef(asyncFn);
+  useEffect(() => { asyncFnRef.current = asyncFn; });
   useEffect(() => { return () => { mountedRef.current = false; }; }, []);
 
   const run = useCallback(async (...args) => {
@@ -21,7 +23,7 @@ export function useAsyncAction(asyncFn) {
     setLoading(true);
     setError(null);
     try {
-      const result = await asyncFn(...args);
+      const result = await asyncFnRef.current(...args);
       return result;
     } catch (err) {
       // L-5: setError로 UI 상태 추적 + throw로 caller의 .catch()에도 전달.
@@ -32,7 +34,7 @@ export function useAsyncAction(asyncFn) {
       runningRef.current = false;
       if (mountedRef.current) setLoading(false);
     }
-  }, [asyncFn]);
+  }, []);
 
   return { run, loading, error };
 }

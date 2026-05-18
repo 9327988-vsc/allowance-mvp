@@ -11,12 +11,31 @@ const KEYS = {
 
 function safeSet(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    const json = JSON.stringify(value);
+    // QuotaExceeded 사전 방어: 95% 초과 시 쓰기 거부
+    const usage = getStorageUsageQuick();
+    if (usage > 0.95) {
+      return { success: false, error: "QUOTA_EXCEEDED" };
+    }
+    localStorage.setItem(key, json);
     return { success: true };
   } catch (e) {
     if (e.name === "QuotaExceededError") return { success: false, error: "QUOTA_EXCEEDED" };
     return { success: false, error: "WRITE_ERROR" };
   }
+}
+
+/** 빠른 용량 비율 체크 (0~1) — safeSet 내부용 */
+function getStorageUsageQuick() {
+  try {
+    let used = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      used += k.length + (localStorage.getItem(k)?.length ?? 0);
+    }
+    return (used * 2) / (5 * 1024 * 1024);
+  } catch { return 0; }
 }
 
 let _onCorruptedCallback = null;
@@ -68,7 +87,7 @@ export function loadSettingsForUser(userId) {
     if (userSettings) return userSettings;
     // 유저별 설정 없음 → 글로벌 설정 마이그레이션 (최초 1회만)
     // 이미 다른 유저가 settings_v1_u_* 키를 가지고 있으면 마이그레이션 완료 상태
-    const anyUserScoped = listAllAppKeys().some(k => k.startsWith("settings_v1_u_"));
+    const anyUserScoped = Object.keys(localStorage).some(k => k.startsWith("settings_v1_u_"));
     if (anyUserScoped) return null; // 다른 유저 존재 → 새 유저는 초기 설정부터
     const globalSettings = safeGet(KEYS.SETTINGS);
     if (globalSettings) {
@@ -148,8 +167,8 @@ function getTodayYearMonth() {
 
 // 키 관리
 export const APP_KEY_PATTERNS = {
-  exact: ["settings_v1", "custom_categories_v1", "meta_v1", "family_context_v1", "family_accounts_v1", "device_id_v1", "submitted_claims_v1", "theme_v1", "user_accounts_v1", "auth_migrated_v1", "user_prefs_v1", "pin_reset_requests_v1", "migration_done_v1"],
-  prefix: ["calendar_v1_", "mock_kv:", "settings_v1_u_"],
+  exact: ["settings_v1", "custom_categories_v1", "meta_v1", "family_context_v1", "family_accounts_v1", "device_id_v1", "submitted_claims_v1", "theme_v1", "user_accounts_v1", "auth_migrated_v1", "user_prefs_v1", "pin_reset_requests_v1", "migration_done_v1", "saved_family_accounts_v1", "phase2_migrated_v1"],
+  prefix: ["calendar_v1_", "mock_kv:", "settings_v1_u_", "notifications_v1_u_", "badges_earned_v1_u_", "chores_v1_f_", "chore_log_v1_f_", "auto_grant_schedules_v1_f_", "auto_grant_last_run_v1_f_", "qna_v1_f_"],
   contains: ["_corrupted_"]
 };
 
@@ -175,7 +194,7 @@ export function cleanupOldCalendars(retainMonths = 6, { dryRun = false } = {}) {
     if (!k || !k.startsWith("calendar_v1_")) continue;
     const match = k.match(/^calendar_v1_(\d{4})_(\d{2})$/);
     if (!match) continue;
-    const keyDate = new Date(parseInt(match[1]), parseInt(match[2]) - 1, 1);
+    const keyDate = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, 1);
     if (keyDate < start) toDelete.push(k);
   }
 
@@ -196,8 +215,11 @@ export function getStorageUsage() {
     if (!key) continue;
     // Only count app-specific keys to avoid inflating usage with third-party data
     if (!isAppKey(key)) continue;
-    used += key.length + (localStorage.getItem(key)?.length ?? 0);
+    // localStorage stores UTF-16 code units; each character = 2 bytes.
+    // Multiply character count by 2 to get byte-accurate usage.
+    used += (key.length + (localStorage.getItem(key)?.length ?? 0)) * 2;
   }
+  // Most browsers allocate 5MB (5 * 1024 * 1024 bytes) for localStorage
   const TOTAL = 5 * 1024 * 1024;
   return { used, total: TOTAL, percent: (used / TOTAL) * 100 };
 }

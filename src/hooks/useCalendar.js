@@ -51,6 +51,8 @@ export function useCalendar(settings) {
 
   const [viewYear, setViewYear] = useState(todayY);
   const [viewMonth, setViewMonth] = useState(todayM);
+  const viewRef = useRef({ year: todayY, month: todayM });
+  useEffect(() => { viewRef.current = { year: viewYear, month: viewMonth }; }, [viewYear, viewMonth]);
   // 캘린더 데이터 갱신 트리거용
   const [revision, setRevision] = useState(0);
 
@@ -91,32 +93,32 @@ export function useCalendar(settings) {
   }, [viewYear, viewMonth, settings, calendar, holidays]);
 
   const goToPrevMonth = useCallback(() => {
-    if (viewYear === 2024 && viewMonth === 1) {
+    const v = viewRef.current;
+    if (v.year === 2024 && v.month === 1) {
       showToast({ type: "warning", message: "📅 2024년 1월 이전으로는 이동할 수 없습니다" });
       return;
     }
-    setViewMonth(m => {
-      if (m === 1) {
-        setViewYear(y => y - 1);
-        return 12;
-      }
-      return m - 1;
-    });
-  }, [viewYear, viewMonth]);
+    if (v.month === 1) {
+      setViewYear(v.year - 1);
+      setViewMonth(12);
+    } else {
+      setViewMonth(v.month - 1);
+    }
+  }, []);
 
   const goToNextMonth = useCallback(() => {
-    if (isNextMonthDisabled(viewYear, viewMonth)) {
+    const v = viewRef.current;
+    if (isNextMonthDisabled(v.year, v.month)) {
       showToast({ type: "warning", message: "📅 12개월 후까지만 표시됩니다", duration: 4000 });
       return;
     }
-    setViewMonth(m => {
-      if (m === 12) {
-        setViewYear(y => y + 1);
-        return 1;
-      }
-      return m + 1;
-    });
-  }, [viewYear, viewMonth]);
+    if (v.month === 12) {
+      setViewYear(v.year + 1);
+      setViewMonth(1);
+    } else {
+      setViewMonth(v.month + 1);
+    }
+  }, []);
 
   const goToMonth = useCallback((year, month) => {
     setViewYear(year);
@@ -132,10 +134,13 @@ export function useCalendar(settings) {
   }, []);
 
   const saveCell = useCallback((date, cellData) => {
-    const cal = loadCalendarMonth(viewYear, viewMonth);
+    const { year, month } = viewRef.current;
+    const cal = loadCalendarMonth(year, month);
     // cellData가 비어있으면 삭제
     const hasData = (cellData.extra_items && cellData.extra_items.length > 0) ||
-                    (cellData.memo && cellData.memo.trim() !== "");
+                    (cellData.memo && cellData.memo.trim() !== "") ||
+                    !!cellData.skip_school ||
+                    !!cellData.skip_academy;
     if (hasData) {
       cal.cells[date] = cellData;
     } else {
@@ -152,7 +157,7 @@ export function useCalendar(settings) {
       showToast({ type: "error", message: "저장 실패. 다시 시도해주세요", duration: 5000 });
     }
     return result;
-  }, [viewYear, viewMonth]);
+  }, []);
 
   const nextDisabled = isNextMonthDisabled(viewYear, viewMonth);
 

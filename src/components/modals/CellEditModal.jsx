@@ -1,5 +1,6 @@
 // src/components/modals/CellEditModal.jsx — S-103 셀 편집
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { getWeekdayKor } from "../../utils/calculator";
 import { getCategoryIcon } from "../../constants/categories";
 import { newExtraItemId } from "../../utils/idGenerator";
@@ -19,6 +20,10 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
   const day = parseInt(date.split("-")[2], 10);
   const month = parseInt(date.split("-")[1], 10);
 
+  // 학교/학원 등교일인지 판별
+  const isSchoolDay = settings?.school?.days?.includes(weekday) && (!is_holiday || settings?.school?.holiday_attend);
+  const isAcademyDay = settings?.academy?.days?.includes(weekday) && (!is_holiday || settings?.academy?.holiday_attend);
+
   // draft 상태 (편집 중) — 초기값을 state로 캡처하여 리렌더 시 재계산 방지
   const [originalExtraItems] = useState(() => {
     const items = calendar?.cells?.[date]?.extra_items;
@@ -26,6 +31,8 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
   });
   const [originalMemo] = useState(() => calendar?.cells?.[date]?.memo ?? "");
   const [originalMood] = useState(() => calendar?.cells?.[date]?.mood ?? null);
+  const [originalSkipSchool] = useState(() => calendar?.cells?.[date]?.skip_school || false);
+  const [originalSkipAcademy] = useState(() => calendar?.cells?.[date]?.skip_academy || false);
 
   const [extraItems, setExtraItems] = useState(() => {
     const items = calendar?.cells?.[date]?.extra_items;
@@ -33,6 +40,9 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
   });
   const [memo, setMemo] = useState(() => calendar?.cells?.[date]?.memo ?? "");
   const [mood, setMood] = useState(() => calendar?.cells?.[date]?.mood ?? null);
+  // false | "half" | "full"
+  const [skipSchool, setSkipSchool] = useState(() => calendar?.cells?.[date]?.skip_school || false);
+  const [skipAcademy, setSkipAcademy] = useState(() => calendar?.cells?.[date]?.skip_academy || false);
   const [memoError, setMemoError] = useState("");
 
   // S-104 상태
@@ -46,9 +56,9 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
   const [viewingReceipt, setViewingReceipt] = useState(null);
 
   const isDirty = useCallback(() => {
-    return JSON.stringify({ extra_items: originalExtraItems, memo: originalMemo, mood: originalMood }) !==
-           JSON.stringify({ extra_items: extraItems, memo, mood });
-  }, [originalExtraItems, originalMemo, originalMood, extraItems, memo, mood]);
+    return JSON.stringify({ extra_items: originalExtraItems, memo: originalMemo, mood: originalMood, skip_school: originalSkipSchool, skip_academy: originalSkipAcademy }) !==
+           JSON.stringify({ extra_items: extraItems, memo, mood, skip_school: skipSchool, skip_academy: skipAcademy });
+  }, [originalExtraItems, originalMemo, originalMood, originalSkipSchool, originalSkipAcademy, extraItems, memo, mood, skipSchool, skipAcademy]);
 
   const handleClose = useCallback(() => {
     if (isDirty()) {
@@ -58,38 +68,15 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
     onClose();
   }, [isDirty, onClose]);
 
-  // ESC 처리
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key !== "Escape") return;
+  // useModalBase: scroll lock + focus trap + ESC (when no sub-modal open)
+  const hasChildOpen = !!(viewingReceipt || showDirtyConfirm || deleteConfirmId || showAddForm || editingItemId);
+  const modalRef = useModalBase(handleClose, { active: !hasChildOpen });
 
-      // 영수증 뷰어가 열려있으면 그것이 처리 (이중 발동 방지)
-      if (viewingReceipt) return;
-      // S-106 변경 확인이 열려있으면 → 계속 편집 (ESC = 안전 방향)
-      if (showDirtyConfirm) {
-        e.stopPropagation();
-        setShowDirtyConfirm(false);
-        return;
-      }
-      // S-107 삭제 확인이 열려있으면 그것만 닫기
-      if (deleteConfirmId) {
-        e.stopPropagation();
-        setDeleteConfirmId(null);
-        return;
-      }
-      // S-104가 열려있으면 그것만 닫기
-      if (showAddForm || editingItemId) {
-        e.stopPropagation();
-        setShowAddForm(false);
-        setEditingItemId(null);
-        return;
-      }
-      // S-103 닫기
-      handleClose();
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [showDirtyConfirm, deleteConfirmId, showAddForm, editingItemId, viewingReceipt, handleClose]);
+  // Sub-modal: delete confirm — focus trap + scroll lock + ESC via modal stack
+  const deleteDialogRef = useModalBase(() => setDeleteConfirmId(null), { active: !!deleteConfirmId });
+
+  // Sub-modal ESC 처리 — ExtraItemForm/ConfirmDirtyModal은 자체 useModalBase가 있으므로 여기서는 불필요
+  // viewingReceipt(ReceiptViewerModal)도 자체 useModalBase 사용
 
   function handleSave() {
     const validation = validateMemo(memo);
@@ -97,7 +84,7 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
       setMemoError(validation.errors.memo);
       return;
     }
-    onSave(date, { extra_items: extraItems, memo: memo.trim(), mood });
+    onSave(date, { extra_items: extraItems, memo: memo.trim(), mood, skip_school: skipSchool, skip_academy: skipAcademy });
     onClose();
   }
 
@@ -142,8 +129,10 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
 
   return (
     <>
-      <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-1)" }}>
+      <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-1)" }} onClick={handleClose}>
         <div
+          ref={modalRef}
+          tabIndex={-1}
           className="modal-content cell-edit-modal"
           style={{ maxWidth: 480, width: "95%" }}
           onClick={e => e.stopPropagation()}
@@ -165,7 +154,7 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
           </div>
 
           {/* 자동 항목 (읽기 전용) */}
-          {(school_fee > 0 || academy_fee > 0) && (
+          {(isSchoolDay || isAcademyDay) && (
             <div
               className="mb-4 p-3 rounded-md"
               style={{ background: "var(--color-bg-secondary)", opacity: 0.85, cursor: "help" }}
@@ -176,11 +165,11 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
               <p className="text-sm font-medium mb-2" style={{ color: "var(--color-text-secondary)" }}>
                 기본 항목 (자동, 수정 불가)
               </p>
-              {school_fee > 0 && (
+              {isSchoolDay && (
                 <>
-                  <div className="flex justify-between text-sm">
-                    <span>🏫 학교 등교</span>
-                    <span>{formatAmountShort(school_fee)}<span className="amount-unit">원</span></span>
+                  <div className="flex justify-between text-sm" style={{ textDecoration: skipSchool === "full" ? "line-through" : "none", opacity: skipSchool ? 0.5 : 1 }}>
+                    <span>🏫 학교 등교 {skipSchool === "half" ? "(편도)" : ""}</span>
+                    <span>{formatAmountShort(skipSchool === "half" ? settings.school.fare : settings.school.fare * (settings.school.round_trip ? 2 : 1))}<span className="amount-unit">원</span></span>
                   </div>
                   {settings?.school?.bus_routes?.length > 0 && (
                     <div className="text-xs" style={{ color: "var(--color-text-secondary)", paddingLeft: "var(--space-2)", marginTop: "2px", marginBottom: "var(--space-1)" }}>
@@ -192,11 +181,11 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
                   )}
                 </>
               )}
-              {academy_fee > 0 && (
+              {isAcademyDay && (
                 <>
-                  <div className="flex justify-between text-sm">
-                    <span>✏️ 학원 등원</span>
-                    <span>{formatAmountShort(academy_fee)}<span className="amount-unit">원</span></span>
+                  <div className="flex justify-between text-sm" style={{ textDecoration: skipAcademy === "full" ? "line-through" : "none", opacity: skipAcademy ? 0.5 : 1 }}>
+                    <span>✏️ 학원 등원 {skipAcademy === "half" ? "(편도)" : ""}</span>
+                    <span>{formatAmountShort(skipAcademy === "half" ? settings.academy.fare : settings.academy.fare * (settings.academy.round_trip ? 2 : 1))}<span className="amount-unit">원</span></span>
                   </div>
                   {settings?.academy?.bus_routes?.length > 0 && (
                     <div className="text-xs" style={{ color: "var(--color-text-secondary)", paddingLeft: "var(--space-2)", marginTop: "2px", marginBottom: "var(--space-1)" }}>
@@ -214,8 +203,63 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
             </div>
           )}
 
+          {/* 결석(안 간 날) 토글 */}
+          {(isSchoolDay || isAcademyDay) && (
+            <div className="mb-4 p-3 rounded-md" style={{ background: "var(--color-bg-tertiary, var(--color-bg-secondary))", border: "1px dashed var(--color-border)" }}>
+              <p className="text-sm font-medium mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                🚫 안 간 날 (버스비 제외)
+              </p>
+              {isSchoolDay && (
+                <div className="py-1">
+                  <p className="text-sm mb-1" style={{ color: "var(--color-text-primary)" }}>��� 학교</p>
+                  <div className="flex gap-3 ml-2">
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="skipSchool" checked={!skipSchool} onChange={() => setSkipSchool(false)} />
+                      <span>정상 등교</span>
+                    </label>
+                    {settings.school.round_trip && (
+                      <label className="flex items-center gap-1 text-xs cursor-pointer">
+                        <input type="radio" name="skipSchool" checked={skipSchool === "half"} onChange={() => setSkipSchool("half")} />
+                        <span>편도만</span>
+                        {skipSchool === "half" && <span style={{ color: "var(--color-error)" }}>-{formatAmountShort(settings.school.fare)}원</span>}
+                      </label>
+                    )}
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="skipSchool" checked={skipSchool === "full"} onChange={() => setSkipSchool("full")} />
+                      <span>안 감</span>
+                      {skipSchool === "full" && <span style={{ color: "var(--color-error)" }}>-{formatAmountShort(settings.school.fare * (settings.school.round_trip ? 2 : 1))}원</span>}
+                    </label>
+                  </div>
+                </div>
+              )}
+              {isAcademyDay && (
+                <div className="py-1">
+                  <p className="text-sm mb-1" style={{ color: "var(--color-text-primary)" }}>✏️ 학원</p>
+                  <div className="flex gap-3 ml-2">
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="skipAcademy" checked={!skipAcademy} onChange={() => setSkipAcademy(false)} />
+                      <span>정상 등원</span>
+                    </label>
+                    {settings.academy.round_trip && (
+                      <label className="flex items-center gap-1 text-xs cursor-pointer">
+                        <input type="radio" name="skipAcademy" checked={skipAcademy === "half"} onChange={() => setSkipAcademy("half")} />
+                        <span>편도만</span>
+                        {skipAcademy === "half" && <span style={{ color: "var(--color-error)" }}>-{formatAmountShort(settings.academy.fare)}원</span>}
+                      </label>
+                    )}
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="skipAcademy" checked={skipAcademy === "full"} onChange={() => setSkipAcademy("full")} />
+                      <span>안 감</span>
+                      {skipAcademy === "full" && <span style={{ color: "var(--color-error)" }}>-{formatAmountShort(settings.academy.fare * (settings.academy.round_trip ? 2 : 1))}원</span>}
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 자동 항목 없는 경우 */}
-          {school_fee === 0 && academy_fee === 0 && !is_holiday && (
+          {school_fee === 0 && academy_fee === 0 && !is_holiday && !isSchoolDay && !isAcademyDay && (
             <p className="mb-4 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
               (자동 항목 없음)
             </p>
@@ -340,8 +384,9 @@ export default function CellEditModal({ cell, calendar, settings, onSave, onClos
         const item = extraItems.find(i => i.id === deleteConfirmId);
         if (!item) return null;
         return (
-          <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }}>
+          <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }} onClick={() => setDeleteConfirmId(null)}>
             <div
+              ref={deleteDialogRef}
               className="modal-content"
               style={{ maxWidth: 360, width: "90%" }}
               onClick={e => e.stopPropagation()}

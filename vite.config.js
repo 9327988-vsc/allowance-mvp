@@ -11,14 +11,11 @@ export default defineConfig(({ mode }) => ({
   build: {
     target: "es2020",
     minify: "esbuild",
-    sourcemap: mode !== "production"
+    sourcemap: mode === "production" ? false : true
   },
   test: {
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/test/setup.js"]
-  },
-  define: {
-    "import.meta.env.VITE_APP_VERSION": JSON.stringify(process.env.npm_package_version || "1.0.0")
   }
 }));

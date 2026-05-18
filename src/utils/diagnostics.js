@@ -6,7 +6,7 @@ export function checkDataStatus() {
   return listAllAppKeys().map(key => {
     const raw = localStorage.getItem(key);
     if (!raw) return { key, valid: false, size: 0, error: "키 없음" };
-    const size = raw.length;
+    const size = (key.length + raw.length) * 2; // UTF-16: 문자당 2바이트
     try {
       const data = JSON.parse(raw);
       let itemCount;
@@ -43,30 +43,14 @@ export function getSystemInfo() {
 }
 
 /**
- * checkDataStatus의 비동기 버전 — 대용량 데이터에서 메인 스레드 차단 방지
- */
-export function checkDataStatusAsync() {
-  return new Promise(resolve => {
-    const run = typeof requestIdleCallback !== "undefined" ? requestIdleCallback : (fn) => setTimeout(fn, 0);
-    // NOTE: checkDataStatus() 자체는 동기 루프이므로, 키가 매우 많으면
-    // idle callback 안에서도 메인 스레드를 잠시 차단할 수 있음.
-    // 향후 키 목록을 청크 단위로 분할 처리하면 개선 가능.
-    run(() => {
-      const result = checkDataStatus();
-      resolve(result);
-    });
-  });
-}
-
-/**
  * 손상된 키를 가장 최근 백업으로 복구
  */
 export function recoverFromBackup(originalKey) {
   const backupKeys = Object.keys(localStorage)
     .filter(k => k.startsWith(originalKey + "_corrupted_"))
     .sort((a, b) => {
-      const ta = parseInt(a.match(/(\d+)$/)?.[1] || "0");
-      const tb = parseInt(b.match(/(\d+)$/)?.[1] || "0");
+      const ta = parseInt(a.match(/(\d+)$/)?.[1] || "0", 10);
+      const tb = parseInt(b.match(/(\d+)$/)?.[1] || "0", 10);
       return tb - ta;
     });
 
@@ -111,8 +95,8 @@ function _enforceBackupRetention(originalKey) {
   const remaining = Object.keys(localStorage)
     .filter(k => k.startsWith(originalKey + "_corrupted_"))
     .sort((a, b) => {
-      const ta = parseInt(a.match(/(\d+)$/)?.[1] || "0");
-      const tb = parseInt(b.match(/(\d+)$/)?.[1] || "0");
+      const ta = parseInt(a.match(/(\d+)$/)?.[1] || "0", 10);
+      const tb = parseInt(b.match(/(\d+)$/)?.[1] || "0", 10);
       return tb - ta;
     });
 

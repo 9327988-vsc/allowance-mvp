@@ -1,23 +1,13 @@
 // src/components/drawers/MonthSelector.jsx — S-202 월 선택
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { isAtFutureLimit } from "../../utils/dateLimit";
 import { useSwipeToClose } from "../../hooks/useSwipeToClose";
 
 export default function MonthSelector({ currentYear, currentMonth, todayY, todayM, onSelect, onClose }) {
+  const contentRef = useModalBase(onClose);
   const swipeHandlers = useSwipeToClose(onClose);
   const [displayYear, setDisplayYear] = useState(currentYear);
-
-  // ESC 닫기
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
 
   // 연도 이동 시 모든 월이 비활성이면 ▶ 비활성
   const allDisabledInYear = Array.from({ length: 12 }, (_, i) => isAtFutureLimit(displayYear + 1, i + 1))
@@ -35,6 +25,7 @@ export default function MonthSelector({ currentYear, currentMonth, todayY, today
       className="month-selector-backdrop"
     >
       <div
+        ref={contentRef}
         className="month-selector"
         role="dialog"
         aria-label="월 선택"

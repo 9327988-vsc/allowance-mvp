@@ -1,5 +1,5 @@
 // src/components/SummaryTable.jsx — S-401 정산표 + S-403 빈 상태
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { getCategoryIcon } from "../constants/categories";
 import { loadCustomCategories } from "../utils/storage";
 import { formatAmountShort } from "../utils/formatAmount";
@@ -27,11 +27,14 @@ export default function SummaryTable({ year, month, calc, settings, claimStatus,
   }, [childMemberId, year, month]);
   const [expanded, setExpanded] = useState(false);
   // 월 변경 시 접기 초기화
-  const [prevMonth, setPrevMonth] = useState(month);
-  if (month !== prevMonth) {
-    setPrevMonth(month);
-    if (expanded) setExpanded(false);
-  }
+  useEffect(() => {
+    setExpanded(false);
+  }, [month]);
+
+  const insightItems = useMemo(() => {
+    if (!year) return [];
+    return generateInsights(year, month);
+  }, [year, month]);
 
   if (!calc) return null;
 
@@ -76,7 +79,7 @@ export default function SummaryTable({ year, month, calc, settings, claimStatus,
     categoryGroups[cat].total += item.amount;
   });
 
-  const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
+  const isDesktop = useMemo(() => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches, []);
 
   return (
     <div className="summary-table">
@@ -177,19 +180,15 @@ export default function SummaryTable({ year, month, calc, settings, claimStatus,
           )}
 
           {/* 월간 인사이트 */}
-          {year && (() => {
-            const insights = generateInsights(year, month);
-            if (!insights.length) return null;
-            return (
-              <div className="summary-insights">
-                {insights.slice(0, 3).map((ins, i) => (
-                  <div key={i} className="summary-insights__item">
-                    <span>{ins.icon}</span> {ins.text}
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
+          {insightItems.length > 0 && (
+            <div className="summary-insights">
+              {insightItems.slice(0, 3).map((ins, i) => (
+                <div key={i} className="summary-insights__item">
+                  <span>{ins.icon}</span> {ins.text}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

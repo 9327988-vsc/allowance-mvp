@@ -72,8 +72,12 @@ export function getHolidays() {
     const todayDay = now.toDateString();
     if (loadedDay !== todayDay) {
       // stale 데이터를 유지하면서 백그라운드 재로드 (atomic: _holidays 유지)
-      _loadedAt = null;
-      retryLoadHolidays().catch(() => {});
+      // 실패 시 _loadedAt을 현재로 복원하여 다음 호출에서도 재시도 가능하게 함
+      const staleDate = _loadedAt;
+      _loadedAt = now; // 임시로 오늘 날짜 설정 (중복 재로드 방지)
+      retryLoadHolidays().catch(() => {
+        // 재로드 실패 시 1시간 후 재시도할 수 있도록 loadedAt은 현재로 유지
+      });
       return _holidays;
     }
   }
@@ -104,14 +108,31 @@ export function getHolidaysLoadError() {
  */
 export async function retryLoadHolidays(timeoutMs = 10000) {
   if (_loading) return _holidays ?? {};
-  const stale = _holidays;
-  _holidays = null;
+  _loading = true;
   try {
-    return await loadHolidays(timeoutMs);
+    const url = (import.meta.env?.BASE_URL ?? "/") + "holidays.json";
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      if (!res.ok) throw new Error(`holidays.json 로드 실패: ${res.status}`);
+      const newData = await res.json();
+      _holidays = newData; // atomic swap only on success
+      _loadedAt = new Date();
+      _loadError = null;
+      return _holidays;
+    } finally {
+      clearTimeout(timer);
+    }
   } catch (e) {
-    // 실패 시 stale 데이터 복원
-    if (!_holidays && stale) _holidays = stale;
-    throw e;
+    // keep stale _holidays intact (don't nullify)
+    const err = e.name === "AbortError"
+      ? new Error(`holidays.json 재로드 timeout (${timeoutMs}ms)`)
+      : e;
+    _loadError = err;
+    throw err;
+  } finally {
+    _loading = false;
   }
 }
 

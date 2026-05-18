@@ -1,6 +1,6 @@
-// src/components/ParentMainScreen.jsx — S-2-001 부모 메인 (받은 청구 목록)
+// src/components/ParentMainScreen.jsx — 부모 메인 (리디자인: 탭바 + FAB + 칩 선택기)
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useClaims } from "../hooks/useClaims";
 import { useSyncPoller } from "../hooks/useSyncPoller";
 import { useToast } from "../hooks/useToast";
@@ -9,7 +9,6 @@ import { isOnline } from "../utils/onlineStatus";
 import { logout } from "../utils/accountSwitcher";
 import { getMessageForError } from "../constants/errorMessages";
 import { getStatusEmoji } from "../constants/statusLabels";
-import { formatAmountShort } from "../utils/formatAmount";
 
 import ClaimCard from "./widgets/ClaimCard";
 import ParentClaimDetailModal from "./modals/ParentClaimDetailModal";
@@ -20,19 +19,90 @@ import CreateGrantModal from "./modals/CreateGrantModal";
 import AutoGrantModal from "./modals/AutoGrantModal";
 import ChoresManagerModal from "./modals/ChoresManagerModal";
 import NotificationCenterModal from "./modals/NotificationCenterModal";
-import { getUnreadCount } from "../utils/notifications";
+import { getUnreadCount, addNotification } from "../utils/notifications";
 import SpendingStatsModal from "./modals/SpendingStatsModal";
+import QnAModal from "./modals/QnAModal";
 import { generateGrantId } from "../utils/idGenerator";
 import { getDueSchedules, markScheduleRun } from "../utils/autoGrant";
-import MoreMenu from "./widgets/MoreMenu";
+
+// 시간대 + 날짜 기반 인사 메시지
+function getGreetingMessage() {
+  const now = new Date();
+  const hour = now.getHours();
+  const month = now.getMonth() + 1;
+  const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+
+  // 시간대별 메시지 풀
+  const morning = [
+    "상쾌한 아침이에요 ☀️",
+    "좋은 아침이에요 🌅",
+    "활기찬 하루를 시작해봐요",
+    "오늘도 힘찬 하루 되세요",
+    "아침 공기가 맑은 날이에요",
+  ];
+  const daytime = [
+    "바람이 솔솔 부는 오전이에요 🍃",
+    "햇살 좋은 오전이에요 🌤",
+    "오늘 하루도 순조로워요",
+    "포근한 오전이에요",
+    "활기찬 오전 보내고 계시죠?",
+  ];
+  const afternoon = [
+    "따뜻한 오후예요 ☕",
+    "여유로운 점심시간이에요 🍚",
+    "바람이 솔솔 부는 오후예요 🍃",
+    "오후의 여유를 즐겨보세요",
+    "점심 맛있게 드셨나요?",
+  ];
+  const evening = [
+    "노을이 예쁜 저녁이에요 🌇",
+    "편안한 저녁 보내세요 🌙",
+    "오늘 하루도 수고하셨어요",
+    "따뜻한 저녁시간이에요",
+    "저녁 바람이 시원해요",
+  ];
+  const night = [
+    "고요한 밤이에요 🌙",
+    "오늘 하루도 수고 많으셨어요 ✨",
+    "편안한 밤 되세요 🌜",
+    "좋은 꿈 꾸세요",
+    "포근한 밤이에요",
+  ];
+
+  // 계절별 보너스 메시지
+  const seasonal = [];
+  if (month >= 6 && month <= 8) seasonal.push("더운 날씨 조심하세요 🌡️", "시원한 하루 보내세요 🧊");
+  if (month >= 12 || month <= 2) seasonal.push("따뜻하게 입으세요 🧣", "추운 날씨 조심하세요 ❄️");
+  if (month >= 3 && month <= 5) seasonal.push("봄바람이 기분 좋은 날이에요 🌸", "꽃향기 가득한 계절이에요 🌷");
+  if (month >= 9 && month <= 11) seasonal.push("선선한 가을 날씨예요 🍂", "하늘이 높은 가을이에요 🍁");
+
+  let pool;
+  if (hour >= 5 && hour < 9) pool = morning;
+  else if (hour >= 9 && hour < 12) pool = daytime;
+  else if (hour >= 12 && hour < 17) pool = afternoon;
+  else if (hour >= 17 && hour < 21) pool = evening;
+  else pool = night;
+
+  // 계절 메시지를 풀에 추가
+  const combined = [...pool, ...seasonal];
+
+  // 날짜 기반 고정 선택 (하루 동안 같은 메시지)
+  const index = dayOfYear % combined.length;
+  return combined[index];
+}
+
+// Module-level style constants (avoid re-creating on each render)
+const EMPTY_STATE_STYLE = { padding: "var(--space-10) var(--space-4)" };
+const MY_POPUP_STYLE = { maxWidth: 400, width: "92%", padding: 0 };
 
 /**
  * @param {{ familyContext: import("../utils/familyContext").FamilyContextData }} props
  */
 export default function ParentMainScreen({ familyContext, onLogout }) {
-  const { claims, fetchClaims } = useClaims(familyContext.family_id);
+  const { claims, loading: claimsLoading, error: claimsError, fetchClaims } = useClaims(familyContext.family_id);
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [filter, setFilter] = useState("pending");
+  const [selectedChild, setSelectedChild] = useState("all");
   const [familyMembers, setFamilyMembers] = useState([]);
   const [showFamilyInfo, setShowFamilyInfo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -45,12 +115,63 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
   const [showChores, setShowChores] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [unreadCount, setUnreadCount] = useState(() => getUnreadCount());
-  const [showMore, setShowMore] = useState(false);
   const [showSpendingStats, setShowSpendingStats] = useState(false);
+  const [showMyPopup, setShowMyPopup] = useState(false);
+  const [showQnA, setShowQnA] = useState(false);
   const [grantLoading, setGrantLoading] = useState(false);
   const { showToast } = useToast();
 
-  // KVAdapter에 familyCode + memberId 설정 (L-6: 변경 시에만 호출)
+  // Stable refs for callbacks that may change (M-2)
+  const showToastRef = useRef(showToast);
+  useEffect(() => { showToastRef.current = showToast; });
+  const notifyRef = useRef(null);
+
+  // addNotification 후 배지 즉시 갱신 (M-13)
+  function notify(data) {
+    addNotification(data);
+    setUnreadCount(getUnreadCount());
+  }
+
+  // Keep notifyRef in sync
+  useEffect(() => { notifyRef.current = notify; });
+
+  // M-4: undoReject dialog focus ref
+  const undoRejectRef = useRef(null);
+  useEffect(() => {
+    if (undoRejectConfirmClaim && undoRejectRef.current) {
+      undoRejectRef.current.querySelector("button")?.focus();
+    }
+  }, [undoRejectConfirmClaim]);
+
+  // m-16: myPopup auto-focus ref
+  const myPopupRef = useRef(null);
+  useEffect(() => {
+    if (showMyPopup && myPopupRef.current) myPopupRef.current.focus();
+  }, [showMyPopup]);
+
+  // m-7: 인사 메시지 메모이제이션 (하루 동안 동일, 자정에 갱신)
+  const [dateKey, setDateKey] = useState(() => new Date().toDateString());
+  useEffect(() => {
+    const checkMidnight = setInterval(() => {
+      const newKey = new Date().toDateString();
+      setDateKey(prev => prev !== newKey ? newKey : prev);
+    }, 60000);
+    return () => clearInterval(checkMidnight);
+  }, []);
+  const greetingMsg = useMemo(() => getGreetingMessage(), [dateKey]);
+  const greetingDate = useMemo(() => new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" }), [dateKey]);
+
+  // 부모 화면은 스크롤 허용
+  useEffect(() => {
+    document.body.style.overflow = "auto";
+    document.body.style.height = "auto";
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.height = "";
+    };
+  }, []);
+
+  // KVAdapter에 familyCode + memberId 설정
   useEffect(() => {
     const adapter = getKVAdapter();
     if (adapter.familyCode !== familyContext.family_code) {
@@ -61,14 +182,14 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
     }
   }, [familyContext.family_code, familyContext.member_id]);
 
-  // 가족 멤버 목록 로드 (자녀 이름 표시용)
+  // 가족 멤버 목록 로드
   const refreshMembers = useCallback(async () => {
     try {
       const adapter = getKVAdapter();
       const result = await adapter.getFamily(familyContext.family_id);
       setFamilyMembers(result.members || []);
     } catch {
-      // 실패 시 무시 — 이름 없이 표시
+      // 실패 시 무시
     }
   }, [familyContext.family_id]);
 
@@ -76,8 +197,9 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
     refreshMembers();
   }, [refreshMembers]);
 
-  // 자동 정기 용돈 실행 (앱 진입 시 1회)
+  // 자동 정기 용돈 실행 (앱 진입 시 1회) (M-3: abort on unmount)
   useEffect(() => {
+    let mounted = true;
     async function runDueSchedules() {
       if (!isOnline()) return;
       const due = getDueSchedules();
@@ -85,6 +207,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
       const adapter = getKVAdapter();
       let successCount = 0;
       for (const schedule of due) {
+        if (!mounted) return;
         try {
           await adapter.submitGrant({
             grant_id: generateGrantId(),
@@ -93,22 +216,26 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
             amount: schedule.amount,
             reason: `자동 지급 (${schedule.frequency === "weekly" ? "매주" : "매월"})`,
           });
+          if (!mounted) return;
           const markResult = markScheduleRun(schedule.id);
           if (markResult.success) successCount++;
         } catch {
           // 개별 스케줄 실패 시 다음 것 계속
         }
       }
+      if (!mounted) return;
       if (successCount > 0) {
-        showToast({ type: "success", message: `🔄 자동 지급 ${successCount}건 완료` });
+        showToastRef.current({ type: "success", message: `🔄 자동 지급 ${successCount}건 완료` });
+        notifyRef.current({ type: "auto_grant", title: "자동 정기 지급", message: `${successCount}건의 자동 지급이 완료되었어요` });
       }
       await fetchClaims();
     }
     runDueSchedules();
+    return () => { mounted = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 30초 폴링 (청구 + 멤버 이름 갱신)
+  // 30초 폴링
   const pollFn = useCallback(async () => {
     if (!isOnline()) return;
     await fetchClaims();
@@ -118,26 +245,24 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
   useSyncPoller(pollFn, { interval: 30000 });
 
   // 청구 카드 클릭
-  function handleClaimClick(claim) {
+  const handleClaimClick = useCallback((claim) => {
     setSelectedClaim(claim);
-  }
+  }, []);
 
-  // 상세 모달 닫기 후 목록 갱신
   function handleDetailClose() {
     setSelectedClaim(null);
     fetchClaims();
   }
 
-  // 자녀 이름 조회
-  function getChildName(childMemberId) {
+  const getChildName = useCallback((childMemberId) => {
     const member = familyMembers.find((m) => m.member_id === childMemberId);
     return member?.display_name || "자녀";
-  }
+  }, [familyMembers]);
 
-  // 빠른 승인
-  async function handleQuickApprove(claim) {
+  // 빠른 승인 (M-2: useCallback + stable refs)
+  const handleQuickApprove = useCallback(async (claim) => {
     if (!isOnline()) {
-      showToast({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
+      showToastRef.current({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
       return;
     }
     setQuickActionId(claim.claim_id);
@@ -148,23 +273,23 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         decided_by_member_id: familyContext.member_id,
         expected_updated_at: claim.updated_at,
       });
-      showToast({ type: "success", message: `${claim.month}월 청구 승인 완료!` });
+      showToastRef.current({ type: "success", message: `${claim.month}월 청구 승인 완료!` });
+      notifyRef.current({ type: "claim_approved", title: `${claim.month}월 청구 승인`, message: `${getChildName(claim.child_member_id)}의 청구가 승인되었어요` });
       await fetchClaims();
     } catch (err) {
       if (err.code === "CONFLICT") {
-        showToast({ type: "error", message: "이미 처리된 청구입니다" });
+        showToastRef.current({ type: "error", message: "이미 처리된 청구입니다" });
       } else {
-        showToast({ type: "error", message: getMessageForError(err) });
+        showToastRef.current({ type: "error", message: getMessageForError(err) });
       }
     } finally {
       setQuickActionId(null);
     }
-  }
+  }, [familyContext.member_id, fetchClaims, getChildName]);
 
-  // 빠른 거절 (사유 입력 모달 오픈)
-  function handleQuickReject(claim) {
+  const handleQuickReject = useCallback((claim) => {
     setQuickRejectTarget(claim);
-  }
+  }, []);
 
   async function handleQuickRejectSubmit(reason) {
     if (!quickRejectTarget) return;
@@ -182,6 +307,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         expected_updated_at: quickRejectTarget.updated_at,
       });
       showToast({ type: "success", message: "거절되었습니다" });
+      notify({ type: "claim_rejected", title: "청구 거절", message: `${getChildName(quickRejectTarget.child_member_id)}의 ${quickRejectTarget.month}월 청구가 거절되었어요` });
       setQuickRejectTarget(null);
       await fetchClaims();
     } catch (err) {
@@ -195,7 +321,6 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
     }
   }
 
-  // 추가 지급 등록
   async function handleSubmitGrant(input) {
     if (!isOnline()) {
       showToast({ type: "error", message: "오프라인 상태에서는 등록할 수 없어요" });
@@ -212,6 +337,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         reason: input.reason,
       });
       showToast({ type: "success", message: `${getStatusEmoji("granted")} ${input.name} 지급 등록 완료!` });
+      notify({ type: "grant_received", title: "추가 지급", message: `${getChildName(input.child_member_id)}에게 ${input.name} 지급 완료` });
       setShowGrantModal(false);
       await fetchClaims();
     } catch (err) {
@@ -221,14 +347,14 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
     }
   }
 
-  // 빠른 거절 취소
-  function handleQuickUndoReject(claim) {
+  // M-14: useCallback memoization
+  const handleQuickUndoReject = useCallback((claim) => {
     if (!isOnline()) {
-      showToast({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
+      showToastRef.current({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
       return;
     }
     setUndoRejectConfirmClaim(claim);
-  }
+  }, []);
 
   async function executeUndoReject(claim) {
     setUndoRejectConfirmClaim(null);
@@ -253,134 +379,107 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
     }
   }
 
-  // 청구 분류: pending (상단) vs 나머지 (하단)
-  const pendingClaims = useMemo(() => claims.filter((c) => c.type !== "grant" && c.status === "pending"), [claims]);
-  const inProgressClaims = useMemo(() => claims.filter((c) => c.type !== "grant" && (c.status === "approved" || c.status === "paid")), [claims]);
-  const completedClaims = useMemo(() => claims.filter((c) => c.type !== "grant" && (c.status === "received" || c.status === "rejected")), [claims]);
-  const grantClaims = useMemo(() => claims.filter((c) => c.type === "grant"), [claims]);
-
-  // 자녀별 요약 데이터
-  const childSummaries = useMemo(() => {
-    const now = new Date();
-    const thisMonth = now.getMonth() + 1;
-    const thisYear = now.getFullYear();
-    const byChild = {};
-
-    claims.forEach((c) => {
-      const id = c.child_member_id;
-      if (!byChild[id]) {
-        byChild[id] = { memberId: id, total: 0, approved: 0, count: 0, lastDate: null };
-      }
-      // 이번 달 기준 통계
-      if (c.year === thisYear && c.month === thisMonth) {
-        byChild[id].total += c.total || 0;
-        byChild[id].count++;
-        if (c.status === "approved" || c.status === "paid") byChild[id].approved++;
-      }
-      // 마지막 청구일
-      const d = new Date(c.submitted_at);
-      if (!byChild[id].lastDate || d > byChild[id].lastDate) byChild[id].lastDate = d;
-    });
-
-    return Object.values(byChild).map((s) => ({
-      ...s,
-      name: getChildName(s.memberId),
-      approvalRate: s.count > 0 ? Math.round((s.approved / s.count) * 100) : 0,
-      lastDateStr: s.lastDate
-        ? s.lastDate.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
-        : "-",
-    }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claims, familyMembers]);
-
+  // 자녀 필터 적용된 청구 목록
   const childMembers = useMemo(() => {
     return familyMembers.filter(m => m.role === "child");
   }, [familyMembers]);
 
-  return (
-    <div className="app-container" style={{ paddingBottom: "var(--space-16, 72px)" }}>
-      <div className="parent-header-title">
-        📬 받은 청구
-        {pendingClaims.length > 0 && (
-          <span className="notification-badge">{pendingClaims.length}</span>
-        )}
-      </div>
+  const filteredClaims = useMemo(() => {
+    if (selectedChild === "all") return claims;
+    return claims.filter(c => c.child_member_id === selectedChild);
+  }, [claims, selectedChild]);
 
-      {/* 자녀별 요약 (항상 표시) */}
-      {childSummaries.length > 0 && (
-        <div className="child-summary-section">
-          <h3 className="child-summary-section__title">👦 자녀별 이번 달</h3>
-          <div className="child-summary-cards">
-            {childSummaries.map((child) => (
-              <div key={child.memberId} className="child-summary-card">
-                <div className="child-summary-card__name">{child.name}</div>
-                <div className="child-summary-card__stats">
-                  <div className="child-summary-card__stat">
-                    <span className="child-summary-card__stat-value">
-                      {formatAmountShort(child.total)}<span className="amount-unit">원</span>
-                    </span>
-                    <span className="child-summary-card__stat-label">청구 합계</span>
-                  </div>
-                  <div className="child-summary-card__stat">
-                    <span className="child-summary-card__stat-value child-summary-card__stat-value--rate">
-                      {child.approvalRate}%
-                    </span>
-                    <span className="child-summary-card__stat-label">승인율</span>
-                  </div>
-                  <div className="child-summary-card__stat">
-                    <span className="child-summary-card__stat-value child-summary-card__stat-value--date">
-                      {child.lastDateStr}
-                    </span>
-                    <span className="child-summary-card__stat-label">마지막 청구</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+  const pendingClaims = useMemo(() => filteredClaims.filter((c) => c.type !== "grant" && c.status === "pending"), [filteredClaims]);
+  const inProgressClaims = useMemo(() => filteredClaims.filter((c) => c.type !== "grant" && (c.status === "approved" || c.status === "paid")), [filteredClaims]);
+  const completedClaims = useMemo(() => filteredClaims.filter((c) => c.type !== "grant" && (c.status === "received" || c.status === "rejected")), [filteredClaims]);
+  const grantClaims = useMemo(() => filteredClaims.filter((c) => c.type === "grant"), [filteredClaims]);
+
+  return (
+    <div className="parent-screen">
+      {/* 인사 헤더 */}
+      <header className="parent-screen__greeting">
+        <div className="parent-screen__greeting-text">
+          <span className="parent-screen__greeting-hello">안녕하세요, {familyContext.member_display_name}님. {greetingMsg}</span>
+          <span className="parent-screen__greeting-date">{greetingDate}</span>
+        </div>
+        {pendingClaims.length > 0 && (
+          <span className="parent-screen__pending-badge">{pendingClaims.length}건 대기</span>
+        )}
+      </header>
+
+      {/* 자녀 칩 선택기 */}
+      {childMembers.length > 0 && (
+        <div className="parent-screen__chips">
+          <button
+            className={`parent-chip${selectedChild === "all" ? " parent-chip--active" : ""}`}
+            onClick={() => setSelectedChild("all")}
+            aria-pressed={selectedChild === "all"}
+          >
+            전체
+          </button>
+          {childMembers.map(child => (
+            <button
+              key={child.member_id}
+              className={`parent-chip${selectedChild === child.member_id ? " parent-chip--active" : ""}`}
+              onClick={() => setSelectedChild(child.member_id)}
+              aria-pressed={selectedChild === child.member_id}
+            >
+              {child.display_name}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* 필터 탭 */}
-      <main className="parent-main-content">
-        {claims.length > 0 && (
-          <div className="parent-filter-tabs">
-            {[
-              { key: "pending", label: "대기", count: pendingClaims.length },
-              { key: "inprogress", label: "진행", count: inProgressClaims.length },
-              { key: "completed", label: "완료", count: completedClaims.length },
-              { key: "all", label: "전체", count: claims.length },
-            ].map(tab => (
-              <button
-                key={tab.key}
-                className={`parent-filter-tab${filter === tab.key ? " parent-filter-tab--active" : ""}`}
-                onClick={() => setFilter(tab.key)}
-              >
-                {tab.label} ({tab.count})
-              </button>
-            ))}
+      {/* 필터 탭 (sticky) — m-15: show when ANY claims exist */}
+      {claims.length > 0 && (
+        <div className="parent-screen__filters" role="tablist" aria-label="청구 필터">
+          {[
+            { key: "pending", label: "대기", count: pendingClaims.length },
+            { key: "inprogress", label: "진행", count: inProgressClaims.length },
+            { key: "completed", label: "완료", count: completedClaims.length },
+            { key: "all", label: "전체", count: filteredClaims.length },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              role="tab"
+              aria-selected={filter === tab.key}
+              className={`parent-filter-tab${filter === tab.key ? " parent-filter-tab--active" : ""}`}
+              onClick={() => setFilter(tab.key)}
+            >
+              {tab.label}({tab.count})
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 스크롤 가능한 청구 리스트 */}
+      <main className="parent-screen__content">
+        {claimsLoading && claims.length === 0 ? (
+          <div className="empty-state" style={EMPTY_STATE_STYLE}>
+            <div className="empty-state__icon">⏳</div>
+            <div className="empty-state__title">불러오는 중...</div>
           </div>
-        )}
-        {claims.length === 0 ? (
-          <div className="summary-table summary-table--empty">
-            <div className="empty-state">
-              <div className="empty-state__icon">📭</div>
-              <div className="empty-state__title">아직 받은 청구가 없어요</div>
-              <div className="empty-state__desc">
-                자녀가 청구를 보내면<br />여기에 표시됩니다
-              </div>
-              <div className="empty-state__hints">
-                <span className="empty-state__hint">✈️ 자녀가 [제출] 클릭</span>
-                <span className="empty-state__hint">📋 여기서 검토/승인</span>
-              </div>
-              <div className="parent-family-code">
-                <span className="parent-family-code__label">가족 코드</span>
-                <span className="parent-family-code__value">{familyContext.family_code}</span>
-              </div>
+        ) : claimsError && claims.length === 0 ? (
+          <div className="empty-state" style={EMPTY_STATE_STYLE}>
+            <div className="empty-state__icon">⚠️</div>
+            <div className="empty-state__title">데이터를 불러오지 못했어요</div>
+            <button className="btn btn--secondary" style={{ marginTop: "var(--space-3)" }} onClick={fetchClaims}>다시 시도</button>
+          </div>
+        ) : filteredClaims.length === 0 ? (
+          <div className="empty-state" style={EMPTY_STATE_STYLE}>
+            <div className="empty-state__icon">📭</div>
+            <div className="empty-state__title">아직 받은 청구가 없어요</div>
+            <div className="empty-state__desc">
+              자녀가 청구를 보내면<br />여기에 표시됩니다
+            </div>
+            <div className="parent-family-code">
+              <span className="parent-family-code__label">가족 코드</span>
+              <span className="parent-family-code__value">{familyContext.family_code}</span>
             </div>
           </div>
         ) : (
           <>
-            {/* 대기 탭: pending만 */}
+            {/* 대기 탭 */}
             {filter === "pending" && (
               <section className="claim-section">
                 {pendingClaims.length > 0 ? (
@@ -394,7 +493,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
                         onQuickApprove={handleQuickApprove}
                         onQuickReject={handleQuickReject}
                         quickLoading={quickActionId === c.claim_id}
-                        style={{ animationDelay: `${i * 0.06}s` }}
+                        style={{ "--anim-delay": `${i * 0.06}s` }}
                       />
                     ))}
                   </div>
@@ -407,7 +506,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
               </section>
             )}
 
-            {/* 진행 탭: approved + paid */}
+            {/* 진행 탭 */}
             {filter === "inprogress" && (
               <section className="claim-section">
                 {inProgressClaims.length > 0 ? (
@@ -419,7 +518,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
                         childName={getChildName(c.child_member_id)}
                         onClick={handleClaimClick}
                         quickLoading={quickActionId === c.claim_id}
-                        style={{ animationDelay: `${i * 0.06}s` }}
+                        style={{ "--anim-delay": `${i * 0.06}s` }}
                       />
                     ))}
                   </div>
@@ -432,7 +531,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
               </section>
             )}
 
-            {/* 완료 탭: received + rejected + grant */}
+            {/* 완료 탭 */}
             {filter === "completed" && (
               <section className="claim-section">
                 <div className="claim-section__list">
@@ -444,7 +543,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
                       onClick={handleClaimClick}
                       onQuickUndoReject={c.status === "rejected" ? handleQuickUndoReject : undefined}
                       quickLoading={quickActionId === c.claim_id}
-                      style={{ animationDelay: `${i * 0.06}s` }}
+                      style={{ "--anim-delay": `${i * 0.06}s` }}
                     />
                   ))}
                   {grantClaims.map((g, i) => (
@@ -453,7 +552,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
                       claim={g}
                       childName={getChildName(g.child_member_id)}
                       onClick={handleClaimClick}
-                      style={{ animationDelay: `${(completedClaims.length + i) * 0.06}s` }}
+                      style={{ "--anim-delay": `${(completedClaims.length + i) * 0.06}s` }}
                     />
                   ))}
                 </div>
@@ -466,7 +565,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
               </section>
             )}
 
-            {/* 전체 탭: 섹션별 구분 */}
+            {/* 전체 탭 */}
             {filter === "all" && (
               <>
                 {pendingClaims.length > 0 && (
@@ -482,7 +581,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
                           onQuickApprove={handleQuickApprove}
                           onQuickReject={handleQuickReject}
                           quickLoading={quickActionId === c.claim_id}
-                          style={{ animationDelay: `${i * 0.06}s` }}
+                          style={{ "--anim-delay": `${i * 0.06}s` }}
                         />
                       ))}
                     </div>
@@ -499,7 +598,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
                           childName={getChildName(c.child_member_id)}
                           onClick={handleClaimClick}
                           quickLoading={quickActionId === c.claim_id}
-                          style={{ animationDelay: `${i * 0.06}s` }}
+                          style={{ "--anim-delay": `${i * 0.06}s` }}
                         />
                       ))}
                     </div>
@@ -517,7 +616,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
                           onClick={handleClaimClick}
                           onQuickUndoReject={c.status === "rejected" ? handleQuickUndoReject : undefined}
                           quickLoading={quickActionId === c.claim_id}
-                          style={{ animationDelay: `${i * 0.06}s` }}
+                          style={{ "--anim-delay": `${i * 0.06}s` }}
                         />
                       ))}
                     </div>
@@ -533,7 +632,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
                           claim={g}
                           childName={getChildName(g.child_member_id)}
                           onClick={handleClaimClick}
-                          style={{ animationDelay: `${i * 0.06}s` }}
+                          style={{ "--anim-delay": `${i * 0.06}s` }}
                         />
                       ))}
                     </div>
@@ -545,7 +644,103 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         )}
       </main>
 
-      {/* 상세 모달 */}
+      {/* FAB 지급 버튼 */}
+      <button
+        className="parent-fab"
+        onClick={() => {
+          if (childMembers.length === 0) {
+            showToast({ type: "info", message: "가족에 자녀가 없어요. 자녀를 먼저 초대해주세요." });
+            return;
+          }
+          setShowGrantModal(true);
+        }}
+        aria-label="추가 지급"
+      >
+        <span className="parent-fab__icon">💝</span>
+        <span className="parent-fab__label">지급</span>
+      </button>
+
+      {/* 탭 바 (fixed) */}
+      <nav className="tab-bar tab-bar--fixed">
+        <button className="tab-bar__item" onClick={() => setShowSpendingStats(true)}>
+          <span className="tab-bar__icon">📊</span>
+          <span className="tab-bar__label">통계</span>
+        </button>
+        <button className="tab-bar__item" onClick={() => setShowNotifs(true)}>
+          <span className="tab-bar__icon">🔔</span>
+          <span className="tab-bar__label">알림</span>
+          {unreadCount > 0 && <span className="tab-bar__badge">{unreadCount}</span>}
+        </button>
+        <button className="tab-bar__item" onClick={() => setShowMyPopup(true)}>
+          <span className="tab-bar__icon">👤</span>
+          <span className="tab-bar__label">마이</span>
+        </button>
+      </nav>
+
+      {/* 마이 팝업 */}
+      {showMyPopup && (
+        <div className="modal-backdrop" ref={myPopupRef} onClick={() => setShowMyPopup(false)} onKeyDown={e => { if (e.key === "Escape") setShowMyPopup(false); }} tabIndex={-1}>
+          <div className="modal-content" style={MY_POPUP_STYLE} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="마이 메뉴">
+            <div className="modal-header">
+              <h2 className="modal-title">👤 마이</h2>
+              <button onClick={() => setShowMyPopup(false)} className="modal-close" aria-label="닫기">×</button>
+            </div>
+            <div className="my-tab">
+              {/* 프로필 카드 */}
+              <button className="my-tab__profile" onClick={() => { setShowMyPopup(false); setShowFamilyInfo(true); }} type="button">
+                <div className="my-tab__avatar">👨‍👩‍👧</div>
+                <div className="my-tab__info">
+                  <span className="my-tab__name">{familyContext.member_display_name || "보호자"}</span>
+                  <span className="my-tab__role">부모 · {familyContext.family_code || "우리 가족"}</span>
+                </div>
+                <span className="my-tab__arrow">›</span>
+              </button>
+
+              {/* 메뉴 리스트 */}
+              <div className="my-tab__menu">
+                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowFamilyInfo(true); }}>
+                  <span className="my-tab__menu-icon">👨‍👩‍👧</span>
+                  <span className="my-tab__menu-label">가족 정보</span>
+                  <span className="my-tab__arrow">›</span>
+                </button>
+                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowSettings(true); }}>
+                  <span className="my-tab__menu-icon">⚙️</span>
+                  <span className="my-tab__menu-label">설정</span>
+                  <span className="my-tab__arrow">›</span>
+                </button>
+                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowChores(true); }}>
+                  <span className="my-tab__menu-icon">🎯</span>
+                  <span className="my-tab__menu-label">미션 관리</span>
+                  <span className="my-tab__arrow">›</span>
+                </button>
+                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowAutoGrant(true); }}>
+                  <span className="my-tab__menu-icon">🔄</span>
+                  <span className="my-tab__menu-label">자동 지급</span>
+                  <span className="my-tab__arrow">›</span>
+                </button>
+                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowQnA(true); }}>
+                  <span className="my-tab__menu-icon">❓</span>
+                  <span className="my-tab__menu-label">Q&A</span>
+                  <span className="my-tab__arrow">›</span>
+                </button>
+              </div>
+
+              {/* 하단 메뉴 */}
+              {onLogout && (
+                <div className="my-tab__menu my-tab__menu--bottom">
+                  <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); logout(); onLogout(); }}>
+                    <span className="my-tab__menu-icon">🔀</span>
+                    <span className="my-tab__menu-label">계정 전환</span>
+                    <span className="my-tab__arrow">›</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 모달들 */}
       {selectedClaim && (
         <ParentClaimDetailModal
           claimSummary={selectedClaim}
@@ -554,73 +749,6 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         />
       )}
 
-      {/* 하단 액션바 */}
-      <div className="parent-action-bar">
-        <button
-          className="parent-action-bar__btn parent-action-bar__btn--primary"
-          onClick={() => {
-            if (childMembers.length === 0) {
-              showToast({ type: "info", message: "가족에 자녀가 없어요. 자녀를 먼저 초대해주세요." });
-              return;
-            }
-            setShowGrantModal(true);
-          }}
-          aria-label={childMembers.length === 0 ? "추가 지급 (자녀 없음)" : "추가 지급"}
-          title={childMembers.length === 0 ? "가족에 자녀가 없어요" : undefined}
-        >
-          <span className="parent-action-bar__icon">💝</span>
-          <span className="parent-action-bar__label">지급</span>
-        </button>
-        <button
-          className="parent-action-bar__btn"
-          onClick={() => { setShowNotifs(true); setUnreadCount(0); }}
-          aria-label="알림"
-          style={{ position: "relative" }}
-        >
-          <span className="parent-action-bar__icon">🔔</span>
-          <span className="parent-action-bar__label">알림</span>
-          {unreadCount > 0 && <span className="notification-badge" style={{ position: "absolute", top: 2, right: 8, fontSize: "0.6rem" }}>{unreadCount}</span>}
-        </button>
-        <button
-          className="parent-action-bar__btn"
-          onClick={() => setShowFamilyInfo(true)}
-          aria-label="가족 정보"
-        >
-          <span className="parent-action-bar__icon">👨‍👩‍👧</span>
-          <span className="parent-action-bar__label">가족</span>
-        </button>
-        <button
-          className="parent-action-bar__btn"
-          onClick={() => setShowSettings(true)}
-          aria-label="설정"
-        >
-          <span className="parent-action-bar__icon">⚙️</span>
-          <span className="parent-action-bar__label">설정</span>
-        </button>
-        <div style={{ position: "relative" }}>
-          <button
-            className="parent-action-bar__btn"
-            onClick={() => setShowMore(prev => !prev)}
-            aria-label="더보기"
-          >
-            <span className="parent-action-bar__icon">···</span>
-            <span className="parent-action-bar__label">더보기</span>
-          </button>
-          {showMore && (
-            <MoreMenu
-              onClose={() => setShowMore(false)}
-              items={[
-                { icon: "🏠", label: "미션 관리", onClick: () => setShowChores(true) },
-                { icon: "🔄", label: "자동 지급", onClick: () => setShowAutoGrant(true) },
-                { icon: "📊", label: "지출 통계", onClick: () => setShowSpendingStats(true) },
-                ...(onLogout ? [{ icon: "👤", label: "계정 전환", onClick: () => { logout(); onLogout(); } }] : []),
-              ]}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* 가족 정보 모달 */}
       {showFamilyInfo && (
         <FamilyInfoModal
           onClose={() => setShowFamilyInfo(false)}
@@ -637,12 +765,10 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         />
       )}
 
-      {/* 맞춤 설정 모달 */}
       {showSettings && (
         <ParentSettingsModal onClose={() => setShowSettings(false)} />
       )}
 
-      {/* 추가 지급 모달 */}
       {showGrantModal && (
         <CreateGrantModal
           childMembers={childMembers}
@@ -652,12 +778,10 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         />
       )}
 
-      {/* 알림 센터 */}
       {showNotifs && (
         <NotificationCenterModal onClose={() => { setShowNotifs(false); setUnreadCount(getUnreadCount()); }} />
       )}
 
-      {/* 집안일 미션 관리 */}
       {showChores && (
         <ChoresManagerModal
           childMembers={childMembers}
@@ -665,7 +789,6 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         />
       )}
 
-      {/* 자동 정기 용돈 관리 */}
       {showAutoGrant && (
         <AutoGrantModal
           childMembers={childMembers}
@@ -673,7 +796,6 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         />
       )}
 
-      {/* 지출 통계 */}
       {showSpendingStats && (
         <SpendingStatsModal
           role="parent"
@@ -683,10 +805,9 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         />
       )}
 
-      {/* 빠른 거절 사유 입력 */}
       {undoRejectConfirmClaim && (
-        <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }} onClick={() => setUndoRejectConfirmClaim(null)}>
-          <div className="modal-content" style={{ maxWidth: 360, width: "90%" }} onClick={e => e.stopPropagation()}>
+        <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }} onClick={() => setUndoRejectConfirmClaim(null)} onKeyDown={e => { if (e.key === "Escape") setUndoRejectConfirmClaim(null); }} tabIndex={-1}>
+          <div className="modal-content" style={{ maxWidth: 360, width: "90%" }} onClick={e => e.stopPropagation()} ref={undoRejectRef} role="dialog" aria-modal="true" aria-label="거절 취소 확인">
             <p className="mb-3">거절을 취소하고 다시 대기 상태로 되돌릴까요?</p>
             <div className="flex justify-end gap-2">
               <button className="btn btn--secondary" onClick={() => setUndoRejectConfirmClaim(null)}>취소</button>
@@ -701,6 +822,14 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
           onSubmit={handleQuickRejectSubmit}
           onClose={() => setQuickRejectTarget(null)}
           loading={!!quickActionId}
+        />
+      )}
+
+      {showQnA && (
+        <QnAModal
+          onClose={() => setShowQnA(false)}
+          userName={familyContext.member_display_name || "보호자"}
+          userRole="parent"
         />
       )}
     </div>

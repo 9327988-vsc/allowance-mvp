@@ -15,6 +15,11 @@ export function _resetAmountFormat() {
   _format = "won";
 }
 
+/** 계정 전환 시 포맷 초기화 */
+export function resetAmountFormat() {
+  _format = "won";
+}
+
 /**
  * 금액을 현재 설정에 맞게 포맷 (단위 포함)
  * @param {number} value

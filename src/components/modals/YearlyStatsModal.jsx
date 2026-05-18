@@ -1,5 +1,6 @@
 // src/components/modals/YearlyStatsModal.jsx — 연간 용돈 통계 + 이력
 import { useState, useMemo, useEffect } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { loadSubmittedClaims, syncSubmittedClaims } from "../../utils/submittedClaims";
 import { loadSettings, loadCalendarMonth } from "../../utils/storage";
 import { calculateMonthlyAllowance } from "../../utils/calculator";
@@ -18,19 +19,12 @@ import { formatAmountShort } from "../../utils/formatAmount";
 import SpendingStatsModal from "./SpendingStatsModal";
 
 export default function YearlyStatsModal({ onClose, year: propYear, month: propMonth }) {
+  const contentRef = useModalBase(onClose);
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   const [year, setYear] = useState(currentYear);
   const [tab, setTab] = useState("stats"); // "stats" | "history"
-
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   // 이력 탭 관련
   const ctx = useMemo(() => loadFamilyContext(), []);
@@ -137,17 +131,15 @@ export default function YearlyStatsModal({ onClose, year: propYear, month: propM
   const maxTotal = Math.max(...stats.months.map(m => m.total + (m.extraTotal || 0)), 1);
 
   return (
-    <div
-      className="modal-backdrop"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="stats-title"
-    >
+    <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 480, padding: 0, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="stats-title"
       >
         <div className="modal-header">
           <h2 id="stats-title" className="modal-title">📊 통계</h2>
@@ -302,7 +294,7 @@ export default function YearlyStatsModal({ onClose, year: propYear, month: propM
                         onClick={setSelectedClaim}
                         onReceiveGrant={c.status === "granted" ? handleReceiveGrant : undefined}
                         quickLoading={receivingId === c.claim_id}
-                        style={{ animationDelay: `${i * 0.05}s` }}
+                        style={{ "--anim-delay": `${i * 0.05}s` }}
                       />
                     ))}
                   </div>
@@ -321,7 +313,7 @@ export default function YearlyStatsModal({ onClose, year: propYear, month: propM
                         key={c.claim_id}
                         claim={c}
                         onClick={setSelectedClaim}
-                        style={{ animationDelay: `${i * 0.05}s` }}
+                        style={{ "--anim-delay": `${i * 0.05}s` }}
                       />
                     ))}
                   </div>

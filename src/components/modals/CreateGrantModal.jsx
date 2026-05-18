@@ -1,6 +1,6 @@
 // src/components/modals/CreateGrantModal.jsx — 부모 추가 지급 등록
-import { useState, useEffect } from "react";
-import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import CurrencyInput from "../inputs/CurrencyInput";
 
 export default function CreateGrantModal({ childMembers = [], onSubmit, onClose, loading }) {
@@ -9,14 +9,7 @@ export default function CreateGrantModal({ childMembers = [], onSubmit, onClose,
   const [amount, setAmount] = useState(0);
   const [reason, setReason] = useState("");
   const [errors, setErrors] = useState({});
-  const trapRef = useFocusTrap(!loading);
-
-  // Y-3: ESC 키로 모달 닫기
-  useEffect(() => {
-    const handleKey = (e) => { if (e.key === "Escape" && !loading) onClose(); };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose, loading]);
+  const contentRef = useModalBase(onClose, { active: !loading });
 
   function validate() {
     const errs = {};
@@ -44,9 +37,9 @@ export default function CreateGrantModal({ childMembers = [], onSubmit, onClose,
   }
 
   return (
-    <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-2)" }}>
+    <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-2)" }} onClick={loading ? undefined : onClose}>
       <div
-        ref={trapRef}
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 420, width: "90%", padding: 0 }}
         onClick={e => e.stopPropagation()}

@@ -1,10 +1,12 @@
 // src/components/modals/ImportModal.jsx — S-114 데이터 가져오기
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { validateImportFile, importData } from "../../utils/exportImport";
 import { showToast } from "../../utils/toastManager";
 import ConfirmOverwriteModal from "./ConfirmOverwriteModal";
 
 export default function ImportModal({ onClose, onImported }) {
+  const contentRef = useModalBase(onClose);
   const [file, setFile] = useState(null);
   const [mode, setMode] = useState("merge");
   const [validation, setValidation] = useState(null);
@@ -13,20 +15,6 @@ export default function ImportModal({ onClose, onImported }) {
   const fileInputRef = useRef(null);
   const validationSeqRef = useRef(0);
 
-  // ESC 닫기
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        if (showOverwriteConfirm) return; // S-115가 ESC 처리
-        if (!importing) {
-          e.stopPropagation();
-          onClose();
-        }
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, importing, showOverwriteConfirm]);
 
   async function handleFileSelect(e) {
     const f = e.target.files?.[0];
@@ -38,6 +26,7 @@ export default function ImportModal({ onClose, onImported }) {
     if (validationSeqRef.current === seq) {
       setValidation(result);
     }
+    e.target.value = "";  // allow re-selecting same file
   }
 
   async function handleImport() {
@@ -101,6 +90,7 @@ export default function ImportModal({ onClose, onImported }) {
       onClick={importing || showOverwriteConfirm ? undefined : onClose}
     >
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 500, width: "95%" }}
         onClick={e => e.stopPropagation()}

@@ -1,15 +1,10 @@
 // src/components/modals/ReceiptViewerModal.jsx — 영수증 사진 뷰어
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 
 export default function ReceiptViewerModal({ src, itemName, onClose }) {
+  const contentRef = useModalBase(onClose);
   const [imgError, setImgError] = useState(false);
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   return (
     <div
@@ -18,6 +13,7 @@ export default function ReceiptViewerModal({ src, itemName, onClose }) {
       onClick={onClose}
     >
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 500, width: "94%", padding: 0, overflow: "hidden" }}
         onClick={e => e.stopPropagation()}

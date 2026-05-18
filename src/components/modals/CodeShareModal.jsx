@@ -1,6 +1,7 @@
 // src/components/modals/CodeShareModal.jsx — S-2-204 가족 코드 공유 안내
 
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useToast } from "../../hooks/useToast";
 import { copyToClipboard } from "../../utils/clipboard";
 
@@ -8,15 +9,8 @@ import { copyToClipboard } from "../../utils/clipboard";
  * @param {{ code: string, onClose: () => void }} props
  */
 export default function CodeShareModal({ code, onClose }) {
+  const contentRef = useModalBase(onClose);
   const { showToast } = useToast();
-
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   const handleCopy = useCallback(async () => {
     const result = await copyToClipboard(code);
@@ -28,8 +22,8 @@ export default function CodeShareModal({ code, onClose }) {
   }, [code, showToast]);
 
   return (
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="가족 코드 공유">
-      <div className="modal-content rounded-xl w-full max-w-sm text-center" onClick={e => e.stopPropagation()} style={{ boxShadow: "var(--shadow-lg)", backgroundColor: "var(--color-bg-card)" }}>
+    <div className="modal-backdrop" onClick={onClose}>
+      <div ref={contentRef} className="modal-content rounded-xl w-full max-w-sm text-center" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="가족 코드 공유" style={{ boxShadow: "var(--shadow-lg)", backgroundColor: "var(--color-bg-card)" }}>
         <div className="px-5 py-6">
           <div className="text-4xl mb-3">🎉</div>
           <h2 className="text-xl font-bold mb-2" style={{ color: "var(--color-text-primary)" }}>

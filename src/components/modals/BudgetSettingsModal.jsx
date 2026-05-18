@@ -1,5 +1,6 @@
 // src/components/modals/BudgetSettingsModal.jsx — 예산 + 급여 실수령액 계산
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { loadSettingsForUser, saveSettingsForUser } from "../../utils/storage";
 import { calculateNetSalary } from "../../utils/salaryCalculator";
 import { showToast } from "../../utils/toastManager";
@@ -30,6 +31,7 @@ function fmt(value) {
 }
 
 export default function BudgetSettingsModal({ userId, onClose, onSaved }) {
+  const contentRef = useModalBase(onClose);
   const [settings, setSettings] = useState(() => loadSettingsForUser(userId) || {});
   const [budget, setBudget] = useState(settings.monthly_budget || 0);
   const [grossSalary, setGrossSalary] = useState(settings.salary_gross || 0);
@@ -37,13 +39,6 @@ export default function BudgetSettingsModal({ userId, onClose, onSaved }) {
 
   const salaryResult = useMemo(() => calculateNetSalary(grossSalary), [grossSalary]);
 
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   function handleSave() {
     const updated = {
@@ -70,6 +65,7 @@ export default function BudgetSettingsModal({ userId, onClose, onSaved }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 460, width: "95%" }}
         onClick={e => e.stopPropagation()}

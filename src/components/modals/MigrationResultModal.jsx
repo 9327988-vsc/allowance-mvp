@@ -1,34 +1,38 @@
 // src/components/modals/MigrationResultModal.jsx — S-2-206 마이그레이션 결과
-// react import removed — no hooks used in this component
+import { useModalBase } from "../../hooks/useModalBase";
 
 /**
  * @param {{
  *   result: { migrated: boolean, migrated_count: number, attempted: number },
  *   onConfirm: () => void,
- *   onRetry: () => void
+ *   onRetry: () => void,
+ *   onClose: () => void
  * }} props
  */
-export default function MigrationResultModal({ result, onConfirm, onRetry }) {
+export default function MigrationResultModal({ result, onConfirm, onRetry, onClose }) {
+  const contentRef = useModalBase(onClose || onConfirm);
   const isSuccess = result.migrated && result.migrated_count === result.attempted;
   const isPartial = result.migrated && result.migrated_count < result.attempted;
   const isAlreadyDone = !result.migrated;
 
   return (
-    <div
-      className="modal-backdrop"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="migration-result-title"
-    >
+    <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 400, padding: 0 }}
         onClick={(e) => e.stopPropagation()}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="migration-result-title"
       >
         <div className="modal-header">
           <h2 id="migration-result-title" className="modal-title">
             {isSuccess ? "마이그레이션 완료" : isPartial ? "마이그레이션 부분 성공" : "마이그레이션 완료"}
           </h2>
+          {onClose && (
+            <button onClick={onClose} className="modal-close" aria-label="닫기">×</button>
+          )}
         </div>
 
         <div className="modal-body" style={{ textAlign: "center" }}>

@@ -1,5 +1,6 @@
 // src/components/modals/GeneralCellEditModal.jsx — 일반계정 셀 편집
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { getGeneralCategoryIcon } from "../../constants/generalCategories";
 import { newExtraItemId } from "../../utils/idGenerator";
 import { validateMemo } from "../../utils/validators";
@@ -48,18 +49,12 @@ export default function GeneralCellEditModal({ cell, calendar, onSave, onClose }
     onClose();
   }, [isDirty, onClose]);
 
-  // ESC
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key !== "Escape") return;
-      if (showDirtyConfirm) { e.stopPropagation(); setShowDirtyConfirm(false); return; }
-      if (deleteConfirmId) { e.stopPropagation(); setDeleteConfirmId(null); return; }
-      if (showAddForm || editingItemId) { e.stopPropagation(); setShowAddForm(false); setEditingItemId(null); return; }
-      handleClose();
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [showDirtyConfirm, deleteConfirmId, showAddForm, editingItemId, handleClose]);
+  // useModalBase: scroll lock + focus trap + ESC (when no sub-modal open)
+  const hasChildOpen = !!(showDirtyConfirm || deleteConfirmId || showAddForm || editingItemId);
+  const modalRef = useModalBase(handleClose, { active: !hasChildOpen });
+
+  // Sub-modal: delete confirm — focus trap + scroll lock + ESC via modal stack
+  const deleteDialogRef = useModalBase(() => setDeleteConfirmId(null), { active: !!deleteConfirmId });
 
   function handleSave() {
     const validation = validateMemo(memo);
@@ -108,8 +103,10 @@ export default function GeneralCellEditModal({ cell, calendar, onSave, onClose }
 
   return (
     <>
-      <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-1)" }}>
+      <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-1)" }} onClick={handleClose}>
         <div
+          ref={modalRef}
+          tabIndex={-1}
           className="modal-content cell-edit-modal"
           style={{ maxWidth: 480, width: "95%" }}
           onClick={e => e.stopPropagation()}
@@ -253,8 +250,9 @@ export default function GeneralCellEditModal({ cell, calendar, onSave, onClose }
         const item = items.find(i => i.id === deleteConfirmId);
         if (!item) return null;
         return (
-          <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }}>
+          <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }} onClick={() => setDeleteConfirmId(null)}>
             <div
+              ref={deleteDialogRef}
               className="modal-content"
               style={{ maxWidth: 360, width: "90%" }}
               onClick={e => e.stopPropagation()}

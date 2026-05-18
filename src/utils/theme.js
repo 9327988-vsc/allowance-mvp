@@ -5,7 +5,7 @@ import { reapplyCurrentPrefs } from "./userPrefs";
 const THEME_KEY = "theme_v1";
 
 /**
- * 저장된 테마 로드. 없으면 "light" 기본값.
+ * 저장된 테마 로드. 없으면 시스템 prefers-color-scheme 참조, 그마저도 없으면 "light".
  * @returns {"light"|"dark"}
  */
 export function loadTheme() {
@@ -13,7 +13,11 @@ export function loadTheme() {
     const saved = localStorage.getItem(THEME_KEY);
     if (saved === "dark" || saved === "light") return saved;
   } catch { /* ignored */ }
-  return "light"; // 기본값: 라이트 모드
+  // C-07: 시스템 다크 모드 선호 반영
+  if (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
+    return "dark";
+  }
+  return "light";
 }
 
 /**

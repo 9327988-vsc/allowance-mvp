@@ -24,7 +24,7 @@ export function createClaimSnapshot(year, month) {
   const calculation = calculateMonthlyAllowance(year, month, settings, calendarData, holidays);
   const message_text = generateMessage(year, month, calculation, settings, holidays, customCategories);
 
-  return {
+  const snapshot = {
     settings,
     cells: calendarData.cells || {},
     custom_categories: customCategories,
@@ -32,4 +32,11 @@ export function createClaimSnapshot(year, month) {
     message_text,
     snapshot_taken_at: new Date().toISOString(),
   };
+
+  const byteSize = new Blob([JSON.stringify(snapshot)]).size;
+  if (byteSize > 100000) {
+    throw new Error("청구 데이터가 너무 큽니다 (100KB 초과). 항목을 줄여주세요.");
+  }
+
+  return snapshot;
 }

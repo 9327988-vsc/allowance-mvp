@@ -1,5 +1,5 @@
 // src/components/widgets/CommentSection.jsx — 댓글 목록 + 입력란
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
 import { getKVAdapter } from "../../utils/kvAdapter";
@@ -26,11 +26,14 @@ export default function CommentSection({ claimId, comments, reactions, claimUpda
   const textRef = useRef(text);
   textRef.current = text;
   const { showToast } = useToast();
+  const showToastRef = useRef(showToast);
+  useEffect(() => { showToastRef.current = showToast; });
+  // Family context is read once on mount; parent re-mounts this component if ctx changes
   const ctx = useMemo(() => loadFamilyContext(), []);
 
   const addAction = useAsyncAction(useCallback(async () => {
     if (!isOnline()) {
-      showToast({ type: "error", message: "오프라인 상태에서는 댓글을 남길 수 없어요" });
+      showToastRef.current({ type: "error", message: "오프라인 상태에서는 댓글을 남길 수 없어요" });
       return;
     }
 
@@ -46,7 +49,7 @@ export default function CommentSection({ claimId, comments, reactions, claimUpda
 
     setText("");
     onCommentAdded();
-  }, [claimId, claimUpdatedAt, showToast, onCommentAdded]));
+  }, [claimId, claimUpdatedAt, onCommentAdded]));
 
   function handleSubmit(e) {
     e.preventDefault();

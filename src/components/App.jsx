@@ -1,5 +1,6 @@
 // src/components/App.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useModalBase } from "../hooks/useModalBase";
 import { initApp, nextScreen } from "../utils/initApp";
 import { registerCorruptedCallback, cleanupOldCalendars } from "../utils/storage";
 import { showToast } from "../utils/toastManager";
@@ -21,9 +22,12 @@ import ParentMainScreen from "./ParentMainScreen";
 import GeneralMainScreen from "./GeneralMainScreen";
 import LoginScreen from "./LoginScreen";
 import SignupScreen from "./SignupScreen";
+import TutorialScreen from "./TutorialScreen";
 import { loadFamilyContext, saveFamilyContext, clearFamilyContext } from "../utils/familyContext";
 import { setActiveUser, findUserById, clearActiveUser, updateUserFamilyContext, getActiveUser } from "../utils/authStore";
 import { loadUserPrefs, applyPrefs, clearPrefsOverrides } from "../utils/userPrefs";
+import { resetKVAdapter } from "../utils/kvAdapter";
+import { resetSpendingLimitCache } from "../utils/spendingLimit";
 
 function isAdminMode() {
   if (!import.meta.env.DEV) return false;
@@ -41,6 +45,9 @@ export default function App() {
   const [showReset, setShowReset] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showPinManage, setShowPinManage] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(null); // null | "child" | "parent"
+  const [showTutorialPicker, setShowTutorialPicker] = useState(false);
+  const tutorialPickerRef = useModalBase(() => setShowTutorialPicker(false), { active: showTutorialPicker });
 
   // 9.1 콘솔 디버그용: window.openAdmin() — DEV 전용
   useEffect(() => {
@@ -51,8 +58,14 @@ export default function App() {
   }, []);
 
   // 1. 부팅 처리
+  const initInProgress = useRef(false);
+  const mountedRef = useRef(true);
   useEffect(() => {
-    initApp().then(setBoot);
+    mountedRef.current = true;
+    if (initInProgress.current) return;
+    initInProgress.current = true;
+    initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
+    return () => { mountedRef.current = false; };
   }, []);
 
   // 2. 손상 콜백 등록
@@ -71,6 +84,31 @@ export default function App() {
     });
   }, []);
 
+  // 인증 완료 콜백 (훅은 early return 위에 위치해야 — Rules of Hooks)
+  const handleAuthComplete = useCallback((userId) => {
+    if (initInProgress.current) return;
+    initInProgress.current = true;
+    setActiveUser(userId);
+    const user = findUserById(userId);
+    if (user?.family_context) {
+      saveFamilyContext(user.family_context);
+    }
+    applyPrefs(loadUserPrefs(userId));
+    initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
+  }, []);
+
+  // 로그아웃 콜백
+  const handleLogout = useCallback(() => {
+    if (initInProgress.current) return;
+    initInProgress.current = true;
+    clearActiveUser();
+    clearFamilyContext();
+    clearPrefsOverrides();
+    resetKVAdapter();
+    resetSpendingLimitCache();
+    initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
+  }, []);
+
   // BTN-A-001: 일반 모드로 돌아가기
   function handleBackToNormal() {
     const url = new URL(window.location);
@@ -87,6 +125,23 @@ export default function App() {
       return;
     }
     setShowCleanup(true);
+  }
+
+  // 온보딩 완료 콜백 (가족 가입 후 앱 재부팅)
+  function handleFamilyJoined() {
+    const ctx = loadFamilyContext();
+    const activeId = getActiveUser();
+    if (ctx && activeId) {
+      updateUserFamilyContext(activeId, ctx);
+    }
+    const role = ctx?.member_role;
+    if (role === "parent" || role === "child") {
+      setShowTutorial(role);
+    }
+    import("../utils/accountSwitcher").then(({ saveCurrentAccount }) => {
+      saveCurrentAccount();
+      initApp().then(result => { if (mountedRef.current) setBoot(result); });
+    }).catch(() => { /* 모듈 로드 실패 시 무시 */ });
   }
 
   // 3. 부팅 중 표시
@@ -115,7 +170,7 @@ export default function App() {
         {showImport && (
           <ImportModal
             onClose={() => setShowImport(false)}
-            onImported={() => { initApp().then(setBoot); setDiagKey(k => k + 1); }}
+            onImported={() => { initApp().then(result => setBoot(result)); setDiagKey(k => k + 1); }}
           />
         )}
         {showCleanup && (
@@ -130,42 +185,6 @@ export default function App() {
         <ToastContainer />
       </>
     );
-  }
-
-  // 인증 완료 콜백
-  function handleAuthComplete(userId) {
-    setActiveUser(userId);
-    const user = findUserById(userId);
-    // 유저의 family_context가 있으면 familyContext에 반영
-    if (user?.family_context) {
-      saveFamilyContext(user.family_context);
-    }
-    // 유저별 맞춤 설정 적용
-    applyPrefs(loadUserPrefs(userId));
-    initApp().then(setBoot);
-  }
-
-  // 로그아웃 콜백
-  function handleLogout() {
-    clearActiveUser();
-    clearFamilyContext();
-    clearPrefsOverrides();
-    initApp().then(setBoot);
-  }
-
-  // 온보딩 완료 콜백 (가족 가입 후 앱 재부팅)
-  function handleFamilyJoined() {
-    // user 계정에 familyContext 동기화
-    const ctx = loadFamilyContext();
-    const activeId = getActiveUser();
-    if (ctx && activeId) {
-      updateUserFamilyContext(activeId, ctx);
-    }
-    // 새 계정을 저장 목록에 추가 후 앱 재부팅
-    import("../utils/accountSwitcher").then(({ saveCurrentAccount }) => {
-      saveCurrentAccount();
-      initApp().then(setBoot);
-    }).catch(() => { /* 모듈 로드 실패 시 무시 */ });
   }
 
   // 4-B. 일반 모드 화면 분기
@@ -185,6 +204,7 @@ export default function App() {
       onComplete={handleAuthComplete}
       onNewAccount={() => setBoot({ ...boot, _forceSignup: true })}
       onAdmin={import.meta.env.DEV ? () => setAdminMode(true) : undefined}
+      onTutorial={() => setShowTutorialPicker(true)}
     />;
   } else if (screen === "signup") {
     content = <SignupScreen onComplete={handleAuthComplete} />;
@@ -216,6 +236,38 @@ export default function App() {
   return (
     <>
       {content}
+      {showTutorialPicker && (
+        <div className="modal-backdrop" onClick={() => setShowTutorialPicker(false)}>
+          <div ref={tutorialPickerRef} className="modal-content" style={{ maxWidth: 320, width: "85%", padding: 0 }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="튜토리얼 선택">
+            <div className="modal-header">
+              <h2 className="modal-title">📖 튜토리얼</h2>
+              <button onClick={() => setShowTutorialPicker(false)} className="modal-close" aria-label="닫기">×</button>
+            </div>
+            <div style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              <button
+                className="btn btn--primary"
+                style={{ width: "100%", padding: "var(--space-3)" }}
+                onClick={() => { setShowTutorialPicker(false); setShowTutorial("child"); }}
+              >
+                👦 자녀용 튜토리얼
+              </button>
+              <button
+                className="btn btn--primary"
+                style={{ width: "100%", padding: "var(--space-3)", background: "linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end))" }}
+                onClick={() => { setShowTutorialPicker(false); setShowTutorial("parent"); }}
+              >
+                👨‍👩‍👧 부모용 튜토리얼
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showTutorial && (
+        <TutorialScreen
+          role={showTutorial}
+          onComplete={() => setShowTutorial(null)}
+        />
+      )}
       <ToastContainer />
     </>
   );

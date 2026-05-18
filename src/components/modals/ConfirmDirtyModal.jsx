@@ -1,18 +1,8 @@
 // src/components/modals/ConfirmDirtyModal.jsx — S-106 변경 확인
-import { useEffect } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 
 export default function ConfirmDirtyModal({ onContinueEdit, onDiscard }) {
-  // ESC = 계속 편집 (안전 방향)
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onContinueEdit();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onContinueEdit]);
+  const contentRef = useModalBase(onContinueEdit);
 
   return (
     <div
@@ -21,15 +11,17 @@ export default function ConfirmDirtyModal({ onContinueEdit, onDiscard }) {
       onClick={onContinueEdit}
     >
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 360, width: "90%", textAlign: "center" }}
         onClick={e => e.stopPropagation()}
         role="alertdialog"
-        aria-label="저장하지 않은 변경 사항"
+        aria-label="저장��지 않은 변경 사항"
         aria-modal="true"
+        aria-describedby="modal-desc"
       >
         <div className="text-2xl mb-3">⚠️</div>
-        <p className="font-medium mb-1">저장하지 않은 변경 사항이 있습니다.</p>
+        <p id="modal-desc" className="font-medium mb-1">저장하지 않은 변경 사항이 있습니다.</p>
         <p className="text-sm mb-5" style={{ color: "var(--color-text-secondary)" }}>
           닫으면 변경 사항이 사라집니다.
         </p>

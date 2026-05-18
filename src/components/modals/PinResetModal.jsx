@@ -1,17 +1,14 @@
 // src/components/modals/PinResetModal.jsx — 관리자용 PIN 초기화 요청 관리
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { loadPinResetRequests, approvePinReset, rejectPinReset, clearResolvedPinResets } from "../../utils/authStore";
 
 export default function PinResetModal({ onClose }) {
   const [requests, setRequests] = useState(() => loadPinResetRequests());
-
-  useEffect(() => {
-    const handleKey = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
-
   const [confirmApproveId, setConfirmApproveId] = useState(null);
+
+  const contentRef = useModalBase(onClose, { active: !confirmApproveId });
+  const confirmDialogRef = useModalBase(() => setConfirmApproveId(null), { active: !!confirmApproveId });
 
   function handleApprove(userId) {
     setConfirmApproveId(userId);
@@ -45,8 +42,8 @@ export default function PinResetModal({ onClose }) {
   const resolved = requests.filter(r => r.status !== "pending");
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true">
-      <div className="modal-content" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+    <div className="modal-backdrop" onClick={onClose}>
+      <div ref={contentRef} className="modal-content" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="비밀번호 관리">
         <div className="modal-header">
           <h2 className="modal-title">🔑 비밀번호 관리</h2>
           <button onClick={onClose} className="modal-close" aria-label="닫기">×</button>
@@ -115,7 +112,7 @@ export default function PinResetModal({ onClose }) {
 
       {confirmApproveId && (
         <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }} onClick={() => setConfirmApproveId(null)}>
-          <div className="modal-content" style={{ maxWidth: 360, width: "90%" }} onClick={e => e.stopPropagation()}>
+          <div ref={confirmDialogRef} className="modal-content" style={{ maxWidth: 360, width: "90%" }} onClick={e => e.stopPropagation()} role="alertdialog" aria-modal="true" aria-label="PIN 초기화 승인 확인">
             <p className="mb-3">이 계정의 비밀번호를 초기화할까요?<br />다음 로그인 시 새 PIN을 설정하게 됩니다.</p>
             <div className="flex justify-end gap-2">
               <button className="btn btn--secondary" onClick={() => setConfirmApproveId(null)}>취소</button>

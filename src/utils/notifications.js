@@ -1,6 +1,13 @@
 // src/utils/notifications.js — 인앱 알림 관리
 
-const NOTIF_KEY = "notifications_v1";
+import { getActiveUser } from "./authStore";
+import { nanoid } from "./idGenerator";
+
+function getNotifKey() {
+  const userId = getActiveUser();
+  if (!userId) return null;
+  return "notifications_v1_u_" + userId;
+}
 const MAX_NOTIFICATIONS = 50;
 
 /**
@@ -17,8 +24,10 @@ const MAX_NOTIFICATIONS = 50;
  */
 
 export function loadNotifications() {
+  const key = getNotifKey();
+  if (!key) return [];
   try {
-    const raw = localStorage.getItem(NOTIF_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -26,17 +35,21 @@ export function loadNotifications() {
 }
 
 function saveNotifications(notifs) {
+  const key = getNotifKey();
+  if (!key) return;
   try {
     // 최대 개수 제한
     const trimmed = notifs.slice(0, MAX_NOTIFICATIONS);
-    localStorage.setItem(NOTIF_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(key, JSON.stringify(trimmed));
   } catch { /* ignored */ }
 }
 
 export function addNotification({ type, title, message, icon }) {
+  const key = getNotifKey();
+  if (!key) return;
   const notifs = loadNotifications();
   notifs.unshift({
-    id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    id: `notif_${nanoid(8)}`,
     type: type || "info",
     title,
     message,
@@ -48,26 +61,59 @@ export function addNotification({ type, title, message, icon }) {
 }
 
 export function markAsRead(notifId) {
+  const key = getNotifKey();
+  if (!key) return;
   const notifs = loadNotifications();
-  const target = notifs.find(n => n.id === notifId);
-  if (target) target.read = true;
+  const idx = notifs.findIndex(n => n.id === notifId);
+  if (idx === -1) return;
+  notifs[idx] = { ...notifs[idx], read: true };
   saveNotifications(notifs);
 }
 
 export function markAllAsRead() {
+  const key = getNotifKey();
+  if (!key) return;
   const notifs = loadNotifications();
-  notifs.forEach(n => { n.read = true; });
-  saveNotifications(notifs);
+  const updated = notifs.map(n => n.read ? n : { ...n, read: true });
+  saveNotifications(updated);
 }
 
 export function getUnreadCount() {
+  const key = getNotifKey();
+  if (!key) return 0;
   return loadNotifications().filter(n => !n.read).length;
 }
 
 export function clearNotifications() {
+  const key = getNotifKey();
+  if (!key) return;
   try {
-    localStorage.removeItem(NOTIF_KEY);
+    localStorage.removeItem(key);
   } catch { /* ignored */ }
+}
+
+/**
+ * 특정 유저에게 알림 전달 (현재 활성 유저와 무관하게 직접 쓰기)
+ * 청구 승인/거절 시 자녀에게 알림을 보낼 때 사용
+ */
+export function addNotificationForUser(userId, notification) {
+  if (!userId) return;
+  const key = "notifications_v1_u_" + userId;
+  let list;
+  try {
+    list = JSON.parse(localStorage.getItem(key) || "[]");
+  } catch {
+    list = [];
+  }
+  if (!Array.isArray(list)) list = [];
+  list.unshift({
+    ...notification,
+    id: `notif_${nanoid(8)}`,
+    created_at: new Date().toISOString(),
+    read: false,
+    icon: notification.icon || getDefaultIcon(notification.type),
+  });
+  try { localStorage.setItem(key, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS))); } catch { /* ignored */ }
 }
 
 function getDefaultIcon(type) {
@@ -76,7 +122,7 @@ function getDefaultIcon(type) {
     case "claim_rejected": return "❌";
     case "claim_paid": return "💰";
     case "grant_received": return "💝";
-    case "chore_approved": return "���";
+    case "chore_approved": return "⭐";
     case "chore_rejected": return "🚫";
     case "auto_grant": return "🔄";
     default: return "🔔";

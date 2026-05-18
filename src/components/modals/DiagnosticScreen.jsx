@@ -1,5 +1,6 @@
 // src/components/modals/DiagnosticScreen.jsx — S-112 진단 화면 (관리자 모드)
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { checkDataStatus, getSystemInfo, recoverFromBackup, discardBackup } from "../../utils/diagnostics";
 import { getStorageUsage, listAllAppKeys, loadSettings, saveSettings } from "../../utils/storage";
 import { getHolidays } from "../../utils/holidays";
@@ -7,6 +8,7 @@ import { showToast } from "../../utils/toastManager";
 import { loadUserAccounts, removeUser } from "../../utils/authStore";
 import { loadFamilyContext } from "../../utils/familyContext";
 import { formatAmount } from "../../utils/formatAmount";
+import { loadQuestions, answerQuestion, deleteQuestion, getUnansweredCount } from "../../utils/qna";
 
 // mock_kv 직접 읽기 헬퍼
 function kvRead(key) {
@@ -85,13 +87,18 @@ const STATUS_LABELS = {
 };
 
 export default function DiagnosticScreen({ onBack, onExport, onImport, onCategoryManage, onCleanup, onReset, onPinManage }) {
+  // useModalBase: ESC handler + focus trap (전체 화면이므로 scroll lock 비활성화)
+  const modalRef = useModalBase(onBack, { noScrollLock: true });
+
+  // 전체 화면이므로 body 스크롤 허용 (body에 overflow:hidden이 기본 적용됨)
   useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onBack(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onBack]);
+    document.body.style.overflow = "auto";
+    document.body.style.height = "auto";
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.height = "";
+    };
+  }, []);
 
   const [dataStatus, setDataStatus] = useState(() => checkDataStatus());
   const [systemInfo] = useState(() => getSystemInfo());
@@ -118,6 +125,11 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
   });
   const [claimFilter, setClaimFilter] = useState("all");
 
+  // Q&A 관리
+  const [qnaList, setQnaList] = useState(() => loadQuestions());
+  const [answeringId, setAnsweringId] = useState(null);
+  const [answerText, setAnswerText] = useState("");
+
   // 5. 설정 편집
   const [editSettings, setEditSettings] = useState(null);
   const [settingsDirty, setSettingsDirty] = useState(false);
@@ -132,17 +144,17 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
     const keys = listAllAppKeys();
     keys.forEach(k => {
       if (SENSITIVE_KEYS.some(sk => k.includes(sk))) {
-        console.log(`[${k}]`, "(민감 정보 — 콘솔 출력 생략)");
+        console.debug(`[${k}]`, "(민감 정보 — 콘솔 출력 생략)");
         return;
       }
       const raw = localStorage.getItem(k);
       try {
-        console.log(`[${k}]`, JSON.parse(raw));
+        console.debug(`[${k}]`, JSON.parse(raw));
       } catch {
-        console.log(`[${k}]`, raw);
+        console.debug(`[${k}]`, raw);
       }
     });
-    console.log("[systemInfo]", getSystemInfo());
+    console.debug("[systemInfo]", getSystemInfo());
     alert("F12 → 콘솔 탭에서 로그를 확인하세요");
   }
 
@@ -209,7 +221,7 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
   const pct = storageUsage.percent.toFixed(2);
 
   return (
-    <div className="app-container diagnostic-screen">
+    <div ref={modalRef} tabIndex={-1} className="app-container diagnostic-screen" role="dialog" aria-modal="true" aria-label="진단 화면">
       {/* 헤더 */}
       <header className="diag-header">
         <h1 className="diag-title">🛠 관리자 / 진단 모드</h1>
@@ -273,7 +285,7 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
                   📦 {bk}
                   <button className="diag-action-sm" onClick={() => {
                     const raw = localStorage.getItem(bk);
-                    try { console.log(`[${bk}]`, JSON.parse(raw)); } catch { console.log(`[${bk}]`, raw); }
+                    try { console.debug(`[${bk}]`, JSON.parse(raw)); } catch { console.debug(`[${bk}]`, raw); }
                     alert("F12 콘솔에서 확인하세요");
                   }}>보기</button>
                   <button className="diag-action-sm diag-action-danger" onClick={() => handleDiscardBackup(bk)}>삭제</button>
@@ -297,12 +309,12 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
       <section className="diag-section">
         <h2 className="diag-section-title">작업</h2>
         <div className="diag-actions">
-          <button className="diag-btn" onClick={onExport}>📤 데이터 내보내기</button>
-          <button className="diag-btn" onClick={onImport}>📥 데이터 가져오기</button>
-          <button className="diag-btn" onClick={onCategoryManage}>🏷 카테고리 관리</button>
-          <button className="diag-btn" onClick={onCleanup}>🧹 오래된 데이터 정리</button>
-          <button className="diag-btn" onClick={onPinManage}>🔑 비밀번호 관리</button>
-          <button className="diag-btn diag-btn--danger" onClick={onReset}>🗑 모든 데이터 초기화</button>
+          {onExport && <button className="diag-btn" onClick={onExport}>📤 데이터 내보내기</button>}
+          {onImport && <button className="diag-btn" onClick={onImport}>📥 데이터 가져오기</button>}
+          {onCategoryManage && <button className="diag-btn" onClick={onCategoryManage}>🏷 카테고리 관리</button>}
+          {onCleanup && <button className="diag-btn" onClick={onCleanup}>🧹 오래된 데이터 정리</button>}
+          {onPinManage && <button className="diag-btn" onClick={onPinManage}>🔑 비밀번호 관리</button>}
+          {onReset && <button className="diag-btn diag-btn--danger" onClick={onReset}>🗑 모든 데이터 초기화</button>}
         </div>
       </section>
 
@@ -321,7 +333,7 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
 
       {/* ── 1. 계정/가족 관리 ── */}
       <section className="diag-section diag-section--collapsible">
-        <button className="diag-section-toggle" onClick={() => toggleSection("accounts")}>
+        <button className="diag-section-toggle" onClick={() => toggleSection("accounts")} aria-expanded={openSection === "accounts"}>
           <span>👥 계정 / 가족 관리</span>
           <span>{openSection === "accounts" ? "▲" : "▼"}</span>
         </button>
@@ -411,7 +423,7 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
 
       {/* ── 2. 청구 내역 전체 조회 ── */}
       <section className="diag-section diag-section--collapsible">
-        <button className="diag-section-toggle" onClick={() => toggleSection("claims")}>
+        <button className="diag-section-toggle" onClick={() => toggleSection("claims")} aria-expanded={openSection === "claims"}>
           <span>📋 청구 내역 전체 조회</span>
           <span>{openSection === "claims" ? "▲" : "▼"}</span>
         </button>
@@ -462,7 +474,7 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
 
       {/* ── 3. 통계 대시보드 ── */}
       <section className="diag-section diag-section--collapsible">
-        <button className="diag-section-toggle" onClick={() => toggleSection("stats")}>
+        <button className="diag-section-toggle" onClick={() => toggleSection("stats")} aria-expanded={openSection === "stats"}>
           <span>📈 통계 대시보드</span>
           <span>{openSection === "stats" ? "▲" : "▼"}</span>
         </button>
@@ -525,7 +537,7 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
 
       {/* ── 4. 활동 로그 ── */}
       <section className="diag-section diag-section--collapsible">
-        <button className="diag-section-toggle" onClick={() => toggleSection("logs")}>
+        <button className="diag-section-toggle" onClick={() => toggleSection("logs")} aria-expanded={openSection === "logs"}>
           <span>📝 활동 로그</span>
           <span>{openSection === "logs" ? "▲" : "▼"}</span>
         </button>
@@ -572,7 +584,7 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
 
       {/* ── 5. 설정 편집 ── */}
       <section className="diag-section diag-section--collapsible">
-        <button className="diag-section-toggle" onClick={() => {
+        <button className="diag-section-toggle" aria-expanded={openSection === "settings"} onClick={() => {
           toggleSection("settings");
           if (openSection !== "settings") {
             const s = loadSettings();
@@ -667,6 +679,78 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
                   <pre className="diag-raw-json">{JSON.stringify(editSettings, null, 2)}</pre>
                 </details>
               </>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Q&A 관리 */}
+      <section className="diag-section diag-section--collapsible">
+        <button className="diag-section-toggle" aria-expanded={openSection === "qna"} onClick={() => { toggleSection("qna"); setQnaList(loadQuestions()); }}>
+          <span>❓ Q&A 관리 {(() => { const c = getUnansweredCount(); return c > 0 ? `(미답변 ${c})` : ""; })()}</span>
+          <span>{openSection === "qna" ? "▲" : "▼"}</span>
+        </button>
+        {openSection === "qna" && (
+          <div className="diag-section-body">
+            {qnaList.length === 0 ? (
+              <p className="diag-empty">등록된 질문이 없습니다</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {qnaList.map(q => (
+                  <div key={q.id} style={{ padding: 12, background: "var(--color-bg-secondary)", borderRadius: 8, border: q.answer ? "1px solid var(--color-border)" : "2px solid var(--color-warning, #f59e0b)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--color-text-tertiary)" }}>
+                        {q.author} ({q.author_role === "parent" ? "부모" : "자녀"}) · {new Date(q.created_at).toLocaleDateString("ko-KR")}
+                      </span>
+                      <button
+                        className="diag-btn diag-btn--sm"
+                        style={{ padding: "2px 8px", fontSize: "0.7rem" }}
+                        onClick={() => { if (!confirm("이 질문을 삭제할까요?")) return; deleteQuestion(q.id); setQnaList(loadQuestions()); showToast({ type: "info", message: "질문 삭제됨" }); }}
+                        aria-label="질문 삭제"
+                      >🗑</button>
+                    </div>
+                    <div style={{ fontWeight: 600, marginBottom: 6, fontSize: "0.88rem" }}>Q. {q.question}</div>
+                    {q.answer ? (
+                      <div style={{ fontSize: "0.85rem", color: "var(--color-success, #059669)", padding: "8px", background: "var(--color-success-bg, #d1fae5)", borderRadius: 6 }}>
+                        A. {q.answer}
+                      </div>
+                    ) : (
+                      <>
+                        {answeringId === q.id ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <textarea
+                              style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--color-border)", fontSize: "0.85rem", fontFamily: "var(--font-family)", minHeight: 60, resize: "vertical" }}
+                              placeholder="답변을 입력하세요..."
+                              value={answerText}
+                              onChange={e => setAnswerText(e.target.value)}
+                            />
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                              <button className="diag-btn diag-btn--sm" onClick={() => { setAnsweringId(null); setAnswerText(""); }}>취소</button>
+                              <button
+                                className="diag-btn"
+                                disabled={!answerText.trim()}
+                                onClick={() => {
+                                  const ok = answerQuestion(q.id, answerText);
+                                  setAnsweringId(null);
+                                  setAnswerText("");
+                                  setQnaList(loadQuestions());
+                                  showToast({ type: ok ? "success" : "error", message: ok ? "답변 등록 완료" : "답변 등록 실패" });
+                                }}
+                              >답변 등록</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            className="diag-btn"
+                            style={{ fontSize: "0.8rem" }}
+                            onClick={() => { setAnsweringId(q.id); setAnswerText(""); }}
+                          >✍️ 답변 달기</button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

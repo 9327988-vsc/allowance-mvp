@@ -1,6 +1,7 @@
 // src/components/modals/SettingsModal.jsx
 // S-101 (첫 설정) / S-102 (재설정) 통합 모달
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useSettings } from "../../hooks/useSettings";
 import { useToast } from "../../hooks/useToast";
 import { validateSettings } from "../../utils/validators";
@@ -54,19 +55,8 @@ export default function SettingsModal({ mode, role, onSaved, onClose, onRecurrin
     onClose();
   }, [onClose, isDirty]);
 
-  // ESC 키 처리 (S-101: 차단, S-102: 닫기)
-  useEffect(() => {
-    if (isFirst) return;
-    const handler = (e) => {
-      if (e.key === "Escape") {
-        if (showRecurring) return; // RecurringExtrasModal이 처리
-        e.stopPropagation();
-        handleClose();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isFirst, handleClose, showRecurring]);
+  // useModalBase: scroll lock + focus trap + ESC (S-101: 차단, S-102: 닫기)
+  const modalRef = useModalBase(handleClose, { active: !isFirst && !showDirtyConfirm && !showRecurring });
 
   const handleSave = useCallback(async () => {
     // 일반 계정은 자녀 설정 검증 건너뛰기
@@ -98,12 +88,14 @@ export default function SettingsModal({ mode, role, onSaved, onClose, onRecurrin
     <div
       className="modal-backdrop"
       onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
     >
       <div
+        ref={modalRef}
+        tabIndex={-1}
         className="modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         style={{ maxWidth: 480, width: "90%", padding: 0 }}
       >
         {/* 헤더 */}
@@ -619,8 +611,8 @@ export default function SettingsModal({ mode, role, onSaved, onClose, onRecurrin
 
       {showDirtyConfirm && (
         <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }} onClick={() => setShowDirtyConfirm(false)}>
-          <div className="modal-content" style={{ maxWidth: 360, width: "90%" }} onClick={e => e.stopPropagation()}>
-            <p className="mb-3">저장하지 않은 변경사항이 있어요. 정말 닫을까요?</p>
+          <div className="modal-content" role="alertdialog" aria-modal="true" aria-describedby="dirty-confirm-desc" aria-label="저장하지 않은 변경사항" style={{ maxWidth: 360, width: "90%" }} onClick={e => e.stopPropagation()}>
+            <p id="dirty-confirm-desc" className="mb-3">저장하지 않은 변경사항이 있어요. 정말 닫을까요?</p>
             <div className="flex justify-end gap-2">
               <button className="btn btn--secondary" onClick={() => setShowDirtyConfirm(false)}>취소</button>
               <button className="btn btn--primary" onClick={() => { setShowDirtyConfirm(false); onClose(); }}>확인</button>

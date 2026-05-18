@@ -1,5 +1,6 @@
 // src/components/modals/SpendingStatsModal.jsx — 통계 모달 (지출 통계 + 부모용 청구 차트 + 월간 리포트)
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { formatAmountShort } from "../../utils/formatAmount";
 import DonutChart, { DonutLegend } from "../charts/DonutChart";
 import LineChart from "../charts/LineChart";
@@ -60,16 +61,11 @@ function getMonthlyTrend(currentYear, currentMonth, months = 6) {
 }
 
 export default function SpendingStatsModal({ role, familyContext, claims, onClose }) {
+  const contentRef = useModalBase(onClose);
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth() + 1);
   const [tab, setTab] = useState("spending"); // "spending" | "claims" | "report"
-
-  useEffect(() => {
-    function handleEsc(e) { if (e.key === "Escape") onClose(); }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   const spending = useMemo(() => getMonthlySpending(viewYear, viewMonth), [viewYear, viewMonth]);
   const trend = useMemo(() => getMonthlyTrend(viewYear, viewMonth, 6), [viewYear, viewMonth]);
@@ -121,6 +117,7 @@ export default function SpendingStatsModal({ role, familyContext, claims, onClos
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 480, width: "95%", maxHeight: "90vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column" }}
         onClick={e => e.stopPropagation()}

@@ -1,13 +1,16 @@
 // src/components/modals/AutoGrantModal.jsx — 자동 정기 용돈 스케줄 관리
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { loadSchedules, addSchedule, removeSchedule, toggleSchedule } from "../../utils/autoGrant";
+import { useModalBase } from "../../hooks/useModalBase";
 import CurrencyInput from "../inputs/CurrencyInput";
 
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 
 export default function AutoGrantModal({ childMembers = [], onClose }) {
+  const modalRef = useModalBase(onClose);
   const [schedules, setSchedules] = useState(() => loadSchedules());
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     child_member_id: childMembers.length === 1 ? childMembers[0].member_id : "",
     name: "",
@@ -18,15 +21,10 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
   });
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+  // ESC handled by useModalBase
 
   function handleAdd() {
+    if (submitting) return;
     const errs = {};
     if (!form.child_member_id && childMembers.length > 1) errs.child = "자녀를 선택해주세요";
     if (childMembers.length === 0) errs.child = "등록된 자녀가 없어요";
@@ -34,6 +32,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
     if (!form.amount || form.amount < 100) errs.amount = "100원 이상 입력해주세요";
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
+    setSubmitting(true);
     const childId = form.child_member_id || childMembers[0]?.member_id;
     const child = childMembers.find(m => m.member_id === childId);
     addSchedule({
@@ -49,6 +48,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
     setShowForm(false);
     setForm({ ...form, name: "", amount: 0 });
     setErrors({});
+    setSubmitting(false);
   }
 
   function handleToggle(id) {
@@ -64,6 +64,8 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={modalRef}
+        tabIndex={-1}
         className="modal-content"
         style={{ maxWidth: 440, width: "90%", padding: 0 }}
         onClick={e => e.stopPropagation()}
@@ -104,6 +106,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
                 onClick={() => handleToggle(s.id)}
                 className="btn btn--sm"
                 style={{ minWidth: 40, fontSize: "0.8rem" }}
+                aria-label={s.enabled ? "일시정지" : "재개"}
               >
                 {s.enabled ? "⏸" : "▶️"}
               </button>
@@ -111,6 +114,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
                 onClick={() => handleRemove(s.id)}
                 className="btn btn--sm btn--danger"
                 style={{ minWidth: 40, fontSize: "0.8rem" }}
+                aria-label="삭제"
               >
                 🗑
               </button>
@@ -125,6 +129,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
                   value={form.child_member_id}
                   onChange={e => setForm({ ...form, child_member_id: e.target.value })}
                   className="input"
+                  aria-label="대상 자녀"
                 >
                   <option value="">자녀 선택</option>
                   {childMembers.map(m => <option key={m.member_id} value={m.member_id}>{m.display_name}</option>)}
@@ -139,6 +144,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
                 placeholder="항목명 (예: 주간 용돈)"
                 className="input"
                 maxLength={30}
+                aria-label="항목명"
               />
               {errors.name && <p style={{ color: "var(--color-error)", fontSize: "0.78rem" }}>{errors.name}</p>}
 
@@ -157,6 +163,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
                   onChange={e => setForm({ ...form, frequency: e.target.value })}
                   className="input"
                   style={{ flex: 1 }}
+                  aria-label="주기"
                 >
                   <option value="weekly">매주</option>
                   <option value="monthly">매월</option>
@@ -168,6 +175,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
                     onChange={e => setForm({ ...form, day_of_week: Number(e.target.value) })}
                     className="input"
                     style={{ flex: 1 }}
+                    aria-label="요일"
                   >
                     {DAY_NAMES.map((name, i) => <option key={i} value={i}>{name}요일</option>)}
                   </select>
@@ -177,6 +185,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
                     onChange={e => setForm({ ...form, day_of_month: Number(e.target.value) })}
                     className="input"
                     style={{ flex: 1 }}
+                    aria-label="날짜"
                   >
                     {Array.from({ length: 28 }, (_, i) => (
                       <option key={i + 1} value={i + 1}>{i + 1}일</option>
@@ -186,7 +195,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
               </div>
 
               <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                <button onClick={handleAdd} className="btn btn--primary" style={{ flex: 1 }}>추가</button>
+                <button onClick={handleAdd} disabled={submitting} className="btn btn--primary" style={{ flex: 1 }}>추가</button>
                 <button onClick={() => { setShowForm(false); setErrors({}); }} className="btn btn--secondary">취소</button>
               </div>
             </div>
@@ -194,10 +203,15 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
         </div>
 
         <div className="modal-footer modal-footer--stretch">
-          {!showForm && (
+          {!showForm && childMembers.length > 0 && (
             <button onClick={() => setShowForm(true)} className="btn btn--primary btn--full">
               + 스케줄 추가
             </button>
+          )}
+          {!showForm && childMembers.length === 0 && (
+            <p style={{ textAlign: "center", color: "var(--color-text-secondary)", fontSize: "0.8rem", padding: "var(--space-2)" }}>
+              등록된 자녀가 없어 스케줄을 추가할 수 없어요
+            </p>
           )}
         </div>
       </div>

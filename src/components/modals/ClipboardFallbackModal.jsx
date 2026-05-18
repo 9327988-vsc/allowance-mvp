@@ -1,7 +1,9 @@
 // src/components/modals/ClipboardFallbackModal.jsx — S-111 클립보드 폴백
 import { useEffect, useRef } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 
 export default function ClipboardFallbackModal({ text, onClose }) {
+  const modalRef = useModalBase(onClose);
   const textareaRef = useRef(null);
 
   // 자동 포커스 + 전체 선택
@@ -11,18 +13,6 @@ export default function ClipboardFallbackModal({ text, onClose }) {
       textareaRef.current.select();
     }
   }, []);
-
-  // ESC 닫기
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
 
   function handleSelectAll() {
     if (textareaRef.current) {
@@ -34,8 +24,11 @@ export default function ClipboardFallbackModal({ text, onClose }) {
     <div
       className="modal-backdrop"
       style={{ zIndex: "var(--z-modal-1)" }}
+      onClick={onClose}
     >
       <div
+        ref={modalRef}
+        tabIndex={-1}
         className="modal-content"
         style={{ maxWidth: 500, width: "95%" }}
         onClick={e => e.stopPropagation()}

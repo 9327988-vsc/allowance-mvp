@@ -11,6 +11,7 @@ const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "💰
 export default function ReactionBar({ claimId, reactions, claimUpdatedAt, onReactionChanged }) {
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef(null);
+  // Family context is read once on mount; parent re-mounts this component if ctx changes
   const ctx = useMemo(() => loadFamilyContext(), []);
 
   // 외부 클릭 시 피커 닫기

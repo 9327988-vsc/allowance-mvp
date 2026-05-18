@@ -30,7 +30,7 @@ export function notifySpendingLimit(year, month, currentTotal, settings) {
   if (!result.limit) return result;
 
   // 오래된 알림 키 정리 (현재 월 외 제거)
-  const key = `${year}-${month}`;
+  const key = `${year}-${String(month).padStart(2, '0')}`;
   for (const k of _notified) {
     if (!k.startsWith(key)) _notified.delete(k);
   }
@@ -56,5 +56,10 @@ export function notifySpendingLimit(year, month, currentTotal, settings) {
 
 /** 테스트용 리셋 */
 export function _resetSpendingLimitNotifications() {
+  _notified.clear();
+}
+
+/** 계정 전환 시 캐시 리셋 */
+export function resetSpendingLimitCache() {
   _notified.clear();
 }

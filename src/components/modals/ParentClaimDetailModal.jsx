@@ -1,5 +1,6 @@
 // src/components/modals/ParentClaimDetailModal.jsx — S-2-002 부모 청구 상세
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useClaim } from "../../hooks/useClaim";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
@@ -27,6 +28,16 @@ function CellDetailPopup({ cell, customCategories, onClose }) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${day}일 (${weekdayKor}) 상세 정보`}
+      tabIndex={-1}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          onClose();
+        }
+      }}
       style={{
         position: "fixed", inset: 0, zIndex: "var(--z-modal-1, 200)",
         background: "rgba(15,23,42,0.4)",
@@ -51,7 +62,7 @@ function CellDetailPopup({ cell, customCategories, onClose }) {
         {/* 헤더 */}
         <div style={{
           padding: "var(--space-3) var(--space-4)",
-          background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+          background: "linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%)",
           color: "#fff",
           display: "flex",
           justifyContent: "space-between",
@@ -263,6 +274,7 @@ function SnapshotCalendar({ year, month, cells, customCategories, startDay = 0 }
  * }} props
  */
 export default function ParentClaimDetailModal({ claimSummary, familyContext, onClose }) {
+  const contentRef = useModalBase(onClose);
   const startDay = useMemo(() => { const uid = getActiveUser(); const p = uid ? loadUserPrefs(uid) : {}; return p.calendar_start === "monday" ? 1 : 0; }, []);
   const { claim, fetchClaim } = useClaim(claimSummary.claim_id);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -272,17 +284,6 @@ export default function ParentClaimDetailModal({ claimSummary, familyContext, on
   const [partialAmount, setPartialAmount] = useState("");
   const { showToast } = useToast();
 
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") {
-        if (showRejectModal) return; // RejectionReasonModal이 처리
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose, showRejectModal]);
 
   useEffect(() => {
     fetchClaim();
@@ -395,7 +396,7 @@ export default function ParentClaimDetailModal({ claimSummary, familyContext, on
 
   if (!claim) {
     return (
-      <div className="modal-backdrop">
+      <div className="modal-backdrop" onClick={onClose}>
         <div className="modal-content" style={{ maxWidth: 440, padding: 0 }} onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
             <h2 className="modal-title">청구 상세</h2>
@@ -431,16 +432,15 @@ export default function ParentClaimDetailModal({ claimSummary, familyContext, on
   }
 
   return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="claim-detail-title"
-    >
+    <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 460, maxHeight: "90vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="claim-detail-title"
       >
         {/* 헤더 */}
         <div className="modal-header">

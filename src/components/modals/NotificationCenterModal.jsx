@@ -1,17 +1,11 @@
 // src/components/modals/NotificationCenterModal.jsx — 인앱 알림 센터
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { loadNotifications, markAsRead, markAllAsRead, clearNotifications } from "../../utils/notifications";
 
 export default function NotificationCenterModal({ onClose }) {
+  const contentRef = useModalBase(onClose);
   const [notifs, setNotifs] = useState(() => loadNotifications());
-
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   function handleRead(id) {
     markAsRead(id);
@@ -46,6 +40,7 @@ export default function NotificationCenterModal({ onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 420, width: "92%", padding: 0 }}
         onClick={e => e.stopPropagation()}
@@ -53,6 +48,7 @@ export default function NotificationCenterModal({ onClose }) {
         aria-label="알림"
         aria-modal="true"
       >
+        {/* 헤더 */}
         <div className="modal-header">
           <h2 className="modal-title">🔔 알림</h2>
           <button onClick={onClose} className="modal-close" aria-label="닫기">×</button>
@@ -83,7 +79,10 @@ export default function NotificationCenterModal({ onClose }) {
           {notifs.map(n => (
             <div
               key={n.id}
+              role={n.read ? undefined : "button"}
+              tabIndex={n.read ? undefined : 0}
               onClick={() => !n.read && handleRead(n.id)}
+              onKeyDown={n.read ? undefined : (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleRead(n.id); } })}
               style={{
                 display: "flex", gap: "var(--space-3)",
                 padding: "var(--space-3) var(--space-4)",

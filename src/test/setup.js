@@ -7,6 +7,8 @@
 // - LWW conflict resolution
 // - carryover detection across months
 
+import { afterEach, vi } from "vitest";
+
 if (typeof globalThis.localStorage === "undefined" || typeof globalThis.localStorage.clear !== "function") {
   const store = {};
   globalThis.localStorage = {
@@ -18,3 +20,28 @@ if (typeof globalThis.localStorage === "undefined" || typeof globalThis.localSto
     key(i) { return Object.keys(store)[i] ?? null; },
   };
 }
+
+// window.matchMedia mock (jsdom 미지원)
+if (!window.matchMedia) {
+  window.matchMedia = (query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  });
+}
+
+// crypto.subtle mock (jsdom에서 SHA-256 등 사용하는 테스트용)
+if (typeof globalThis.crypto === "undefined" || !globalThis.crypto.subtle) {
+  const { webcrypto } = await import("node:crypto");
+  globalThis.crypto = webcrypto;
+}
+
+afterEach(() => {
+  localStorage.clear();
+  vi.restoreAllMocks();
+});

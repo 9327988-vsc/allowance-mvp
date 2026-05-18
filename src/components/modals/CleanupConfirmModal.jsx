@@ -1,9 +1,11 @@
 // src/components/modals/CleanupConfirmModal.jsx — S-116 오래된 데이터 정리 확인
 import { useState, useEffect } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { cleanupOldCalendars } from "../../utils/storage";
 import { showToast } from "../../utils/toastManager";
 
 export default function CleanupConfirmModal({ onClose, onCleaned }) {
+  const contentRef = useModalBase(onClose);
   const [targets, setTargets] = useState([]);
   const [cleaning, setCleaning] = useState(false);
 
@@ -12,17 +14,6 @@ export default function CleanupConfirmModal({ onClose, onCleaned }) {
     setTargets(result.deletedKeys);
   }, []);
 
-  // ESC = 취소
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape" && !cleaning) {
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, cleaning]);
 
   function handleCleanup() {
     setCleaning(true);
@@ -72,16 +63,18 @@ export default function CleanupConfirmModal({ onClose, onCleaned }) {
       onClick={() => { if (!cleaning) onClose(); }}
     >
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 440, width: "95%" }}
         onClick={e => e.stopPropagation()}
         role="alertdialog"
         aria-label="오래된 데이터 정리"
         aria-modal="true"
+        aria-describedby="modal-desc"
       >
         <h2 className="modal-title mb-3">🧹 오래된 데이터 정리</h2>
 
-        <p className="mb-2">다음 캘린더가 삭제됩니다 (오늘 - 6개월 이전):</p>
+        <p id="modal-desc" className="mb-2">다음 캘린더가 삭제됩니다 (오늘 - 6개월 이전):</p>
 
         <ul className="text-sm mb-3" style={{ paddingLeft: "1.2em", listStyle: "disc" }}>
           {targets.map(key => {

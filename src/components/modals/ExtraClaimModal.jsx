@@ -1,6 +1,7 @@
 // src/components/modals/ExtraClaimModal.jsx — S-2-104 추가 청구
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
 import { getKVAdapter } from "../../utils/kvAdapter";
@@ -22,16 +23,9 @@ import { formatAmountShort } from "../../utils/formatAmount";
  * }} props
  */
 export default function ExtraClaimModal({ year, month, onClose, onSuccess }) {
+  const contentRef = useModalBase(onClose);
   const { showToast } = useToast();
   const [items, setItems] = useState([]);
-
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
   const [showItemForm, setShowItemForm] = useState(false);
 
   const itemsTotal = items.reduce((sum, item) => sum + item.amount, 0);
@@ -101,16 +95,15 @@ export default function ExtraClaimModal({ year, month, onClose, onSuccess }) {
   }
 
   return (
-    <div
-      className="modal-backdrop"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="extra-title"
-    >
+    <div className="modal-backdrop" onClick={submitAction.loading ? undefined : onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 420, padding: 0 }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="extra-title"
       >
         <div className="modal-header">
           <h2 id="extra-title" className="modal-title">

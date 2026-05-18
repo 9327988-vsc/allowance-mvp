@@ -9,6 +9,10 @@ describe("cleanupOldCalendars", () => {
     vi.setSystemTime(new Date(2026, 4, 15));
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("retainMonths=6: 오늘 2026-05 → 2025-11부터 유지, 2025-10 이전 삭제", () => {
     [
       "calendar_v1_2025_06", "calendar_v1_2025_10", "calendar_v1_2025_11",

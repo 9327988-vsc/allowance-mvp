@@ -1,5 +1,4 @@
 // src/hooks/useToast.js
-import { useCallback } from "react";
 import { showToast, dismissToast } from "../utils/toastManager";
 
 /**
@@ -7,8 +6,5 @@ import { showToast, dismissToast } from "../utils/toastManager";
  * toastManager.js의 imperative API를 래핑
  */
 export function useToast() {
-  const toast = useCallback((opts) => showToast(opts), []);
-  const dismiss = useCallback((id) => dismissToast(id), []);
-
-  return { showToast: toast, dismissToast: dismiss };
+  return { showToast, dismissToast };
 }

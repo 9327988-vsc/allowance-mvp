@@ -1,11 +1,16 @@
 // src/utils/holidays.test.js
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { loadHolidays, getHolidays, _resetHolidaysCache } from "./holidays";
 
 describe("holidays.js", () => {
   beforeEach(() => {
     _resetHolidaysCache();
-    global.fetch = vi.fn();
+    vi.spyOn(global, 'fetch').mockImplementation(vi.fn());
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete global.fetch;
   });
 
   it("loadHolidays: 정상 로드 + 캐시", async () => {

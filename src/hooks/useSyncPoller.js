@@ -10,11 +10,13 @@ import { createPoller } from "../utils/syncPoller";
 export function useSyncPoller(fetchFn, options = {}) {
   const { interval = 30000, enabled = true } = options;
   const pollerRef = useRef(null);
+  const fetchFnRef = useRef(fetchFn);
+  useEffect(() => { fetchFnRef.current = fetchFn; });
 
   useEffect(() => {
     if (!enabled) return;
 
-    const poller = createPoller(fetchFn, { interval });
+    const poller = createPoller((...args) => fetchFnRef.current(...args), { interval });
     pollerRef.current = poller;
     poller.start();
 
@@ -33,7 +35,7 @@ export function useSyncPoller(fetchFn, options = {}) {
       pollerRef.current = null;
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [fetchFn, interval, enabled]);
+  }, [interval, enabled]);
 
   return {
     restart: () => {

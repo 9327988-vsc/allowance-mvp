@@ -94,6 +94,7 @@ export function generateMessage(year, month, calc, settings, holidays, customCat
 }
 
 function formatNumber(n) {
+  if (n == null || isNaN(n)) return "0";
   return n.toLocaleString("ko-KR");
 }
 const formatCurrency = formatNumber;

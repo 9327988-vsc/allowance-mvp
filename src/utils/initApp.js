@@ -7,6 +7,63 @@ import { loadHolidays } from "./holidays";
 import { loadFamilyContext } from "./familyContext";
 import { loadUserAccounts, getActiveUser, findUserById, migrateFromLegacyAccounts } from "./authStore";
 import { loadUserPrefs, applyPrefs } from "./userPrefs";
+import { recoverFromCrashedImport } from "./exportImport";
+
+/**
+ * Phase-2 키 마이그레이션: 글로벌 키 → 스코프드 키
+ * 한 번만 실행 (phase2_migrated_v1 플래그로 제어)
+ */
+function migratePhase2Keys() {
+  if (localStorage.getItem("phase2_migrated_v1")) return;
+
+  const activeUser = getActiveUser();
+  const familyCtx = loadFamilyContext();
+
+  // Migrate notifications
+  const oldNotifs = localStorage.getItem("notifications_v1");
+  if (oldNotifs && activeUser) {
+    const newKey = "notifications_v1_u_" + activeUser;
+    if (!localStorage.getItem(newKey)) {
+      localStorage.setItem(newKey, oldNotifs);
+    }
+    localStorage.removeItem("notifications_v1");
+  }
+
+  // Migrate badges
+  const oldBadges = localStorage.getItem("badges_earned_v1");
+  if (oldBadges && activeUser) {
+    const newKey = "badges_earned_v1_u_" + activeUser;
+    if (!localStorage.getItem(newKey)) {
+      localStorage.setItem(newKey, oldBadges);
+    }
+    localStorage.removeItem("badges_earned_v1");
+  }
+
+  // Migrate chores, chore_log, auto_grant_*, qna
+  if (familyCtx?.family_id) {
+    const fid = familyCtx.family_id;
+    const migrations = [
+      ["chores_v1", "chores_v1_f_" + fid],
+      ["chore_log_v1", "chore_log_v1_f_" + fid],
+      ["auto_grant_schedules_v1", "auto_grant_schedules_v1_f_" + fid],
+      ["auto_grant_last_run_v1", "auto_grant_last_run_v1_f_" + fid],
+      ["qna_v1", "qna_v1_f_" + fid],
+    ];
+    migrations.forEach(([oldKey, newKey]) => {
+      const old = localStorage.getItem(oldKey);
+      if (old && !localStorage.getItem(newKey)) {
+        localStorage.setItem(newKey, old);
+      }
+      localStorage.removeItem(oldKey);
+    });
+  }
+
+  // 활성 유저가 있을 때만 마이그레이션 완료 플래그 설정
+  // familyCtx만 있고 activeUser가 없으면 user-scoped 데이터(알림/배지)가 영구 유실될 수 있음
+  if (activeUser) {
+    localStorage.setItem("phase2_migrated_v1", "1");
+  }
+}
 
 /**
  * 앱 부팅 (v3.2: async + holidays.json 로드 포함)
@@ -25,8 +82,14 @@ export async function initApp() {
     return { status: "storage_disabled" };
   }
 
-  // 1.5. 레거시 계정 마이그레이션 (스토리지 확인 후)
+  // 1.5a. 이전 import 중 크래시 발생 시 백업 복원
+  recoverFromCrashedImport();
+
+  // 1.5b. 레거시 계정 마이그레이션 (스토리지 확인 후)
   migrateFromLegacyAccounts();
+
+  // 1.6. Phase-2 키 마이그레이션 (글로벌 → 스코프드)
+  migratePhase2Keys();
 
   // 2. holidays.json 로드 (실패는 fatal 아님)
   let holidays = {};
@@ -77,24 +140,6 @@ export async function initApp() {
   }
 
   return { status: "ok", settings, meta, holidays, familyContext, authenticated, activeUser };
-}
-
-/**
- * 부팅 결과 → 표시할 화면 결정
- * 2단계: familyContext 기반 분기 추가
- */
-/**
- * 로컬 데이터 → 서버 마이그레이션 프롬프트 표시 여부
- * D-2: kvAdapter.migrateFromLocal 엔드포인트 존재하지만 UI에서 호출하지 않음
- */
-export function shouldShowMigrationPrompt() {
-  const ctx = loadFamilyContext();
-  if (!ctx) return false;
-  const migrated = localStorage.getItem("migration_done_v1");
-  if (migrated) return false;
-  // Check if there's local data
-  const hasLocalData = localStorage.getItem("settings_v1") || localStorage.getItem("calendar_v1_2026_01");
-  return !!hasLocalData;
 }
 
 /**

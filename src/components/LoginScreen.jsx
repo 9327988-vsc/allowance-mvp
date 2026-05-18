@@ -4,6 +4,45 @@ import { loadUserAccounts, verifyPin, removeUser, setUserPin, requestPinReset } 
 import PinInput from "./PinInput";
 import ThemeToggle from "./widgets/ThemeToggle";
 
+// ── 잠금 상태 무결성 보호 (C3: sessionStorage 변조 방어) ──
+const _LOCKOUT_KEY = "_pl_state";
+const _LOCKOUT_PEPPER = "lk-integrity-v1";
+
+function _simpleHash(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36);
+}
+
+function _encodeLockout(attempts, lockoutUntil) {
+  const payload = JSON.stringify({ a: attempts, l: lockoutUntil || 0 });
+  const sig = _simpleHash(payload + _LOCKOUT_PEPPER);
+  try { sessionStorage.setItem(_LOCKOUT_KEY, btoa(payload) + "." + sig); } catch { /* ignored */ }
+}
+
+function _decodeLockout() {
+  try {
+    const raw = sessionStorage.getItem(_LOCKOUT_KEY);
+    if (!raw || !raw.includes(".")) return null;
+    const [encoded, sig] = raw.split(".");
+    const payload = atob(encoded);
+    if (_simpleHash(payload + _LOCKOUT_PEPPER) !== sig) {
+      // 무결성 실패 → 변조 감지 → 최대 잠금 적용
+      return { a: 5, l: Date.now() + 30000 };
+    }
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
+}
+
+function _clearLockout() {
+  try { sessionStorage.removeItem(_LOCKOUT_KEY); } catch { /* ignored */ }
+}
+
 /**
  * @param {{
  *   onComplete: (userId: string) => void,
@@ -11,15 +50,21 @@ import ThemeToggle from "./widgets/ThemeToggle";
  *   onAdmin?: () => void
  * }} props
  */
-export default function LoginScreen({ onComplete, onNewAccount, onAdmin }) {
+export default function LoginScreen({ onComplete, onNewAccount, onAdmin, onTutorial }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
-  const [attempts, setAttempts] = useState(0);
+  const [attempts, setAttempts] = useState(() => {
+    const state = _decodeLockout();
+    return state ? state.a : 0;
+  });
   const attemptsRef = useRef(0);
   const lockoutTimerRef = useRef(null);
   const mountedRef = useRef(true);
-  const [lockoutUntil, setLockoutUntil] = useState(null);
+  const [lockoutUntil, setLockoutUntil] = useState(() => {
+    const state = _decodeLockout();
+    return state && state.l > Date.now() ? state.l : null;
+  });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [resetRequested, setResetRequested] = useState(false);
 
@@ -31,11 +76,26 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin }) {
 
   useEffect(() => {
     mountedRef.current = true;
+    // 영속화된 잠금 상태 복원: 남은 시간만큼 타이머 재설정
+    const state = _decodeLockout();
+    if (state && state.l > Date.now()) {
+      attemptsRef.current = state.a || 0;
+      lockoutTimerRef.current = setTimeout(() => {
+        if (!mountedRef.current) return;
+        setLockoutUntil(null);
+        setAttempts(0);
+        attemptsRef.current = 0;
+        _clearLockout();
+      }, state.l - Date.now());
+    }
     return () => {
       mountedRef.current = false;
       if (lockoutTimerRef.current) clearTimeout(lockoutTimerRef.current);
     };
   }, []);
+
+  const selectedUserRef = useRef(selectedUser);
+  useEffect(() => { selectedUserRef.current = selectedUser; }, [selectedUser]);
 
   const [accounts, setAccounts] = useState(() => loadUserAccounts());
   const isLocked = lockoutUntil && Date.now() < lockoutUntil;
@@ -66,7 +126,7 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin }) {
     setPinError(false);
 
     if (val.length === 4) {
-      const userId = selectedUser?.user_id;
+      const userId = selectedUserRef.current?.user_id;
       if (!userId) return;
       setTimeout(async () => {
         if (!mountedRef.current) return;
@@ -80,12 +140,15 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin }) {
             setPinError(true);
             setPin("");
             if (next >= 5) {
-              setLockoutUntil(Date.now() + 30000);
+              const lockUntil = Date.now() + 30000;
+              setLockoutUntil(lockUntil);
+              _encodeLockout(next, lockUntil);
               lockoutTimerRef.current = setTimeout(() => {
                 if (!mountedRef.current) return;
                 setLockoutUntil(null);
                 setAttempts(0);
                 attemptsRef.current = 0;
+                _clearLockout();
               }, 30000);
             }
           }
@@ -245,7 +308,7 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin }) {
               role="button"
               tabIndex={0}
               className="account-card fade-in"
-              style={{ animationDelay: `${i * 80}ms` }}
+              style={{ "--anim-delay": `${i * 80}ms` }}
               onClick={() => handleSelectUser(a)}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectUser(a); } }}
             >
@@ -282,10 +345,16 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin }) {
           </button>
         )}
 
+        {onTutorial && (
+          <button onClick={onTutorial} className="account-admin-btn" style={{ marginTop: "var(--space-2)" }}>
+            📖 튜토리얼
+          </button>
+        )}
+
         {/* 삭제 확인 */}
         {deleteConfirm && (
           <div className="modal-backdrop">
-            <div className="modal-content" style={{ maxWidth: 340, padding: 0 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content" style={{ maxWidth: 340, padding: 0 }} onClick={(e) => e.stopPropagation()} role="alertdialog" aria-modal="true" aria-label="계정 삭제 확인">
               <div className="modal-header modal-header--danger">
                 <h2 className="modal-title">계정 삭제</h2>
                 <button onClick={() => setDeleteConfirm(null)} className="modal-close" aria-label="닫기">×</button>

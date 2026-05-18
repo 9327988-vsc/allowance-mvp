@@ -5,7 +5,6 @@ import { generateMessage } from "../utils/messageTemplate";
 import { copyToClipboard } from "../utils/clipboard";
 import { loadCustomCategories } from "../utils/storage";
 import { showToast } from "../utils/toastManager";
-import { isInFamily, loadFamilyContext } from "../utils/familyContext";
 import { logout, saveCurrentAccount } from "../utils/accountSwitcher";
 import { isOnline } from "../utils/onlineStatus";
 import { getKVAdapter } from "../utils/kvAdapter";
@@ -19,7 +18,8 @@ import { formatAmountShort } from "../utils/formatAmount";
 import { generateCalendarText } from "../utils/calendarText";
 import MonthNavigator from "./MonthNavigator";
 import CalendarGrid from "./CalendarGrid";
-import SummaryTable from "./SummaryTable";
+import DashboardSummary from "./widgets/DashboardSummary";
+import EmptyState from "./widgets/EmptyState";
 
 import CellEditModal from "./modals/CellEditModal";
 import SettingsModal from "./modals/SettingsModal";
@@ -35,12 +35,13 @@ import { useClaims } from "../hooks/useClaims";
 import ChoresChildModal from "./modals/ChoresChildModal";
 import NotificationCenterModal from "./modals/NotificationCenterModal";
 import BadgesModal from "./modals/BadgesModal";
-import MoreMenu from "./widgets/MoreMenu";
+import QnAModal from "./modals/QnAModal";
 import { getUnreadCount } from "../utils/notifications";
 
-function createConfetti(confettiRef) {
+function createConfetti(confettiRef, confettiTimerRef) {
   // H-28 / L-11: 이전 confetti가 있으면 제거
   if (confettiRef.current) confettiRef.current.remove();
+  if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
   const emojis = ["🎉", "✨", "💰", "🎊", "⭐"];
   const container = document.createElement("div");
   confettiRef.current = container;
@@ -56,15 +57,15 @@ function createConfetti(confettiRef) {
     particle.style.textShadow = "0 0 4px rgba(255,255,255,0.5)";
     container.appendChild(particle);
   }
-  setTimeout(() => {
+  confettiTimerRef.current = setTimeout(() => {
     container.remove();
     if (confettiRef.current === container) confettiRef.current = null;
+    confettiTimerRef.current = null;
   }, 3000);
 }
 
 export default function MainScreen({ settings: initialSettings, onSettingsChange, familyContext, onLogout }) {
-  const [settings, setSettings] = useState(initialSettings);
-  useEffect(() => { setSettings(initialSettings); }, [initialSettings]);
+  const settings = initialSettings;
   const [startDay, setStartDay] = useState(() => {
     const uid = getActiveUser();
     const p = uid ? loadUserPrefs(uid) : {};
@@ -75,6 +76,12 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
     todayY, todayM, nextDisabled,
     goToPrevMonth, goToNextMonth, goToMonth, saveCell, refresh,
   } = useCalendar(settings);
+
+  // 탭바 상태
+  const [showMyTab, setShowMyTab] = useState(false); // 마이 팝업
+  const [showNotifs, setShowNotifs] = useState(false); // 알림 팝업
+  const myModalRef = useRef(null);
+  useEffect(() => { if (showMyTab && myModalRef.current) myModalRef.current.focus(); }, [showMyTab]);
 
   // 모달/드로어 상태
   const [editingCell, setEditingCell] = useState(null);
@@ -91,20 +98,30 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
   const [grantReceiving, setGrantReceiving] = useState(null); // 수령 확인 중인 grant ID
   const [showProfile, setShowProfile] = useState(false); // 프로필 모달
   const [showChores, setShowChores] = useState(false); // 미션 보드
-  const [showNotifs, setShowNotifs] = useState(false); // 알림 센터
   const [unreadCount, setUnreadCount] = useState(() => getUnreadCount());
   const [showBadges, setShowBadges] = useState(false);
-  const [showMore, setShowMore] = useState(false);
+  const [showQnA, setShowQnA] = useState(false);
 
   // 월 변경 시 submittedStatus 초기화
   useEffect(() => {
     setSubmittedStatus(null);
   }, [viewYear, viewMonth]);
 
+  // m-4: 알림 배지 실시간 갱신 (visibility 복귀 시)
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === "visible") setUnreadCount(getUnreadCount());
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
   // H-28: confetti DOM cleanup on unmount
   const confettiRef = useRef(null);
+  const confettiTimerRef = useRef(null);
   useEffect(() => {
     return () => {
+      if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
       if (confettiRef.current) {
         confettiRef.current.remove();
         confettiRef.current = null;
@@ -113,8 +130,12 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
   }, []);
 
   // 2단계: 청구 제출 (훅보다 먼저 선언)
-  const inFamily = isInFamily();
-  const currentSubmitted = getSubmittedClaimForMonth(viewYear, viewMonth);
+  const familyCtx = familyContext || null;
+  const inFamily = !!familyCtx;
+  const [currentSubmitted, setCurrentSubmitted] = useState(null);
+  useEffect(() => {
+    setCurrentSubmitted(getSubmittedClaimForMonth(viewYear, viewMonth));
+  }, [viewYear, viewMonth, submittedStatus]);
   const claimStatus = submittedStatus || currentSubmitted?.status || null;
 
   // 자녀 자동 갱신: 30초 폴링으로 청구 상태 동기화
@@ -123,10 +144,9 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
   const pollClaimStatus = useCallback(async () => {
     if (!isOnline()) return;
     try {
-      const ctx = loadFamilyContext();
-      if (!ctx) return;
+      if (!familyCtx) return;
       const adapter = getKVAdapter();
-      const { claims } = await adapter.listClaims(ctx.family_id);
+      const { claims } = await adapter.listClaims(familyCtx.family_id);
       // 서버 데이터로 로컬 캐시 동기화
       syncSubmittedClaims(claims);
       const updated = getSubmittedClaimForMonth(viewYear, viewMonth);
@@ -136,13 +156,11 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
     } catch {
       // 폴링 실패는 무시
     }
-  }, [viewYear, viewMonth]);
+  }, [viewYear, viewMonth, familyCtx]);
 
   useSyncPoller(pollClaimStatus, { interval: 30000, enabled: inFamily });
 
   // 추가 지급(Grant) 목록 조회
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const familyCtx = useMemo(() => loadFamilyContext(), [viewYear, viewMonth]);
   const { claims: allClaims, fetchClaims: fetchAllClaims } = useClaims(familyCtx?.family_id);
   const pendingGrants = useMemo(() =>
     allClaims.filter(c => c.type === "grant" && c.status === "granted" && c.child_member_id === familyCtx?.member_id),
@@ -150,7 +168,7 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
   );
 
   // 추가 지급 수령 확인
-  async function handleReceiveGrant(grant) {
+  const handleReceiveGrant = useCallback(async (grant) => {
     if (!isOnline()) {
       showToast({ type: "error", message: "오프라인 상태에서는 확인할 수 없어요" });
       return;
@@ -166,7 +184,7 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
     } finally {
       setGrantReceiving(null);
     }
-  }
+  }, [fetchAllClaims]);
 
   const isEmpty = !calc || (calc.base_allowance === 0 && calc.school_total === 0 &&
     calc.academy_total === 0 && calc.extra_items_total === 0 && (calc.recurring_extras_total || 0) === 0);
@@ -207,7 +225,7 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
         const labels = { text: "청구서", calendar: "캘린더", both: "캘린더+청구서" };
         showToast({ type: "success", message: `📋 ${labels[option]} 복사 완료! 카톡에 붙여넣기 하세요` });
         if (!document.documentElement.classList.contains("anim-off")) {
-          createConfetti(confettiRef);
+          createConfetti(confettiRef, confettiTimerRef);
         }
       } else if (result.fallbackText) {
         setClipboardFallbackText(result.fallbackText);
@@ -223,7 +241,6 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
 
   // 설정 저장 후
   function handleSettingsSaved(newSettings) {
-    setSettings(newSettings);
     setShowSettings(false);
     refresh();
     if (onSettingsChange) onSettingsChange(newSettings);
@@ -233,7 +250,6 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
     setStartDay(p.calendar_start === "monday" ? 1 : 0);
   }
 
-  // 월 선택 — goToMonth를 직접 사용
 
   function handleSubmitClaim() {
     if (!inFamily) return;
@@ -266,7 +282,7 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
 
   return (
     <div className="app-container main-screen">
-      {/* 헤더 (월 네비 + 총액) */}
+      {/* 헤더 (월 네비) */}
       <header className="main-header">
         <div className="main-header__nav">
           <MonthNavigator
@@ -280,68 +296,178 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
         </div>
       </header>
 
-      {/* 추가 지급 알림 */}
-      {inFamily && pendingGrants.length > 0 && (
-        <div className="grant-notification" style={{
-          margin: "0 var(--space-4) var(--space-3)",
-          padding: "var(--space-3) var(--space-4)",
-          borderRadius: "var(--radius-lg, 12px)",
-          background: "var(--color-bg-secondary)",
-          border: "1px solid var(--color-primary)",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-            <span style={{ fontSize: "1.2em" }}>💝</span>
-            <span className="text-sm font-medium">추가 지급 {pendingGrants.length}건</span>
-          </div>
-          {pendingGrants.map(g => (
-            <div key={g.claim_id} style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "var(--space-2) 0",
-              borderTop: "1px solid var(--color-border)",
-            }}>
-              <div>
-                <div className="text-sm font-medium">{g.name || "추가 지급"}</div>
-                <div className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
-                  {formatAmountShort(g.total || g.amount || 0)}<span className="amount-unit">원</span>
-                  {g.reason && <span> · {g.reason}</span>}
-                </div>
+      {/* ═══ 콘텐츠 영역 ═══ */}
+      <div className="tab-content">
+            {/* 대시보드 요약 (그라데이션 합계 카드) */}
+            {!isEmpty && (
+              <div className="dashboard-top">
+                <DashboardSummary calc={calc} viewMonth={viewMonth} settings={settings} claimStatus={claimStatus} />
               </div>
-              <button
-                className="btn btn--primary"
-                style={{ padding: "var(--space-1) var(--space-3)", fontSize: "var(--font-size-sm)", minHeight: "auto" }}
-                onClick={() => handleReceiveGrant(g)}
-                disabled={grantReceiving === g.claim_id}
-              >
-                {grantReceiving === g.claim_id ? "확인 중..." : "받았어요"}
-              </button>
+            )}
+
+            {/* 빈 상태 */}
+            {isEmpty && (
+              <EmptyState onOpenSettings={() => setShowSettings(true)} />
+            )}
+
+            {/* 추가 지급 알림 */}
+            {inFamily && pendingGrants.length > 0 && (
+              <div className="home-card grant-card">
+                <div className="grant-card__header">
+                  <span className="grant-card__icon">💝</span>
+                  <span className="text-sm font-medium">추가 지급 {pendingGrants.length}건</span>
+                </div>
+                {pendingGrants.map(g => (
+                  <div key={g.claim_id} className="grant-card__item">
+                    <div>
+                      <div className="text-sm font-medium">{g.name || "추가 지급"}</div>
+                      <div className="text-xs grant-card__detail">
+                        {formatAmountShort(g.total || g.amount || 0)}<span className="amount-unit">원</span>
+                        {g.reason && <span> · {g.reason}</span>}
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn--primary grant-card__btn"
+                      onClick={() => handleReceiveGrant(g)}
+                      disabled={grantReceiving === g.claim_id}
+                    >
+                      {grantReceiving === g.claim_id ? "확인 중..." : "받았어요"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 캘린더 */}
+            {!isEmpty && (
+              <CalendarGrid
+                year={viewYear}
+                month={viewMonth}
+                calc={calc}
+                todayY={todayY}
+                todayM={todayM}
+                onCellClick={handleCellClick}
+                settings={settings}
+                startDay={startDay}
+              />
+            )}
+
+            {/* 빠른 액션 */}
+            {!isEmpty && (
+              <div className="home-actions">
+                <button
+                  className="home-actions__btn"
+                  onClick={() => setShowCopyOptions(true)}
+                  disabled={copying}
+                >
+                  <span className="home-actions__btn-icon">{copying ? "⏳" : "📋"}</span>
+                  <span className="home-actions__btn-text">카톡 복사</span>
+                </button>
+                {inFamily && (
+                  <button
+                    className="home-actions__btn home-actions__btn--primary"
+                    onClick={handleSubmitClaim}
+                  >
+                    <span className="home-actions__btn-icon">📨</span>
+                    <span className="home-actions__btn-text">청구하기</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+      </div>{/* /tab-content */}
+
+      {/* 🔔 알림 팝업 */}
+      {showNotifs && (
+        <NotificationCenterModal onClose={() => { setShowNotifs(false); setUnreadCount(getUnreadCount()); }} />
+      )}
+
+      {/* 👤 마이 팝업 */}
+      {showMyTab && (
+        <div className="modal-backdrop" ref={myModalRef} onClick={() => setShowMyTab(false)} onKeyDown={e => { if (e.key === "Escape") setShowMyTab(false); }} tabIndex={-1} role="dialog" aria-modal="true" aria-label="마이 메뉴">
+          <div className="modal-content" style={{ maxWidth: 400, width: "92%", padding: 0 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">👤 마이</h2>
+              <button onClick={() => setShowMyTab(false)} className="modal-close" aria-label="닫기">×</button>
             </div>
-          ))}
+            <div className="my-tab">
+              {/* 프로필 카드 */}
+              <button className="my-tab__profile" onClick={() => { setShowMyTab(false); setShowProfile(true); }} type="button">
+                <div className="my-tab__avatar">😊</div>
+                <div className="my-tab__info">
+                  <span className="my-tab__name">{familyCtx?.member_display_name || "사용자"}</span>
+                  <span className="my-tab__role">{familyCtx ? (familyCtx.member_role === "child" ? "자녀" : "보호자") : ""}</span>
+                </div>
+                <span className="my-tab__arrow">›</span>
+              </button>
+
+              {/* 메뉴 리스트 */}
+              <div className="my-tab__menu">
+                {inFamily && (
+                  <button className="my-tab__menu-item" onClick={() => { setShowMyTab(false); setShowChores(true); }}>
+                    <span className="my-tab__menu-icon">🎯</span>
+                    <span className="my-tab__menu-label">미션 보드</span>
+                    <span className="my-tab__arrow">›</span>
+                  </button>
+                )}
+                <button className="my-tab__menu-item" onClick={() => { setShowMyTab(false); setShowBadges(true); }}>
+                  <span className="my-tab__menu-icon">🏅</span>
+                  <span className="my-tab__menu-label">성취 배지</span>
+                  <span className="my-tab__arrow">›</span>
+                </button>
+                <button className="my-tab__menu-item" onClick={() => { setShowMyTab(false); setShowQnA(true); }}>
+                  <span className="my-tab__menu-icon">❓</span>
+                  <span className="my-tab__menu-label">Q&A</span>
+                  <span className="my-tab__arrow">›</span>
+                </button>
+                {inFamily && (
+                  <button className="my-tab__menu-item" onClick={() => { setShowMyTab(false); setShowYearlyStats(true); }}>
+                    <span className="my-tab__menu-icon">📊</span>
+                    <span className="my-tab__menu-label">통계</span>
+                    <span className="my-tab__arrow">›</span>
+                  </button>
+                )}
+                <button className="my-tab__menu-item" onClick={() => { setShowMyTab(false); setShowSettings(true); }}>
+                  <span className="my-tab__menu-icon">⚙️</span>
+                  <span className="my-tab__menu-label">설정</span>
+                  <span className="my-tab__arrow">›</span>
+                </button>
+              </div>
+
+              {/* 하단 메뉴 */}
+              <div className="my-tab__menu my-tab__menu--bottom">
+                {inFamily && onLogout && (
+                  <button className="my-tab__menu-item" onClick={() => { setShowMyTab(false); logout(); onLogout(); }}>
+                    <span className="my-tab__menu-icon">👤</span>
+                    <span className="my-tab__menu-label">계정 전환</span>
+                    <span className="my-tab__arrow">›</span>
+                  </button>
+                )}
+                {!inFamily && (
+                  <button className="my-tab__menu-item" onClick={() => { setShowMyTab(false); setShowOnboarding(true); }}>
+                    <span className="my-tab__menu-icon">👨‍👩‍👧</span>
+                    <span className="my-tab__menu-label">가족 시작하기</span>
+                    <span className="my-tab__arrow">›</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* 캘린더 그리드 */}
-      <CalendarGrid
-        year={viewYear}
-        month={viewMonth}
-        calc={calc}
-        todayY={todayY}
-        todayM={todayM}
-        onCellClick={handleCellClick}
-        settings={settings}
-        startDay={startDay}
-      />
-
-      {/* 정산표 */}
-      <SummaryTable
-        year={viewYear}
-        month={viewMonth}
-        calc={calc}
-        settings={settings}
-        claimStatus={claimStatus}
-        childMemberId={familyCtx?.member_id}
-      />
-
-      {/* 하단 액션바는 아래 parent-action-bar 참조 */}
+      {/* 설정 모달 (마이에서 열림) */}
+      {showSettings && (
+        <SettingsModal
+          mode="edit"
+          onSaved={handleSettingsSaved}
+          onClose={() => setShowSettings(false)}
+          onRecurringSaved={(updatedSettings) => {
+            if (onSettingsChange) onSettingsChange(updatedSettings);
+            refresh();
+          }}
+        />
+      )}
 
       {/* S-103 셀 편집 모달 */}
       {editingCell && (
@@ -354,19 +480,6 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
         />
       )}
 
-      {/* S-102 설정 모달 */}
-      {showSettings && (
-        <SettingsModal
-          mode="edit"
-          onSaved={handleSettingsSaved}
-          onClose={() => setShowSettings(false)}
-          onRecurringSaved={(updatedSettings) => {
-            setSettings(updatedSettings);
-            if (onSettingsChange) onSettingsChange(updatedSettings);
-            refresh();
-          }}
-        />
-      )}
 
       {/* S-202 월 선택기 */}
       {showMonthSelector && (
@@ -441,16 +554,19 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
         <BadgesModal onClose={() => setShowBadges(false)} />
       )}
 
-      {/* 알림 센터 */}
-      {showNotifs && (
-        <NotificationCenterModal onClose={() => { setShowNotifs(false); setUnreadCount(getUnreadCount()); }} />
+      {showQnA && (
+        <QnAModal
+          onClose={() => setShowQnA(false)}
+          userName={familyCtx?.member_display_name || "사용자"}
+          userRole={familyCtx?.member_role || "child"}
+        />
       )}
 
       {/* 미션 보드 (자녀용) */}
       {showChores && familyCtx && (
         <ChoresChildModal
           childMemberId={familyCtx.member_id}
-          childName={familyCtx.display_name || "자녀"}
+          childName={familyCtx.member_display_name || "자녀"}
           onClose={() => setShowChores(false)}
         />
       )}
@@ -464,70 +580,33 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
         />
       )}
 
-      {/* 하단 액션바 */}
-      <div className="parent-action-bar">
+      {/* 하단 탭바 */}
+      <nav className="tab-bar">
         <button
-          className="parent-action-bar__btn"
-          onClick={() => setShowCopyOptions(true)}
-          disabled={isEmpty || copying}
-          aria-label="복사"
+          className="tab-bar__item tab-bar__item--active"
+          aria-label="홈"
         >
-          <span className="parent-action-bar__icon">{copying ? "⏳" : "📋"}</span>
-          <span className="parent-action-bar__label">{copying ? "복사중" : "복사"}</span>
+          <span className="tab-bar__icon">🏠</span>
+          <span className="tab-bar__label">홈</span>
         </button>
-        {inFamily && (
-          <button
-            className="parent-action-bar__btn parent-action-bar__btn--submit"
-            onClick={handleSubmitClaim}
-            disabled={isEmpty}
-            aria-label="청구서 제출"
-          >
-            <span className="parent-action-bar__icon">📨</span>
-            <span className="parent-action-bar__label">청구</span>
-          </button>
-        )}
         <button
-          className="parent-action-bar__btn"
-          onClick={() => { setShowNotifs(true); setUnreadCount(0); }}
+          className="tab-bar__item"
+          onClick={() => setShowNotifs(true)}
           aria-label="알림"
-          style={{ position: "relative" }}
         >
-          <span className="parent-action-bar__icon">🔔</span>
-          <span className="parent-action-bar__label">알림</span>
-          {unreadCount > 0 && <span className="notification-badge" style={{ position: "absolute", top: 2, right: 8, fontSize: "0.6rem" }}>{unreadCount}</span>}
+          <span className="tab-bar__icon">🔔</span>
+          <span className="tab-bar__label">알림</span>
+          {unreadCount > 0 && <span className="tab-bar__badge">{unreadCount}</span>}
         </button>
         <button
-          className="parent-action-bar__btn"
-          onClick={() => setShowSettings(true)}
-          aria-label="설정"
+          className="tab-bar__item"
+          onClick={() => setShowMyTab(true)}
+          aria-label="마이"
         >
-          <span className="parent-action-bar__icon">⚙️</span>
-          <span className="parent-action-bar__label">설정</span>
+          <span className="tab-bar__icon">👤</span>
+          <span className="tab-bar__label">마이</span>
         </button>
-        <div style={{ position: "relative" }}>
-          <button
-            className="parent-action-bar__btn"
-            onClick={() => setShowMore(prev => !prev)}
-            aria-label="더보기"
-          >
-            <span className="parent-action-bar__icon">···</span>
-            <span className="parent-action-bar__label">더보기</span>
-          </button>
-          {showMore && (
-            <MoreMenu
-              onClose={() => setShowMore(false)}
-              items={[
-                ...(inFamily ? [{ icon: "🎯", label: "미션 보드", onClick: () => setShowChores(true) }] : []),
-                { icon: "🏅", label: "성취 배지", onClick: () => setShowBadges(true) },
-                ...(inFamily ? [{ icon: "📊", label: "통계", onClick: () => setShowYearlyStats(true) }] : []),
-                { icon: "😊", label: "프로필", onClick: () => setShowProfile(true) },
-                ...(inFamily && onLogout ? [{ icon: "👤", label: "계정 전환", onClick: () => { logout(); onLogout(); } }] : []),
-                ...(!inFamily ? [{ icon: "👨‍👩‍👧", label: "가족 시작", onClick: () => setShowOnboarding(true) }] : []),
-              ]}
-            />
-          )}
-        </div>
-      </div>
+      </nav>
     </div>
   );
 }

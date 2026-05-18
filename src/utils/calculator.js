@@ -30,30 +30,48 @@ export function calculateMonthlyAllowance(year, month, settings, calendar, holid
     const is_holiday = holidayInfo !== undefined;
     const holiday_name = holidayInfo?.name ?? null;
 
+    // 셀 데이터 (결석 정보 포함)
+    const cellData = calendar?.cells?.[date];
+
     // 학교
     let school_fee = 0;
-    if (settings.school?.days?.includes(weekday)) {
+    const skipSchool = cellData?.skip_school || false; // false | "full" | "half"
+    if (Array.isArray(settings.school?.days) && settings.school.days.includes(weekday)) {
       if (!is_holiday || settings.school.holiday_attend) {
-        const multiplier = settings.school.round_trip ? 2 : 1;
-        school_fee = settings.school.fare * multiplier;
-        school_total += school_fee;
-        school_days_count++;
+        if (!skipSchool) {
+          const multiplier = settings.school.round_trip ? 2 : 1;
+          school_fee = settings.school.fare * multiplier;
+          school_total += school_fee;
+          school_days_count++;
+        } else if (skipSchool === "half") {
+          // 편도만 제외 → 1회분만 청구
+          school_fee = settings.school.fare;
+          school_total += school_fee;
+          school_days_count++;
+        }
+        // skipSchool === "full" → 0원
       }
     }
 
     // 학원
     let academy_fee = 0;
-    if (settings.academy?.days?.includes(weekday)) {
+    const skipAcademy = cellData?.skip_academy || false; // false | "full" | "half"
+    if (Array.isArray(settings.academy?.days) && settings.academy.days.includes(weekday)) {
       if (!is_holiday || settings.academy.holiday_attend) {
-        const multiplier = settings.academy.round_trip ? 2 : 1;
-        academy_fee = settings.academy.fare * multiplier;
-        academy_total += academy_fee;
-        academy_days_count++;
+        if (!skipAcademy) {
+          const multiplier = settings.academy.round_trip ? 2 : 1;
+          academy_fee = settings.academy.fare * multiplier;
+          academy_total += academy_fee;
+          academy_days_count++;
+        } else if (skipAcademy === "half") {
+          // 편도만 제외 → 1회분만 청구
+          academy_fee = settings.academy.fare;
+          academy_total += academy_fee;
+          academy_days_count++;
+        }
+        // skipAcademy === "full" → 0원
       }
     }
-
-    // 임시 항목
-    const cellData = calendar?.cells?.[date];
     const extra_items = cellData?.extra_items ?? [];
     const memo = cellData?.memo ?? "";
     const cell_extra_total = extra_items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -66,6 +84,8 @@ export function calculateMonthlyAllowance(year, month, settings, calendar, holid
       holiday_name,
       school_fee,
       academy_fee,
+      skip_school: skipSchool,
+      skip_academy: skipAcademy,
       extra_items,
       memo,
       total: school_fee + academy_fee + cell_extra_total

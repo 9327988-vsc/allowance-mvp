@@ -1,5 +1,6 @@
 // src/components/modals/SubmitClaimModal.jsx — S-2-103 청구 제출 확인 + 이월 청구
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
 import { getKVAdapter } from "../../utils/kvAdapter";
@@ -11,6 +12,7 @@ import { getCategoryIcon } from "../../constants/categories";
 import { loadCustomCategories } from "../../utils/storage";
 import { detectCarryover } from "../../utils/carryoverDetector";
 import { formatAmount, formatAmountShort } from "../../utils/formatAmount";
+import { getWeekdayKor } from "../../utils/calculator";
 import CurrencyInput from "../inputs/CurrencyInput";
 
 /**
@@ -23,15 +25,8 @@ import CurrencyInput from "../inputs/CurrencyInput";
  * }} props
  */
 export default function SubmitClaimModal({ year, month, snapshot, onClose, onSuccess }) {
+  const contentRef = useModalBase(onClose);
   const { showToast } = useToast();
-
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   const calc = snapshot.calculation;
   const customCategories = snapshot.custom_categories || loadCustomCategories();
@@ -152,16 +147,15 @@ export default function SubmitClaimModal({ year, month, snapshot, onClose, onSuc
   }
 
   return (
-    <div
-      className="modal-backdrop"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="submit-title"
-    >
+    <div className="modal-backdrop" onClick={submitAction.loading ? undefined : onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 440, padding: 0, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="submit-title"
       >
         <div className="modal-header">
           <h2 id="submit-title" className="modal-title">
@@ -215,6 +209,50 @@ export default function SubmitClaimModal({ year, month, snapshot, onClose, onSuc
                 </div>
               )}
             </div>
+
+            {/* 결석(빠진 날) 요약 */}
+            {(() => {
+              const skippedDays = (calc.cells || []).filter(c => c.skip_school || c.skip_academy);
+              if (skippedDays.length === 0) return null;
+              const schoolFullCount = skippedDays.filter(c => c.skip_school === "full").length;
+              const schoolHalfCount = skippedDays.filter(c => c.skip_school === "half").length;
+              const academyFullCount = skippedDays.filter(c => c.skip_academy === "full").length;
+              const academyHalfCount = skippedDays.filter(c => c.skip_academy === "half").length;
+              return (
+                <div className="detail-card" style={{ marginBottom: "var(--space-3)" }}>
+                  <div className="detail-card__header">🚫 빠진 날 ({skippedDays.length}일)</div>
+                  <div className="detail-card__body">
+                    {skippedDays.map(c => {
+                      const d = parseInt(c.date.split("-")[2], 10);
+                      const labels = [];
+                      if (c.skip_school === "full") labels.push("🏫전체");
+                      else if (c.skip_school === "half") labels.push("🏫편도");
+                      if (c.skip_academy === "full") labels.push("✏️전체");
+                      else if (c.skip_academy === "half") labels.push("✏️편도");
+                      return (
+                        <div key={c.date} className="detail-row" style={{ fontSize: "var(--font-size-sm)" }}>
+                          <span className="detail-row__label">
+                            {month}/{d}({getWeekdayKor(c.weekday)}) {labels.join(" ")}
+                          </span>
+                          <span className="detail-row__amount" style={{ color: "var(--color-text-tertiary)" }}>
+                            제외
+                          </span>
+                        </div>
+                      );
+                    })}
+                    <div className="detail-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-2)", marginTop: "var(--space-2)" }}>
+                      <span className="detail-row__label" style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-tertiary)" }}>
+                        {schoolFullCount > 0 && `학교 결석 ${schoolFullCount}일`}
+                        {schoolHalfCount > 0 && ` 편도 ${schoolHalfCount}일`}
+                        {(schoolFullCount > 0 || schoolHalfCount > 0) && (academyFullCount > 0 || academyHalfCount > 0) && " / "}
+                        {academyFullCount > 0 && `학원 결석 ${academyFullCount}일`}
+                        {academyHalfCount > 0 && ` 편도 ${academyHalfCount}일`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 이월 청구 섹션 */}
             {carryover.found && (

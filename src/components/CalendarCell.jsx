@@ -1,14 +1,18 @@
 // src/components/CalendarCell.jsx — 캘린더 개별 셀
+import { memo, useCallback } from "react";
 import { formatAmount, formatAmountShort } from "../utils/formatAmount";
 import { getMoodEmoji } from "../constants/moods";
 
-export default function CalendarCell({ cell, onClick, isToday, mode = "child", onMouseEnter, onMouseLeave, onTouchStart, onTouchEnd }) {
+// 인라인 스타일 상수 (렌더마다 재생성 방지)
+const SKIP_STYLE = { opacity: 0.6, fontSize: "0.7em" };
+
+export default memo(function CalendarCell({ cell, onClick, isToday, mode = "child", onMouseEnter, onMouseLeave, onTouchStart, onTouchEnd }) {
   if (!cell) {
     // placeholder 셀 (이전/다음 달)
     return <div className="calendar-cell placeholder" aria-hidden="true" />;
   }
 
-  const { date, weekday, is_holiday, holiday_name, school_fee, academy_fee, extra_items } = cell;
+  const { date, weekday, is_holiday, holiday_name, school_fee, academy_fee, extra_items, skip_school, skip_academy } = cell;
   const day = parseInt(date.split("-")[2], 10);
 
   // 날짜 색상
@@ -33,13 +37,17 @@ export default function CalendarCell({ cell, onClick, isToday, mode = "child", o
     ? `${date}${holiday_name ? ` ${holiday_name}` : ""}${income > 0 ? ` 수입 ${formatAmount(income)}` : ""}${expense > 0 ? ` 지출 ${formatAmount(expense)}` : ""}`
     : `${date}${holiday_name ? ` ${holiday_name}` : ""}${cellTotal > 0 ? ` ${formatAmount(cellTotal)}` : ""}`;
 
+  const handleClick = useCallback(() => onClick && onClick(cell), [onClick, cell]);
+  const handleMouseEnter = useCallback((e) => onMouseEnter && onMouseEnter(cell, e), [onMouseEnter, cell]);
+  const handleTouchStart = useCallback((e) => onTouchStart && onTouchStart(cell, e), [onTouchStart, cell]);
+
   return (
     <button
       className={`calendar-cell${isToday ? " calendar-cell--today" : ""}${hasData ? " calendar-cell--has-data" : ""}`}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={onMouseLeave}
-      onTouchStart={onTouchStart}
+      onTouchStart={handleTouchStart}
       onTouchEnd={onTouchEnd}
       aria-label={ariaLabel}
     >
@@ -80,7 +88,11 @@ export default function CalendarCell({ cell, onClick, isToday, mode = "child", o
           {/* 자녀계정: 아이콘 표시 */}
           <div className="calendar-cell__icons">
             {school_fee > 0 && <span title="학교 등교">🏫</span>}
+            {skip_school === "full" && <span title="학교 결석" style={SKIP_STYLE}>🚫</span>}
+            {skip_school === "half" && <span title="학교 편도" style={SKIP_STYLE}>½</span>}
             {academy_fee > 0 && <span title="학원 등원">✏️</span>}
+            {skip_academy === "full" && <span title="학원 결석" style={SKIP_STYLE}>🚫</span>}
+            {skip_academy === "half" && <span title="학원 편도" style={SKIP_STYLE}>½</span>}
             {hasExtra && <span title="임시 항목">🎒</span>}
           </div>
 
@@ -104,4 +116,4 @@ export default function CalendarCell({ cell, onClick, isToday, mode = "child", o
       )}
     </button>
   );
-}
+});

@@ -1,10 +1,12 @@
 // src/components/modals/StorageDisabledModal.jsx — S-110 스토리지 비활성 안내
+import { useModalBase } from "../../hooks/useModalBase";
 import { isStorageAvailable } from "../../utils/storage";
 import { initApp } from "../../utils/initApp";
 import { showToast } from "../../utils/toastManager";
 
 export default function StorageDisabledModal({ onRecovered }) {
-  // 닫기 정책: ❌ X / ❌ ESC / ❌ 외부 클릭 — 강제 표시
+  // 닫기 정책: ❌ X / ❌ ESC / ❌ 외부 클릭 — 강제 표시 (but useModalBase for focus trap/scroll lock)
+  const contentRef = useModalBase(() => {});
 
   function handleRetry() {
     if (isStorageAvailable()) {
@@ -19,10 +21,12 @@ export default function StorageDisabledModal({ onRecovered }) {
   return (
     <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-1)" }}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 440, width: "90%" }}
         role="alertdialog"
         aria-modal="true"
+        aria-label="사용할 수 없는 환경"
         aria-describedby="storage-disabled-desc"
       >
         <h2 className="modal-title mb-3">⚠ 사용할 수 없는 환경입니다</h2>

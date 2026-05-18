@@ -1,5 +1,6 @@
 // src/components/modals/ProfileModal.jsx — 프로필 + 오늘의 기분
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { getActiveUser } from "../../utils/authStore";
 import { loadUserPrefs, saveUserPrefs, ACCENT_PRESETS } from "../../utils/userPrefs";
 import { loadFamilyContext } from "../../utils/familyContext";
@@ -18,6 +19,7 @@ const PROFILE_EMOJIS = [
 const BIRTHDAY_MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 export default function ProfileModal({ year, month, onClose }) {
+  const contentRef = useModalBase(onClose);
   const userId = getActiveUser();
   const ctx = useMemo(() => loadFamilyContext(), []);
   const prefs = useMemo(() => loadUserPrefs(userId), [userId]);
@@ -50,13 +52,6 @@ export default function ProfileModal({ year, month, onClose }) {
     setSaved(current === initialValues);
   }, [displayName, profileEmoji, statusMessage, birthdayMonth, birthdayDay, initialValues]);
 
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   const handleSaveProfile = useCallback(() => {
     if (!displayName.trim()) {
@@ -86,7 +81,11 @@ export default function ProfileModal({ year, month, onClose }) {
       cal.cells[todayKey] = {};
     }
     cal.cells[todayKey].mood = moodId;
-    saveCalendarMonth(cal);
+    const result = saveCalendarMonth(cal);
+    if (result && !result.success) {
+      showToast({ type: "error", message: "저장에 실패했어요" });
+      return;
+    }
     setCalendar({ ...cal }); // 새 참조로 MoodSummary 리렌더 트리거
     showToast({ type: "success", message: moodId ? "오늘의 기분이 기록되었어요" : "기분 기록이 삭제되었어요" });
   }
@@ -139,6 +138,7 @@ export default function ProfileModal({ year, month, onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content profile-modal"
         onClick={e => e.stopPropagation()}
         role="dialog"
@@ -157,6 +157,7 @@ export default function ProfileModal({ year, month, onClose }) {
               className="profile-card__avatar"
               onClick={() => setShowEmojiGrid(p => !p)}
               title="아바타 변경"
+              aria-label="아바타 변경"
             >
               <span className="profile-card__avatar-emoji">{profileEmoji}</span>
               <span className="profile-card__avatar-edit">✏️</span>
@@ -201,6 +202,7 @@ export default function ProfileModal({ year, month, onClose }) {
                 type="button"
                 className={`profile-emoji-btn${profileEmoji === em ? " profile-emoji-btn--selected" : ""}`}
                 onClick={() => { setProfileEmoji(em); setShowEmojiGrid(false); }}
+                aria-label={em}
               >
                 {em}
               </button>

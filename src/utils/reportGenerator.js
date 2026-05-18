@@ -1,16 +1,13 @@
 // src/utils/reportGenerator.js — 월간 리포트 데이터 + 카톡 복사 텍스트 생성
 import { formatAmount } from "./formatAmount";
+import { loadCalendarMonth } from "./storage";
 
 /**
  * 월간 지출 리포트 데이터 생성
  */
 export function generateMonthlyReport(year, month) {
-  const key = `calendar_v1_${year}_${String(month).padStart(2, "0")}`;
-  const raw = localStorage.getItem(key);
-  if (!raw) return null;
-
-  let cal;
-  try { cal = JSON.parse(raw); } catch { return null; }
+  const cal = loadCalendarMonth(year, month);
+  if (!cal) return null;
 
   const categories = {};
   let total = 0;

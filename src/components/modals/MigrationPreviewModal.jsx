@@ -1,11 +1,12 @@
 // src/components/modals/MigrationPreviewModal.jsx — S-2-205 마이그레이션 미리보기
-import { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
 import { getKVAdapter } from "../../utils/kvAdapter";
 import { loadSettings, loadCalendarMonth, loadCustomCategories } from "../../utils/storage";
 import { createClaimSnapshot } from "../../utils/createClaimSnapshot";
-import { generateClaimId } from "../../utils/idGenerator";
+import { generateClaimId, nanoid } from "../../utils/idGenerator";
 import { isOnline } from "../../utils/onlineStatus";
 import { getMessageForError } from "../../constants/errorMessages";
 
@@ -62,16 +63,9 @@ function scanLocalData() {
  * }} props
  */
 export default function MigrationPreviewModal({ onComplete, onSkip }) {
+  const contentRef = useModalBase(onSkip);
   const { showToast } = useToast();
-  const migrationId = useMemo(() => crypto.randomUUID(), []);
-
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onSkip(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onSkip]);
+  const migrationId = useMemo(() => nanoid(16), []);
 
   const preview = useMemo(() => scanLocalData(), []);
 
@@ -127,8 +121,8 @@ export default function MigrationPreviewModal({ onComplete, onSkip }) {
   // 데이터 없으면 건너뛰기
   if (!preview.hasData) {
     return (
-      <div className="modal-backdrop" role="dialog" aria-modal="true">
-        <div className="modal-content" style={{ maxWidth: 400, padding: 0 }}>
+      <div className="modal-backdrop">
+        <div ref={contentRef} className="modal-content" style={{ maxWidth: 400, padding: 0 }} role="dialog" aria-modal="true" aria-label="데이터 가져오기">
           <div className="modal-header">
             <h2 className="modal-title">데이터 가져오기</h2>
           </div>
@@ -158,11 +152,15 @@ export default function MigrationPreviewModal({ onComplete, onSkip }) {
   }
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="migration-title">
+    <div className="modal-backdrop" onClick={migrateAction.loading ? undefined : onSkip}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 420, padding: 0 }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="migration-title"
       >
         <div className="modal-header">
           <h2 id="migration-title" className="modal-title">📦 데이터 가져오기</h2>

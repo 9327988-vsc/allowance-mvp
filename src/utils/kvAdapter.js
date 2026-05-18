@@ -91,7 +91,7 @@ export class KVAdapter {
       if (err.name === "AbortError") {
         throw new KVError("TIMEOUT", "요청 시간 초과");
       }
-      throw new KVError("NETWORK_ERROR", `${err.name}: ${err.message}` || "네트워크 오류");
+      throw new KVError("NETWORK_ERROR", (err.name && err.message) ? `${err.name}: ${err.message}` : "네트워크 오류");
     }
   }
 

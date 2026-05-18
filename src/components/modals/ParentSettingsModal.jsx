@@ -1,6 +1,7 @@
 // src/components/modals/ParentSettingsModal.jsx
 // 부모 계정 맞춤 설정 모달 (테마 + 커스터마이징 10개 옵션)
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { loadTheme, setTheme } from "../../utils/theme";
 import { useUserPrefs } from "../../hooks/useUserPrefs";
 import { updateUserAvatar } from "../../utils/authStore";
@@ -24,28 +25,20 @@ export default function ParentSettingsModal({ onClose }) {
   const [currentTheme, setCurrentTheme] = useState(loadTheme);
   const { prefs, updatePref } = useUserPrefs();
 
-  // ESC 키 처리
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  // useModalBase: scroll lock + focus trap + ESC
+  const modalRef = useModalBase(onClose);
 
   return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-label="맞춤 설정"
-    >
+    <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={modalRef}
+        tabIndex={-1}
         className="modal-content"
         style={{ maxWidth: 480, width: "90%", padding: 0 }}
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="맞춤 설정"
       >
         {/* 헤더 */}
         <div className="modal-header">

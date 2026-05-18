@@ -1,7 +1,19 @@
 // src/utils/chores.js — 집안일/미션 보상 관리
 
-const CHORES_KEY = "chores_v1";
-const CHORE_LOG_KEY = "chore_log_v1";
+import { loadFamilyContext } from "./familyContext";
+import { nanoid } from "./idGenerator";
+
+function getChoresKey() {
+  const familyId = loadFamilyContext()?.family_id;
+  if (!familyId) return null;
+  return "chores_v1_f_" + familyId;
+}
+function getChoreLogKey() {
+  const familyId = loadFamilyContext()?.family_id;
+  if (!familyId) return null;
+  return "chore_log_v1_f_" + familyId;
+}
+const MAX_CHORE_LOG = 500;
 
 /**
  * 미션(집안일) 데이터 구조:
@@ -31,8 +43,10 @@ const CHORE_LOG_KEY = "chore_log_v1";
  */
 
 export function loadChores() {
+  const key = getChoresKey();
+  if (!key) return [];
   try {
-    const raw = localStorage.getItem(CHORES_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -40,8 +54,10 @@ export function loadChores() {
 }
 
 export function saveChores(chores) {
+  const key = getChoresKey();
+  if (!key) return { success: false, error: "no family context" };
   try {
-    localStorage.setItem(CHORES_KEY, JSON.stringify(chores));
+    localStorage.setItem(key, JSON.stringify(chores));
     return { success: true };
   } catch (e) {
     return { success: false, error: e.message };
@@ -52,7 +68,7 @@ export function addChore(chore) {
   const chores = loadChores();
   chores.push({
     ...chore,
-    id: `chore_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `chore_${nanoid(10)}`,
     enabled: true,
     max_per_day: chore.max_per_day || 1,
     created_at: new Date().toISOString(),
@@ -64,7 +80,11 @@ export function updateChore(id, updates) {
   const chores = loadChores();
   const idx = chores.findIndex(c => c.id === id);
   if (idx === -1) return { success: false, error: "not found" };
-  chores[idx] = { ...chores[idx], ...updates };
+  chores[idx] = {
+    ...chores[idx],
+    ...updates,
+    ...(updates.schedule && chores[idx].schedule ? { schedule: { ...chores[idx].schedule, ...updates.schedule } } : {})
+  };
   return saveChores(chores);
 }
 
@@ -83,8 +103,10 @@ export function toggleChore(id) {
 // --- 완료 기록 관리 ---
 
 export function loadChoreLog() {
+  const key = getChoreLogKey();
+  if (!key) return [];
   try {
-    const raw = localStorage.getItem(CHORE_LOG_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -92,8 +114,12 @@ export function loadChoreLog() {
 }
 
 function saveChoreLog(log) {
+  const key = getChoreLogKey();
+  if (!key) return { success: false, error: "no family context" };
   try {
-    localStorage.setItem(CHORE_LOG_KEY, JSON.stringify(log));
+    // Trim old entries to prevent unbounded growth — keep NEWEST
+    const trimmed = log.slice(-MAX_CHORE_LOG);
+    localStorage.setItem(key, JSON.stringify(trimmed));
     return { success: true };
   } catch (e) {
     return { success: false, error: e.message };
@@ -128,14 +154,19 @@ export function submitChoreCompletion(choreId, childMemberId, childName) {
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const todayCount = log.filter(
-    l => l.chore_id === choreId && l.child_member_id === childMemberId && l.completed_at.slice(0, 10) === todayKey
+    l => {
+      if (l.chore_id !== choreId || l.child_member_id !== childMemberId) return false;
+      const localDate = new Date(l.completed_at);
+      const localKey = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+      return localKey === todayKey;
+    }
   ).length;
   if (todayCount >= (chore.max_per_day || 1)) {
     return { success: false, error: "오늘 이미 최대 횟수를 달성했어요" };
   }
 
   const entry = {
-    id: `cl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `clog_${nanoid(8)}`,
     chore_id: choreId,
     chore_name: chore.name,
     chore_icon: chore.icon,

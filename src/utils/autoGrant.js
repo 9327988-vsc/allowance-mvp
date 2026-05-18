@@ -1,7 +1,31 @@
 // src/utils/autoGrant.js — 자동 정기 용돈 스케줄 관리
 
-const STORAGE_KEY = "auto_grant_schedules_v1";
-const LAST_RUN_KEY = "auto_grant_last_run_v1";
+import { loadFamilyContext } from "./familyContext";
+import { nanoid } from "./idGenerator";
+
+let _cachedFamilyId = null;
+
+function getFamilyId() {
+  if (!_cachedFamilyId) {
+    _cachedFamilyId = loadFamilyContext()?.family_id || null;
+  }
+  return _cachedFamilyId;
+}
+
+export function resetAutoGrantCache() {
+  _cachedFamilyId = null;
+}
+
+function getStorageKey() {
+  const familyId = getFamilyId();
+  if (!familyId) return null;
+  return "auto_grant_schedules_v1_f_" + familyId;
+}
+function getLastRunKey() {
+  const familyId = getFamilyId();
+  if (!familyId) return null;
+  return "auto_grant_last_run_v1_f_" + familyId;
+}
 
 /**
  * 스케줄 데이터 구조:
@@ -20,8 +44,10 @@ const LAST_RUN_KEY = "auto_grant_last_run_v1";
  */
 
 export function loadSchedules() {
+  const key = getStorageKey();
+  if (!key) return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -29,8 +55,10 @@ export function loadSchedules() {
 }
 
 export function saveSchedules(schedules) {
+  const key = getStorageKey();
+  if (!key) return { success: false, error: "no family context" };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
+    localStorage.setItem(key, JSON.stringify(schedules));
     return { success: true };
   } catch (e) {
     return { success: false, error: e.message };
@@ -50,7 +78,7 @@ export function addSchedule(schedule) {
   const schedules = loadSchedules();
   schedules.push({
     ...schedule,
-    id: `sched_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+    id: `sched_${nanoid(10)}`,
     enabled: true,
     created_at: new Date().toISOString(),
   });
@@ -59,6 +87,13 @@ export function addSchedule(schedule) {
 
 export function removeSchedule(id) {
   const schedules = loadSchedules().filter(s => s.id !== id);
+  // Clean up lastRunMap entry for deleted schedule
+  const lastRun = getLastRunMap();
+  const lastRunKey = getLastRunKey();
+  if (lastRun[id] && lastRunKey) {
+    delete lastRun[id];
+    try { localStorage.setItem(lastRunKey, JSON.stringify(lastRun)); } catch { /* ignored */ }
+  }
   return saveSchedules(schedules);
 }
 
@@ -74,11 +109,13 @@ export function toggleSchedule(id) {
  * (이미 오늘 실행된 것은 제외)
  */
 export function getDueSchedules() {
+  const key = getStorageKey();
+  if (!key) return [];
   const schedules = loadSchedules().filter(s => s.enabled);
+  // NOTE: Uses local date (not UTC). Schedules are evaluated based on device timezone.
   const today = new Date();
   const dayOfWeek = today.getDay();
   const dayOfMonth = today.getDate();
-  // 로컬 날짜 키 사용 (UTC 대신)
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
   // 이미 실행된 기록
@@ -99,12 +136,14 @@ export function getDueSchedules() {
  * @returns {{ success: boolean }}
  */
 export function markScheduleRun(scheduleId) {
+  const lastRunKey = getLastRunKey();
+  if (!lastRunKey) return { success: false };
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const lastRun = getLastRunMap();
   lastRun[scheduleId] = todayKey;
   try {
-    localStorage.setItem(LAST_RUN_KEY, JSON.stringify(lastRun));
+    localStorage.setItem(lastRunKey, JSON.stringify(lastRun));
     return { success: true };
   } catch {
     return { success: false };
@@ -112,8 +151,10 @@ export function markScheduleRun(scheduleId) {
 }
 
 function getLastRunMap() {
+  const key = getLastRunKey();
+  if (!key) return {};
   try {
-    const raw = localStorage.getItem(LAST_RUN_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};

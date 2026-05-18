@@ -63,9 +63,9 @@ export default function CalendarGrid({ year, month, calc, todayY, todayM, onCell
   }, []);
 
   const handleCellMouseEnter = useCallback((cell, e) => {
+    const rect = e.currentTarget.getBoundingClientRect(); // capture immediately before timeout
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     hoverTimerRef.current = setTimeout(() => {
-      const rect = e.currentTarget.getBoundingClientRect();
       showTooltip(cell, rect);
     }, 200);
   }, [showTooltip]);
@@ -76,8 +76,8 @@ export default function CalendarGrid({ year, month, calc, todayY, todayM, onCell
 
   const handleCellTouchStart = useCallback((cell, e) => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    const rect = e.currentTarget.getBoundingClientRect();
     longPressTimerRef.current = setTimeout(() => {
-      const rect = e.currentTarget.getBoundingClientRect();
       showTooltip(cell, rect);
     }, 500);
   }, [showTooltip]);
@@ -89,22 +89,24 @@ export default function CalendarGrid({ year, month, calc, todayY, todayM, onCell
     tooltipDismissRef.current = setTimeout(hideTooltip, 1500);
   }, [hideTooltip]);
 
-  // 그리드 생성: placeholder + 실제 날짜
-  const gridCells = [];
-
-  // 첫 주 앞 빈 셀
-  for (let i = 0; i < firstDayOfWeek; i++) {
-    gridCells.push(null);
-  }
-  // 실제 날짜 셀
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = formatDate(year, month, day);
-    gridCells.push(cellMap[date] || null);
-  }
-  // 마지막 주 뒤 빈 셀
-  while (gridCells.length % 7 !== 0) {
-    gridCells.push(null);
-  }
+  // 그리드 생성: placeholder + 실제 날짜 (메모이제이션으로 CalendarCell memo 유효화)
+  const gridCells = useMemo(() => {
+    const cells = [];
+    // 첫 주 앞 빈 셀
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      cells.push(null);
+    }
+    // 실제 날짜 셀
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = formatDate(year, month, day);
+      cells.push(cellMap[date] || null);
+    }
+    // 마지막 주 뒤 빈 셀
+    while (cells.length % 7 !== 0) {
+      cells.push(null);
+    }
+    return cells;
+  }, [firstDayOfWeek, daysInMonth, year, month, cellMap]);
 
   return (
     <div className="calendar-grid" role="grid" aria-label={`${year}년 ${month}월 캘린더`}>
@@ -135,10 +137,10 @@ export default function CalendarGrid({ year, month, calc, todayY, todayM, onCell
               cell={cell}
               isToday={isToday}
               mode={mode}
-              onClick={() => onCellClick(cell)}
-              onMouseEnter={(e) => handleCellMouseEnter(cell, e)}
+              onClick={onCellClick}
+              onMouseEnter={handleCellMouseEnter}
               onMouseLeave={handleCellMouseLeave}
-              onTouchStart={(e) => handleCellTouchStart(cell, e)}
+              onTouchStart={handleCellTouchStart}
               onTouchEnd={handleCellTouchEnd}
             />
           );

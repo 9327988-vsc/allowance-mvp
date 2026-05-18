@@ -1,5 +1,6 @@
 // src/components/modals/ParentMonthlyChartModal.jsx — 월별 지출 차트 모달
-import { useMemo, useEffect } from "react";
+import { useMemo } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { formatAmountShort } from "../../utils/formatAmount";
 
 /**
@@ -9,13 +10,7 @@ import { formatAmountShort } from "../../utils/formatAmount";
  * }} props
  */
 export default function ParentMonthlyChartModal({ claims, onClose }) {
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+  const contentRef = useModalBase(onClose);
 
   const currentYear = new Date().getFullYear();
 
@@ -52,6 +47,7 @@ export default function ParentMonthlyChartModal({ claims, onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 480, width: "92%", padding: 0 }}
         onClick={(e) => e.stopPropagation()}

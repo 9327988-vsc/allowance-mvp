@@ -1,7 +1,8 @@
 // src/components/modals/FamilyOnboardingModal.jsx
 // S-2-201 가족 그룹 시작하기 + S-2-201A 가족 만들기
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
 import { getKVAdapter } from "../../utils/kvAdapter";
@@ -36,6 +37,7 @@ function OnboardingProgress({ current, total }) {
  * @param {{ onComplete: () => void }} props
  */
 export default function FamilyOnboardingModal({ onComplete }) {
+  const contentRef = useModalBase(onComplete);
   const [step, setStep] = useState("choose"); // "choose" | "create" | "join"
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState(""); // "child" | "parent"
@@ -45,16 +47,6 @@ export default function FamilyOnboardingModal({ onComplete }) {
   const [migrationResult, setMigrationResult] = useState(null);
   const { showToast } = useToast();
 
-  // ESC 키로 모달 닫기 ("나중에 하기"와 동일)
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        onComplete();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onComplete]);
 
   const createFn = useCallback(async () => {
     if (!isOnline()) {
@@ -105,6 +97,7 @@ export default function FamilyOnboardingModal({ onComplete }) {
     return (
       <MigrationResultModal
         result={migrationResult}
+        onClose={() => setMigrationResult(null)}
         onConfirm={onComplete}
         onRetry={() => {
           setMigrationResult(null);
@@ -163,8 +156,8 @@ export default function FamilyOnboardingModal({ onComplete }) {
   // S-2-201A 가족 만들기
   if (step === "create") {
     return (
-      <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="가족 만들기">
-        <div className="modal-content" style={{ maxWidth: 420, width: "90%", padding: 0 }}>
+      <div className="modal-backdrop">
+        <div ref={contentRef} className="modal-content" style={{ maxWidth: 420, width: "90%", padding: 0 }} role="dialog" aria-modal="true" aria-label="가족 만들기">
           <div className="modal-header">
             <h2 className="modal-title">가족 만들기</h2>
             <button onClick={() => setStep("choose")} className="modal-close" aria-label="뒤로">
@@ -232,8 +225,8 @@ export default function FamilyOnboardingModal({ onComplete }) {
 
   // S-2-201 선택 화면
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="가족 그룹 시작하기">
-      <div className="modal-content" style={{ maxWidth: 420, width: "90%", padding: 0 }}>
+    <div className="modal-backdrop">
+      <div ref={contentRef} className="modal-content" style={{ maxWidth: 420, width: "90%", padding: 0 }} role="dialog" aria-modal="true" aria-label="가족 그룹 시작하기">
         <div className="modal-body" style={{ textAlign: "center", padding: "var(--space-6) var(--space-5)" }}>
           <OnboardingProgress current={1} total={3} />
           <div style={{ fontSize: "2.5rem", marginBottom: "var(--space-3)" }}>👨‍👩‍👧</div>

@@ -18,7 +18,14 @@ function kvGet(key) {
 }
 
 function kvPut(key, value) {
-  localStorage.setItem(PREFIX + key, JSON.stringify(value));
+  try {
+    localStorage.setItem(PREFIX + key, JSON.stringify(value));
+  } catch (e) {
+    if (e.name === "QuotaExceededError") {
+      console.error(`[mockBackend] localStorage quota exceeded for key: ${key}`);
+    }
+    throw e;
+  }
 }
 
 function kvDel(key) {
@@ -35,12 +42,15 @@ function kvRemove(listKey, id) {
   kvPut(listKey, list.filter(x => x !== id));
 }
 
-// --- 코드 생성 ---
-const ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-function generateCode() {
-  const arr = new Uint8Array(6);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, b => ALPHABET[b % ALPHABET.length]).join("");
+// --- 코드 생성 (no modulo bias: 256 % 32 = 0) ---
+const ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // 32 chars
+function generateCode(length = 6) {
+  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  let result = "";
+  for (let i = 0; i < bytes.length; i++) {
+    result += ALPHABET[bytes[i] % 32];
+  }
+  return result;
 }
 
 // --- last_seen_at 스로틀 업데이트 (5분 이상 경과 시만) ---
@@ -205,6 +215,17 @@ function handleLeaveFamily(ctx, memberId) {
   if (ctx.member.member_id !== memberId) return err(400, "CAN_ONLY_LEAVE_SELF", "본인만 탈퇴 가능");
   kvRemove(`families/${ctx.familyId}/members/list`, memberId);
   kvDel(`families/${ctx.familyId}/members/${memberId}`);
+
+  // Mark claims referencing the departed member (preserve history for parent)
+  const claimsList = kvGet(`families/${ctx.familyId}/claims/list`) || [];
+  for (const cid of claimsList) {
+    const claim = kvGet(`families/${ctx.familyId}/claims/${cid}`);
+    if (claim && claim.child_member_id === memberId) {
+      claim.member_departed = true;
+      kvPut(`families/${ctx.familyId}/claims/${cid}`, claim);
+    }
+  }
+
   const remaining = kvGet(`families/${ctx.familyId}/members/list`) || [];
   if (remaining.length === 0) {
     // 가족 해산 — by_code 인덱스도 제거
@@ -406,8 +427,8 @@ function handleSubmitGrant(ctx, body) {
   if (typeof amount !== "number" || !Number.isInteger(amount) || amount < 100 || amount > 10000000) return err(400, "VALIDATION_ERROR", "금액은 100원~10,000,000원 정수");
   if (typeof name !== "string" || name.length < 1 || name.length > 50) return err(400, "VALIDATION_ERROR", "항목명은 1~50자");
 
-  // HTML 태그 제거
-  const sanitizedName = name.replace(/<[^>]*>/g, "");
+  // XSS 방지용 정제
+  const sanitizedName = name.replace(/<[^>]*>?/g, "").replace(/on\w+\s*=/gi, "").replace(/javascript\s*:/gi, "").trim();
 
   const now = new Date().toISOString();
   const grant = {
@@ -459,7 +480,7 @@ function handleMigrate(ctx, body) {
   for (const c of claims) {
     if (!c.claim_id || !c.year || !c.month || !c.snapshot) continue;
     // claim_id 형식 검증
-    if (typeof c.claim_id !== "string" || !/^cl_[a-z0-9]+$/.test(c.claim_id)) continue;
+    if (typeof c.claim_id !== "string" || !/^cl_[a-zA-Z0-9_-]+$/.test(c.claim_id)) continue;
     // year/month 범위 검증
     if (typeof c.year !== "number" || c.year < 2024 || c.year > 2099) continue;
     if (typeof c.month !== "number" || c.month < 1 || c.month > 12) continue;
@@ -491,11 +512,11 @@ function route(method, path, body, headers) {
   // Public routes
   if (method === "POST" && path === "/api/families") return handleFamiliesPost(body, headers);
 
-  m = path.match(/^\/api\/families\/by-code\/([2-9A-HJ-NP-Za-z]{6})$/);
+  m = path.match(/^\/api\/families\/by-code\/([2-9A-HJ-NP-Z]{6})$/);
   if (method === "GET" && m) return handleGetFamilyByCode(m[1].toUpperCase());
 
   m = path.match(/^\/api\/families\/([2-9A-HJ-NP-Z]{6})\/join$/);
-  if (method === "POST" && m) return handleJoinFamily(m[1], body, headers);
+  if (method === "POST" && m) return handleJoinFamily(m[1].toUpperCase(), body, headers);
 
   // Authenticated routes
   const ctx = authenticate(headers);
@@ -524,7 +545,7 @@ function route(method, path, body, headers) {
     return handleListClaims(ctx);
   }
 
-  m = path.match(/^\/api\/claims\/(cl_[a-z0-9]+)$/);
+  m = path.match(/^\/api\/claims\/((?:cl|gr)_[a-z0-9]+)$/);
   if (m) {
     if (!ctx) return err(401, "AUTH_REQUIRED", "인증 필요");
     if (method === "GET") return handleGetClaim(ctx, m[1]);
@@ -579,7 +600,7 @@ let _originalFetch = null;
 export function enableMockBackend(apiBase) {
   _originalFetch = window.fetch;
   const base = apiBase.replace(/\/$/, "");
-  console.log("[MockBackend] 활성화됨 — API:", base);
+  console.debug("[MockBackend] 활성화됨 — API:", base);
 
   window.fetch = async function(input, init = {}) {
     // Request 객체와 일반 문자열 URL 모두 지원 (C-12)
@@ -649,5 +670,5 @@ export function enableMockBackend(apiBase) {
  */
 export function disableMockBackend() {
   if (_originalFetch) window.fetch = _originalFetch;
-  console.log("[MockBackend] 비활성화됨");
+  console.debug("[MockBackend] 비활성화됨");
 }

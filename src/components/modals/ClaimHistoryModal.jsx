@@ -1,7 +1,7 @@
 // src/components/modals/ClaimHistoryModal.jsx — S-2-101 자녀 청구 이력
 
 import { useState, useEffect, useMemo } from "react";
-import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useClaims } from "../../hooks/useClaims";
 import { loadFamilyContext } from "../../utils/familyContext";
 import { syncSubmittedClaims } from "../../utils/submittedClaims";
@@ -15,18 +15,11 @@ import ChildClaimDetailModal from "./ChildClaimDetailModal";
  * @param {{ onClose: () => void }} props
  */
 export default function ClaimHistoryModal({ onClose }) {
+  const contentRef = useModalBase(onClose);
   const ctx = useMemo(() => loadFamilyContext(), []);
   const { claims, fetchClaims, loading } = useClaims(ctx?.family_id);
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [receivingId, setReceivingId] = useState(null);
-  const trapRef = useFocusTrap(!selectedClaim);
-
-  // ESC 키 핸들러
-  useEffect(() => {
-    const handleKey = (e) => { if (e.key === "Escape") { if (selectedClaim) return; onClose(); } };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose, selectedClaim]);
 
   // 청구와 grant 분리
   const regularClaims = useMemo(() => claims.filter(c => c.type !== "grant"), [claims]);
@@ -73,18 +66,15 @@ export default function ClaimHistoryModal({ onClose }) {
   }
 
   return (
-    <div
-      className="modal-backdrop"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="history-title"
-    >
+    <div className="modal-backdrop" onClick={onClose}>
       <div
-        ref={trapRef}
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 440, maxHeight: "90vh", overflow: "hidden", padding: 0, display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="history-title"
       >
         <div className="modal-header">
           <h2 id="history-title" className="modal-title">📜 청구 이력</h2>
@@ -118,7 +108,7 @@ export default function ClaimHistoryModal({ onClose }) {
                     onClick={setSelectedClaim}
                     onReceiveGrant={c.status === "granted" ? handleReceiveGrant : undefined}
                     quickLoading={receivingId === c.claim_id}
-                    style={{ animationDelay: `${i * 0.05}s` }}
+                    style={{ "--anim-delay": `${i * 0.05}s` }}
                   />
                 ))}
               </div>
@@ -137,7 +127,7 @@ export default function ClaimHistoryModal({ onClose }) {
                     key={c.claim_id}
                     claim={c}
                     onClick={setSelectedClaim}
-                    style={{ animationDelay: `${i * 0.05}s` }}
+                    style={{ "--anim-delay": `${i * 0.05}s` }}
                   />
                 ))}
               </div>

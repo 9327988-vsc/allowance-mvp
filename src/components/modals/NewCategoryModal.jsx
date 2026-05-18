@@ -1,27 +1,17 @@
 // src/components/modals/NewCategoryModal.jsx — S-105 새 카테고리 추가
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { COMMON_EMOJIS, addCustomCategory } from "../../constants/categories";
 import { showToast } from "../../utils/toastManager";
 
 const GRID_COLS = 6;
 
 export default function NewCategoryModal({ onSuccess, onCancel }) {
+  const contentRef = useModalBase(onCancel);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
   const [errors, setErrors] = useState({});
   const [focusIndex, setFocusIndex] = useState(-1);
-
-  // ESC = 닫기
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onCancel();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
 
   function handleSubmit() {
     const result = addCustomCategory({ name: name.trim(), icon });
@@ -80,6 +70,7 @@ export default function NewCategoryModal({ onSuccess, onCancel }) {
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 400, width: "90%" }}
         onClick={e => e.stopPropagation()}

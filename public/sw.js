@@ -1,8 +1,11 @@
 // sw.js — 서비스워커 (오프라인 캐시 + 앱 셸)
-const CACHE_NAME = "allowance-v1";
+const CACHE_NAME = "allowance-v8.5";
 const APP_SHELL = [
   "/allowance-mvp/",
   "/allowance-mvp/index.html",
+  "/allowance-mvp/manifest.json",
+  "/allowance-mvp/icons/icon-192.svg",
+  "/allowance-mvp/icons/icon-512.svg",
 ];
 
 // 설치: 앱 셸 캐시
@@ -36,8 +39,8 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        // 성공 응답을 캐시에 저장
-        if (response.ok) {
+        // 유효한 응답만 캐시에 저장 (opaque/redirect/error 응답 제외)
+        if (response.ok && response.type === "basic" && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }

@@ -1,6 +1,7 @@
 // src/components/modals/FamilyInfoModal.jsx — S-2-004 가족 정보
 
 import { useState, useEffect, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
 import { getKVAdapter } from "../../utils/kvAdapter";
@@ -18,6 +19,7 @@ import { copyToClipboard } from "../../utils/clipboard";
  * }} props
  */
 export default function FamilyInfoModal({ onClose, onLeft }) {
+  const contentRef = useModalBase(onClose);
   const [members, setMembers] = useState([]);
   const [familyCode, setFamilyCode] = useState("");
   const [editingName, setEditingName] = useState(false);
@@ -28,13 +30,6 @@ export default function FamilyInfoModal({ onClose, onLeft }) {
 
   const [ctx, setCtx] = useState(() => loadFamilyContext());
 
-  useEffect(() => {
-    function handleEsc(e) {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   useEffect(() => {
     if (!ctx) return;
@@ -101,6 +96,15 @@ export default function FamilyInfoModal({ onClose, onLeft }) {
 
     const adapter = getKVAdapter();
     await adapter.leaveFamily(ctx.family_id, ctx.member_id);
+
+    // Clean up family-scoped localStorage keys before clearing context
+    const familyId = ctx?.family_id;
+    if (familyId) {
+      ["chores_v1_f_", "chore_log_v1_f_", "auto_grant_schedules_v1_f_", "auto_grant_last_run_v1_f_", "qna_v1_f_"].forEach(prefix => {
+        localStorage.removeItem(prefix + familyId);
+      });
+    }
+
     clearFamilyContext();
     showToast({ type: "success", message: "가족에서 탈퇴했어요" });
     onLeft();
@@ -126,16 +130,15 @@ export default function FamilyInfoModal({ onClose, onLeft }) {
   }
 
   return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="family-info-title"
-    >
+    <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 440, width: "90%", padding: 0 }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="family-info-title"
       >
         <div className="modal-header">
           <h2 id="family-info-title" className="modal-title">가족 정보</h2>

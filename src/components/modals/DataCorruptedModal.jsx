@@ -1,5 +1,6 @@
 // src/components/modals/DataCorruptedModal.jsx — S-109 설정 손상 안내
 import { useEffect, useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import { recoverFromBackup } from "../../utils/diagnostics";
 import { showToast } from "../../utils/toastManager";
 
@@ -13,17 +14,8 @@ export default function DataCorruptedModal({ onResetSettings, onRecovered }) {
     setHasBackup(backupExists);
   }, []);
 
-  // ESC → 다시 설정하기 (안전 방향)
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onResetSettings();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onResetSettings]);
+  // useModalBase: scroll lock + focus trap + ESC (→ 다시 설정하기)
+  const modalRef = useModalBase(onResetSettings, { active: true });
 
   function handleRecover() {
     setRecovering(true);
@@ -46,10 +38,13 @@ export default function DataCorruptedModal({ onResetSettings, onRecovered }) {
   return (
     <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-1)" }}>
       <div
+        ref={modalRef}
+        tabIndex={-1}
         className="modal-content"
         style={{ maxWidth: 420, width: "90%" }}
         role="alertdialog"
         aria-modal="true"
+        aria-label="설정 데이터 손상 안내"
       >
         <h2 className="modal-title mb-3">⚠ 설정 데이터 손상</h2>
 

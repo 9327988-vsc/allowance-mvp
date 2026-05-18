@@ -1,5 +1,7 @@
 // src/utils/deviceId.js — 디바이스 UUID 관리 (4.6)
 
+import { nanoid } from "./idGenerator";
+
 const STORAGE_KEY = "device_id_v1";
 
 /**
@@ -15,7 +17,7 @@ export function getDeviceId() {
     }
     return id;
   }
-  id = `dev_${crypto.randomUUID()}`;
+  id = `dev_${nanoid(16)}`;
   try { localStorage.setItem(STORAGE_KEY, id); } catch { /* ignored */ }
   return id;
 }

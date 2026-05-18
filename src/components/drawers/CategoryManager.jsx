@@ -1,5 +1,6 @@
 // src/components/drawers/CategoryManager.jsx — S-203 카테고리 관리
 import { useState, useEffect, useCallback } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 import {
   DEFAULT_CATEGORIES, getCategoryIcon,
   deleteCustomCategory, updateCustomCategory, COMMON_EMOJIS
@@ -30,6 +31,12 @@ export default function CategoryManager({ onClose }) {
   // 미사용 정리 미리보기
   const [cleanupPreview, setCleanupPreview] = useState(null);
 
+  // 서브모달 열려있으면 부모 useModalBase 비활성 (ESC 중첩 방지)
+  const hasSubModal = deleteTarget !== null || cleanupPreview !== null || showNewCategory;
+  const contentRef = useModalBase(onClose, { active: !hasSubModal });
+  const deleteDialogRef = useModalBase(() => setDeleteTarget(null), { active: deleteTarget !== null });
+  const cleanupDialogRef = useModalBase(() => setCleanupPreview(null), { active: cleanupPreview !== null });
+
   const isEditing = editingId !== null;
 
   const refreshData = useCallback(() => {
@@ -37,32 +44,6 @@ export default function CategoryManager({ onClose }) {
     setUsage(getCategoryUsage());
   }, []);
 
-  // ESC 처리
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key !== "Escape") return;
-      if (showNewCategory) return; // S-105가 처리
-      if (cleanupPreview) {
-        e.stopPropagation();
-        setCleanupPreview(null);
-        return;
-      }
-      if (deleteTarget) {
-        e.stopPropagation();
-        setDeleteTarget(null);
-        return;
-      }
-      if (isEditing) {
-        e.stopPropagation();
-        cancelEdit();
-        return;
-      }
-      e.stopPropagation();
-      onClose();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showNewCategory, cleanupPreview, deleteTarget, isEditing, cancelEdit, onClose]);
 
   // ── 인라인 편집 ──
   function startEdit(cat) {
@@ -145,6 +126,7 @@ export default function CategoryManager({ onClose }) {
   return (
     <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-1)" }}>
       <div
+        ref={contentRef}
         className="modal-content category-manager"
         style={{ maxWidth: 540, width: "95%", maxHeight: "85dvh", overflow: "auto" }}
         onClick={e => e.stopPropagation()}
@@ -230,12 +212,14 @@ export default function CategoryManager({ onClose }) {
                         onClick={() => startEdit(cat)}
                         disabled={isEditing}
                         title="수정"
+                        aria-label="수정"
                       >✏️</button>
                       <button
                         className="cm-action-btn"
                         onClick={() => setDeleteTarget(cat)}
                         disabled={isEditing}
                         title="삭제"
+                        aria-label="삭제"
                       >🗑</button>
                     </div>
                   </>
@@ -269,11 +253,13 @@ export default function CategoryManager({ onClose }) {
         {deleteTarget && (
           <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }}>
             <div
+              ref={deleteDialogRef}
               className="modal-content"
               style={{ maxWidth: 380, width: "90%" }}
               onClick={e => e.stopPropagation()}
               role="alertdialog"
               aria-modal="true"
+              aria-label="카테고리 삭제 확인"
             >
               {deleteUsageCount > 0 ? (
                 <p className="mb-3">
@@ -299,11 +285,13 @@ export default function CategoryManager({ onClose }) {
         {cleanupPreview && (
           <div className="modal-backdrop" style={{ zIndex: "var(--z-modal-3)" }}>
             <div
+              ref={cleanupDialogRef}
               className="modal-content"
               style={{ maxWidth: 400, width: "90%" }}
               onClick={e => e.stopPropagation()}
               role="alertdialog"
               aria-modal="true"
+              aria-label="미사용 카테고리 정리"
             >
               <h3 className="font-bold mb-2">🗂 정리 미리보기</h3>
               <p className="mb-2">다음 {cleanupPreview.length}개 카테고리는 임시 항목 어디에도 사용된 적이 없어요.</p>

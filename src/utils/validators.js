@@ -5,12 +5,10 @@ export function validateSettings(form) {
   if (!form) return { valid: false, errors: { form: "설정 데이터가 없습니다" } };
   const errors = {};
 
-  if (form.child_name !== undefined && form.child_name !== null) {
-    if (form.child_name.trim().length === 0) {
-      errors.child_name = "이름을 입력해주세요";
-    } else if (form.child_name.length > 20) {
-      errors.child_name = "20자 이내로 입력해주세요";
-    }
+  if (!form.child_name || form.child_name.trim().length === 0) {
+    errors.child_name = "이름을 입력해주세요";
+  } else if (form.child_name.length > 20) {
+    errors.child_name = "20자 이내로 입력해주세요";
   }
 
   if (!Number.isInteger(form.base_allowance)) {
@@ -25,8 +23,8 @@ export function validateSettings(form) {
   if (!form.school) form = { ...form, school: { days: [], fare: 0 } };
   if (!Array.isArray(form.school.days)) form = { ...form, school: { ...form.school, days: [] } };
   if (form.school.days.length === 0) {
-    if (form.school.fare !== 0 && !Number.isInteger(form.school.fare)) {
-      errors["school.fare"] = "정수로 입력해주세요";
+    if (form.school.fare !== 0) {
+      errors["school.fare"] = "등교일이 없으면 교통비는 0이어야 합니다";
     }
   } else {
     if (!Number.isInteger(form.school.fare) || form.school.fare < 1) {
@@ -40,8 +38,8 @@ export function validateSettings(form) {
   if (!form.academy) form = { ...form, academy: { days: [], fare: 0 } };
   if (!Array.isArray(form.academy.days)) form = { ...form, academy: { ...form.academy, days: [] } };
   if (form.academy.days.length === 0) {
-    if (form.academy.fare !== 0 && !Number.isInteger(form.academy.fare)) {
-      errors["academy.fare"] = "정수로 입력해주세요";
+    if (form.academy.fare !== 0) {
+      errors["academy.fare"] = "학원일이 없으면 교통비는 0이어야 합니다";
     }
   } else {
     if (!Number.isInteger(form.academy.fare) || form.academy.fare < 1) {
@@ -57,7 +55,8 @@ export function validateSettings(form) {
 export function validateExtraItem(input) {
   const errors = {};
 
-  if (!input.category || input.category.trim() === "") {
+  const cat = String(input.category || "").trim();
+  if (!cat) {
     errors.category = "카테고리를 선택해주세요";
   }
 

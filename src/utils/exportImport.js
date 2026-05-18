@@ -1,5 +1,7 @@
 // src/utils/exportImport.js
 import { APP_VERSION } from "../constants/appVersion";
+import { getActiveUser } from "./authStore";
+import { loadFamilyContext } from "./familyContext";
 
 export async function exportData(options = {}) {
   const data = {
@@ -35,6 +37,32 @@ export async function exportData(options = {}) {
   try { const familyContext = JSON.parse(localStorage.getItem("family_context_v1") || "null"); if (familyContext) data.family_context = familyContext; } catch (e) { console.warn("exportData: family_context parse failed:", e); }
   try { const submittedClaims = JSON.parse(localStorage.getItem("submitted_claims_v1") || "null"); if (submittedClaims) data.submitted_claims = submittedClaims; } catch (e) { console.warn("exportData: submitted_claims parse failed:", e); }
   try { const userPrefs = JSON.parse(localStorage.getItem("user_prefs_v1") || "null"); if (userPrefs) data.user_prefs = userPrefs; } catch (e) { console.warn("exportData: user_prefs parse failed:", e); }
+
+  // Phase-2 scoped data (only export if valid user/family context)
+  const activeUser = getActiveUser();
+  const familyCtx = loadFamilyContext();
+  if (activeUser) {
+    // export_user_id를 기록하여 import 시 크로스유저 방지
+    data.export_user_id = activeUser;
+    try { const v = JSON.parse(localStorage.getItem("notifications_v1_u_" + activeUser) || "null"); if (v) data.notifications = v; } catch { /* ignored */ }
+    try { const v = JSON.parse(localStorage.getItem("badges_earned_v1_u_" + activeUser) || "null"); if (v) data.badges_earned = v; } catch { /* ignored */ }
+  }
+  if (familyCtx?.family_id) {
+    const fid = familyCtx.family_id;
+    data.export_family_id = fid;
+    try { const v = JSON.parse(localStorage.getItem("auto_grant_schedules_v1_f_" + fid) || "null"); if (v) data.auto_grant_schedules = v; } catch { /* ignored */ }
+    try { const v = JSON.parse(localStorage.getItem("auto_grant_last_run_v1_f_" + fid) || "null"); if (v) data.auto_grant_last_run = v; } catch { /* ignored */ }
+    try { const v = JSON.parse(localStorage.getItem("chores_v1_f_" + fid) || "null"); if (v) data.chores = v; } catch { /* ignored */ }
+    try { const v = JSON.parse(localStorage.getItem("chore_log_v1_f_" + fid) || "null"); if (v) data.chore_log = v; } catch { /* ignored */ }
+    try { const v = JSON.parse(localStorage.getItem("qna_v1_f_" + fid) || "null"); if (v) data.qna = v; } catch { /* ignored */ }
+  }
+  // user_accounts 포함 (pin_hash/pin_salt 제거하여 보안 보호)
+  try {
+    const v = JSON.parse(localStorage.getItem("user_accounts_v1") || "null");
+    if (v) {
+      data.user_accounts = (Array.isArray(v) ? v : []).map(({ pin_hash, pin_salt, pin_reset_pending, birth_date, ...rest }) => rest);
+    }
+  } catch { /* ignored */ }
 
   if (options.includeBackups) {
     data.backups = {};
@@ -89,6 +117,26 @@ export function defaultExportFilename() {
   return `allowance-backup-${today}.json`;
 }
 
+/**
+ * 앱 시작 시 호출: 이전 import 중 크래시 발생 시 백업 복원
+ */
+export function recoverFromCrashedImport() {
+  try {
+    const raw = localStorage.getItem("_import_backup_v1");
+    if (!raw) return false;
+    const backup = JSON.parse(raw);
+    Object.keys(backup).forEach(k => {
+      if (backup[k] === null) localStorage.removeItem(k);
+      else localStorage.setItem(k, backup[k]);
+    });
+    localStorage.removeItem("_import_backup_v1");
+    return true;
+  } catch {
+    try { localStorage.removeItem("_import_backup_v1"); } catch { /* ignored */ }
+    return false;
+  }
+}
+
 export async function importData(file, mode = "overwrite") {
   const text = await file.text();
   let data;
@@ -108,65 +156,167 @@ export async function importData(file, mode = "overwrite") {
 
   const result = { success: true, applied: { settings: 0, categories: 0, calendars: 0 } };
 
+  // Backup current localStorage state before overwrite (M-7: rollback on failure)
+  // C-04: persist backup to localStorage so it survives browser crash mid-import
+  let backup = null;
   if (mode === "overwrite") {
+    backup = {};
     Object.keys(localStorage)
       .filter(k =>
         k === "settings_v1" || k === "meta_v1" || k === "custom_categories_v1" ||
-        k.startsWith("calendar_v1_")
+        k.startsWith("calendar_v1_") ||
+        k === "family_context_v1" || k === "submitted_claims_v1" || k === "user_prefs_v1" ||
+        k === "user_accounts_v1"
       )
       .filter(k => !k.includes("_corrupted_"))
-      .forEach(k => localStorage.removeItem(k));
+      .forEach(k => { backup[k] = localStorage.getItem(k); });
+
+    // Also backup Phase-2 scoped keys
+    const backupUser = getActiveUser();
+    const backupFamilyCtx = loadFamilyContext();
+    if (backupUser) {
+      const nk = "notifications_v1_u_" + backupUser;
+      const bk = "badges_earned_v1_u_" + backupUser;
+      backup[nk] = localStorage.getItem(nk);
+      backup[bk] = localStorage.getItem(bk);
+    }
+    if (backupFamilyCtx?.family_id) {
+      const fid = backupFamilyCtx.family_id;
+      ["chores_v1_f_", "chore_log_v1_f_", "auto_grant_schedules_v1_f_", "auto_grant_last_run_v1_f_", "qna_v1_f_"].forEach(prefix => {
+        const k = prefix + fid;
+        backup[k] = localStorage.getItem(k);
+      });
+    }
+    // Persist backup to localStorage so it survives browser crash
+    try {
+      localStorage.setItem("_import_backup_v1", JSON.stringify(backup));
+    } catch { /* if this fails, proceed with in-memory backup only */ }
   }
 
-  if (data.settings && (mode === "overwrite" || !localStorage.getItem("settings_v1"))) {
-    localStorage.setItem("settings_v1", JSON.stringify(data.settings));
-    result.applied.settings = 1;
-  }
-  if (data.meta && (mode === "overwrite" || !localStorage.getItem("meta_v1"))) {
-    localStorage.setItem("meta_v1", JSON.stringify(data.meta));
-  }
-  if (data.custom_categories) {
+  try {
     if (mode === "overwrite") {
-      localStorage.setItem("custom_categories_v1", JSON.stringify(data.custom_categories));
-      result.applied.categories = data.custom_categories.categories?.length ?? 0;
-    } else {
-      let existing;
-      try { existing = JSON.parse(localStorage.getItem("custom_categories_v1") || '{"categories":[],"version":1}'); } catch (e) { console.warn("importData: categories parse failed:", e); existing = { categories: [], version: 1 }; }
-      (data.custom_categories.categories || []).forEach(c => {
-        if (!existing.categories.some(e => e.name === c.name)) {
-          existing.categories.push(c);
-          result.applied.categories++;
+      Object.keys(backup).forEach(k => localStorage.removeItem(k));
+    }
+
+    if (data.settings && (mode === "overwrite" || !localStorage.getItem("settings_v1"))) {
+      localStorage.setItem("settings_v1", JSON.stringify(data.settings));
+      result.applied.settings = 1;
+    } else if (mode === "overwrite" && !data.settings && backup && backup["settings_v1"]) {
+      // Restore settings from backup if import data doesn't include settings
+      localStorage.setItem("settings_v1", backup["settings_v1"]);
+    }
+    if (data.meta && (mode === "overwrite" || !localStorage.getItem("meta_v1"))) {
+      localStorage.setItem("meta_v1", JSON.stringify(data.meta));
+    }
+    if (data.custom_categories) {
+      if (mode === "overwrite") {
+        localStorage.setItem("custom_categories_v1", JSON.stringify(data.custom_categories));
+        result.applied.categories = data.custom_categories.categories?.length ?? 0;
+      } else {
+        let existing;
+        try { existing = JSON.parse(localStorage.getItem("custom_categories_v1") || '{"categories":[],"version":1}'); } catch (e) { console.warn("importData: categories parse failed:", e); existing = { categories: [], version: 1 }; }
+        (data.custom_categories.categories || []).forEach(c => {
+          if (!existing.categories.some(e => e.name === c.name)) {
+            existing.categories.push(c);
+            result.applied.categories++;
+          }
+        });
+        localStorage.setItem("custom_categories_v1", JSON.stringify(existing));
+      }
+    }
+    // 2단계 데이터 복원
+    if (data.family_context) {
+      if (mode === "overwrite" || !localStorage.getItem("family_context_v1")) {
+        localStorage.setItem("family_context_v1", JSON.stringify(data.family_context));
+      }
+    }
+    if (data.submitted_claims) {
+      if (mode === "overwrite" || !localStorage.getItem("submitted_claims_v1")) {
+        localStorage.setItem("submitted_claims_v1", JSON.stringify(data.submitted_claims));
+      }
+    }
+    if (data.user_prefs) {
+      if (mode === "overwrite" || !localStorage.getItem("user_prefs_v1")) {
+        localStorage.setItem("user_prefs_v1", JSON.stringify(data.user_prefs));
+      }
+    }
+
+    // Phase-2 scoped data restore
+    // 크로스유저 방지: export_user_id가 현재 유저와 다르면 개인 데이터(알림/배지)를 건너뜀
+    const importUserId = getActiveUser();
+    const importFamilyCtx = loadFamilyContext();
+    const importFamilyId = importFamilyCtx?.family_id;
+    const sameUser = !data.export_user_id || data.export_user_id === importUserId;
+    if (importUserId && sameUser) {
+      if (data.notifications) {
+        const k = "notifications_v1_u_" + importUserId;
+        if (mode === "overwrite" || !localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(data.notifications));
+      }
+      if (data.badges_earned) {
+        const k = "badges_earned_v1_u_" + importUserId;
+        if (mode === "overwrite" || !localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(data.badges_earned));
+      }
+    }
+    const sameFamily = !data.export_family_id || data.export_family_id === importFamilyId;
+    if (importFamilyId && sameFamily) {
+      if (data.auto_grant_schedules) {
+        const k = "auto_grant_schedules_v1_f_" + importFamilyId;
+        if (mode === "overwrite" || !localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(data.auto_grant_schedules));
+      }
+      if (data.auto_grant_last_run) {
+        const k = "auto_grant_last_run_v1_f_" + importFamilyId;
+        if (mode === "overwrite" || !localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(data.auto_grant_last_run));
+      }
+      if (data.chores) {
+        const k = "chores_v1_f_" + importFamilyId;
+        if (mode === "overwrite" || !localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(data.chores));
+      }
+      if (data.chore_log) {
+        const k = "chore_log_v1_f_" + importFamilyId;
+        if (mode === "overwrite" || !localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(data.chore_log));
+      }
+      if (data.qna) {
+        const k = "qna_v1_f_" + importFamilyId;
+        if (mode === "overwrite" || !localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify(data.qna));
+      }
+    }
+    // user_accounts 복원 (크로스유저 방지: export_user_id가 현재 유저 목록에 있을 때만)
+    if (data.user_accounts) {
+      const currentAccounts = JSON.parse(localStorage.getItem("user_accounts_v1") || "[]");
+      const currentUserIds = new Set(currentAccounts.map(a => a.user_id));
+      // export에 현재 기기의 유저가 포함된 경우에만 복원 허용
+      const hasOverlap = !data.export_user_id || currentUserIds.has(data.export_user_id) || currentUserIds.size === 0;
+      if (hasOverlap && (mode === "overwrite" || !localStorage.getItem("user_accounts_v1"))) {
+        localStorage.setItem("user_accounts_v1", JSON.stringify(data.user_accounts));
+      }
+    }
+
+    Object.entries(data.calendars).forEach(([ym, cal]) => {
+      const [y, m] = ym.split("-");
+      const key = `calendar_v1_${y}_${m}`;
+      if (mode === "overwrite" || !localStorage.getItem(key)) {
+        localStorage.setItem(key, JSON.stringify(cal));
+        result.applied.calendars++;
+      }
+    });
+  } catch (e) {
+    // Restore from backup on failure
+    if (backup) {
+      Object.keys(backup).forEach(k => {
+        if (backup[k] === null) {
+          localStorage.removeItem(k);
+        } else {
+          localStorage.setItem(k, backup[k]);
         }
       });
-      localStorage.setItem("custom_categories_v1", JSON.stringify(existing));
     }
-  }
-  // 2단계 데이터 복원
-  if (data.family_context) {
-    if (mode === "overwrite" || !localStorage.getItem("family_context_v1")) {
-      localStorage.setItem("family_context_v1", JSON.stringify(data.family_context));
-    }
-  }
-  if (data.submitted_claims) {
-    if (mode === "overwrite" || !localStorage.getItem("submitted_claims_v1")) {
-      localStorage.setItem("submitted_claims_v1", JSON.stringify(data.submitted_claims));
-    }
-  }
-  if (data.user_prefs) {
-    if (mode === "overwrite" || !localStorage.getItem("user_prefs_v1")) {
-      localStorage.setItem("user_prefs_v1", JSON.stringify(data.user_prefs));
-    }
+    try { localStorage.removeItem("_import_backup_v1"); } catch { /* ignored */ }
+    return { success: false, error: "IMPORT_WRITE_FAILED" };
   }
 
-  Object.entries(data.calendars).forEach(([ym, cal]) => {
-    const [y, m] = ym.split("-");
-    const key = `calendar_v1_${y}_${m}`;
-    if (mode === "overwrite" || !localStorage.getItem(key)) {
-      localStorage.setItem(key, JSON.stringify(cal));
-      result.applied.calendars++;
-    }
-  });
-
+  // Clear backup on success
+  backup = null;
+  try { localStorage.removeItem("_import_backup_v1"); } catch { /* ignored */ }
   return result;
 }
 

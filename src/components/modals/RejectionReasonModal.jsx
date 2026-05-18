@@ -1,6 +1,7 @@
 // src/components/modals/RejectionReasonModal.jsx — S-2-003 거절 사유 입력
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useModalBase } from "../../hooks/useModalBase";
 
 const MAX_REASON_LENGTH = 200;
 
@@ -12,22 +13,11 @@ const MAX_REASON_LENGTH = 200;
  * }} props
  */
 export default function RejectionReasonModal({ onSubmit, onClose, loading }) {
+  const contentRef = useModalBase(onClose);
   const [reason, setReason] = useState("");
 
   const trimmed = reason.trim();
   const isValid = trimmed.length >= 1 && trimmed.length <= MAX_REASON_LENGTH;
-
-  // ESC 키로 모달 닫기
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape" && !loading) {
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [loading, onClose]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -39,14 +29,16 @@ export default function RejectionReasonModal({ onSubmit, onClose, loading }) {
     <div
       className="modal-backdrop"
       style={{ zIndex: "var(--z-modal-2)" }}
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="reject-title"
+      onClick={loading ? undefined : onClose}
     >
       <div
+        ref={contentRef}
         className="modal-content"
         style={{ maxWidth: 400, padding: 0 }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reject-title"
       >
         <div className="modal-header modal-header--danger">
           <h2 id="reject-title" className="modal-title">거절 사유</h2>
