@@ -11,7 +11,6 @@ export default function CellTooltip({ cell, anchorRect, settings }) {
   const prevRect = useRef(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const extraCategories = cell?.extra_items?.map(i => i.category).join(",") || "";
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const customCategories = useMemo(() => loadCustomCategories(), [extraCategories]);
 
   useEffect(() => {

@@ -101,8 +101,9 @@ function authenticate(headers) {
 // --- 라우트 핸들러 ---
 
 function handleFamiliesPost(body, headers) {
+  if (!body || typeof body !== "object") return err(400, "INVALID_BODY", "요청 본문이 올바르지 않습니다");
   const { creator_display_name, creator_role } = body;
-  if (!creator_display_name || creator_display_name.length > 20) return err(400, "INVALID_DISPLAY_NAME", "이름은 1~20자");
+  if (typeof creator_display_name !== "string" || creator_display_name.trim().length === 0 || creator_display_name.length > 20) return err(400, "INVALID_DISPLAY_NAME", "이름은 1~20자");
   if (creator_role !== "child" && creator_role !== "parent") return err(400, "INVALID_ROLE", "역할을 선택해 주세요");
 
   const deviceId = headers["X-Device-Id"];
@@ -152,8 +153,9 @@ function handleGetFamilyByCode(code) {
 }
 
 function handleJoinFamily(code, body, headers) {
+  if (!body || typeof body !== "object") return err(400, "INVALID_BODY", "요청 본문이 올바르지 않습니다");
   const { display_name, role } = body;
-  if (!display_name || display_name.length > 20) return err(400, "INVALID_DISPLAY_NAME", "이름은 1~20자");
+  if (typeof display_name !== "string" || display_name.trim().length === 0 || display_name.length > 20) return err(400, "INVALID_DISPLAY_NAME", "이름은 1~20자");
   if (role !== "child" && role !== "parent") return err(400, "INVALID_ROLE", "역할을 선택해 주세요");
 
   const deviceId = headers["X-Device-Id"];
@@ -200,9 +202,10 @@ function handleGetFamily(ctx) {
 }
 
 function handlePatchMember(ctx, memberId, body) {
+  if (!body || typeof body !== "object") return err(400, "INVALID_BODY", "요청 본문이 올바르지 않습니다");
   if (ctx.member.member_id !== memberId) return err(400, "CAN_ONLY_EDIT_SELF", "본인 정보만 수정할 수 있어요");
   const { display_name } = body;
-  if (!display_name || display_name.length > 20) return err(400, "INVALID_DISPLAY_NAME", "이름은 1~20자");
+  if (typeof display_name !== "string" || display_name.trim().length === 0 || display_name.length > 20) return err(400, "INVALID_DISPLAY_NAME", "이름은 1~20자");
 
   const member = kvGet(`families/${ctx.familyId}/members/${memberId}`);
   if (!member) return err(404, "MEMBER_NOT_FOUND", "멤버를 찾을 수 없어요");
@@ -367,8 +370,10 @@ function handleReceiveClaim(ctx, claimId, body) {
 }
 
 function handleAddComment(ctx, claimId, body) {
+  if (!body || typeof body !== "object") return err(400, "INVALID_BODY", "요청 본문이 올바르지 않습니다");
   const { comment_id, text } = body;
-  if (!comment_id || !text || text.length > 200) return err(400, "VALIDATION_ERROR", "댓글 1~200자 필수");
+  if (typeof comment_id !== "string" || !comment_id) return err(400, "VALIDATION_ERROR", "comment_id 필수");
+  if (typeof text !== "string" || text.trim().length === 0 || text.length > 200) return err(400, "VALIDATION_ERROR", "댓글 1~200자 필수");
 
   const claim = kvGet(`families/${ctx.familyId}/claims/${claimId}`);
   if (!claim) return err(404, "CLAIM_NOT_FOUND", "청구를 찾을 수 없습니다");
