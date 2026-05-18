@@ -35,7 +35,7 @@ function getStorageUsageQuick() {
       used += k.length + (localStorage.getItem(k)?.length ?? 0);
     }
     return (used * 2) / (5 * 1024 * 1024);
-  } catch { return 0; }
+  } catch (e) { console.warn("[storage] getStorageUsageQuick failed:", e); return 0; }
 }
 
 let _onCorruptedCallback = null;

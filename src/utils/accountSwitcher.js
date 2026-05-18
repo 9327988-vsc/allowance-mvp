@@ -21,7 +21,8 @@ export function loadSavedAccounts() {
     const raw = localStorage.getItem(getAccountsKey());
     if (!raw) return [];
     return JSON.parse(raw);
-  } catch {
+  } catch (e) {
+    console.warn("[accountSwitcher] loadSavedAccounts parse failed:", e);
     // 손상된 데이터 백업 후 제거
     try {
       const raw = localStorage.getItem(getAccountsKey());
@@ -29,7 +30,7 @@ export function loadSavedAccounts() {
         localStorage.setItem(`${getAccountsKey()}_corrupted_${Date.now()}`, raw);
         localStorage.removeItem(getAccountsKey());
       }
-    } catch { /* ignored */ }
+    } catch (e2) { console.warn("[accountSwitcher] corrupted backup failed:", e2); }
     return [];
   }
 }
@@ -50,7 +51,7 @@ export function saveCurrentAccount() {
   } else {
     accounts.push(ctx);
   }
-  try { localStorage.setItem(getAccountsKey(), JSON.stringify(accounts)); } catch { /* ignored */ }
+  try { localStorage.setItem(getAccountsKey(), JSON.stringify(accounts)); } catch (e) { console.warn("[accountSwitcher] saveCurrentAccount failed:", e); }
 }
 
 /**
@@ -100,7 +101,7 @@ export function updateAccountDisplayName(memberId, newName) {
   const idx = accounts.findIndex(a => a.member_id === memberId);
   if (idx >= 0) {
     accounts[idx].member_display_name = newName;
-    try { localStorage.setItem(getAccountsKey(), JSON.stringify(accounts)); } catch { /* ignored */ }
+    try { localStorage.setItem(getAccountsKey(), JSON.stringify(accounts)); } catch (e) { console.warn("[accountSwitcher] updateAccountDisplayName failed:", e); }
   }
 }
 
@@ -112,5 +113,5 @@ export function removeSavedAccount(familyId, memberId) {
   const filtered = accounts.filter(
     (a) => !(a.family_id === familyId && a.member_id === memberId)
   );
-  try { localStorage.setItem(getAccountsKey(), JSON.stringify(filtered)); } catch { /* ignored */ }
+  try { localStorage.setItem(getAccountsKey(), JSON.stringify(filtered)); } catch (e) { console.warn("[accountSwitcher] removeSavedAccount failed:", e); }
 }

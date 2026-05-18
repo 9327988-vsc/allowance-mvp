@@ -131,8 +131,9 @@ export function recoverFromCrashedImport() {
     });
     localStorage.removeItem("_import_backup_v1");
     return true;
-  } catch {
-    try { localStorage.removeItem("_import_backup_v1"); } catch { /* ignored */ }
+  } catch (e) {
+    console.warn("[exportImport] restoreBackup failed:", e);
+    try { localStorage.removeItem("_import_backup_v1"); } catch (e2) { console.warn("[exportImport] backup cleanup failed:", e2); }
     return false;
   }
 }

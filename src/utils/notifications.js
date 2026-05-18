@@ -29,7 +29,8 @@ export function loadNotifications() {
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (e) {
+    console.warn("[notifications] loadNotifications parse failed:", e);
     return [];
   }
 }
@@ -41,7 +42,7 @@ function saveNotifications(notifs) {
     // 최대 개수 제한
     const trimmed = notifs.slice(0, MAX_NOTIFICATIONS);
     localStorage.setItem(key, JSON.stringify(trimmed));
-  } catch { /* ignored */ }
+  } catch (e) { console.warn("[notifications] saveNotifications failed:", e); }
 }
 
 export function addNotification({ type, title, message, icon }) {
@@ -89,7 +90,7 @@ export function clearNotifications() {
   if (!key) return;
   try {
     localStorage.removeItem(key);
-  } catch { /* ignored */ }
+  } catch (e) { console.warn("[notifications] clearNotifications failed:", e); }
 }
 
 /**
@@ -102,7 +103,8 @@ export function addNotificationForUser(userId, notification) {
   let list;
   try {
     list = JSON.parse(localStorage.getItem(key) || "[]");
-  } catch {
+  } catch (e) {
+    console.warn("[notifications] addNotificationForUser parse failed:", e);
     list = [];
   }
   if (!Array.isArray(list)) list = [];
@@ -113,7 +115,7 @@ export function addNotificationForUser(userId, notification) {
     read: false,
     icon: notification.icon || getDefaultIcon(notification.type),
   });
-  try { localStorage.setItem(key, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS))); } catch { /* ignored */ }
+  try { localStorage.setItem(key, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS))); } catch (e) { console.warn("[notifications] addNotificationForUser save failed:", e); }
 }
 
 function getDefaultIcon(type) {

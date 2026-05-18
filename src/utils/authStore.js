@@ -109,7 +109,8 @@ export function loadUserAccounts() {
     const raw = localStorage.getItem(ACCOUNTS_KEY);
     if (!raw) return [];
     return JSON.parse(raw);
-  } catch {
+  } catch (e) {
+    console.warn("[authStore] loadUserAccounts parse failed:", e);
     return [];
   }
 }
@@ -261,7 +262,7 @@ export function removeUser(userId) {
         localStorage.setItem("user_prefs_v1", JSON.stringify(all));
       }
     }
-  } catch { /* ignored */ }
+  } catch (e) { console.warn("[authStore] removeUser prefs cleanup failed:", e); }
   if (getActiveUser() === userId) clearActiveUser();
 }
 
@@ -287,7 +288,7 @@ export function loadPinResetRequests() {
   try {
     const raw = localStorage.getItem(PIN_RESET_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  } catch (e) { console.warn("[authStore] loadPinResetRequests parse failed:", e); return []; }
 }
 
 function savePinResetRequests(requests) {
@@ -393,8 +394,8 @@ export function migrateFromLegacyAccounts() {
     }
     saveUserAccounts(existing);
     localStorage.setItem(MIGRATED_KEY, "1");
-  } catch {
-    // 마이그레이션 실패 → MIGRATED_KEY 미설정 → 다음 기동 시 재시도
+  } catch (e) {
+    console.warn("[authStore] migrateFromLegacyAccounts failed (will retry next boot):", e);
   } finally {
     migrateFromLegacyAccounts._running = false;
   }
