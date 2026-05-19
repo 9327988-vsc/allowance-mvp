@@ -14,20 +14,20 @@ function readableAmount(value) {
     const eok = Math.floor(abs / 100000000);
     const rest = abs % 100000000;
     const man = Math.floor(rest / 10000);
-    return man > 0 ? `${eok}억 ${man.toLocaleString()}만` : `${eok}억`;
+    return man > 0 ? `${eok}억 ${man.toLocaleString("ko-KR")}만` : `${eok}억`;
   }
   if (abs >= 10000) {
     const man = Math.floor(abs / 10000);
     const rest = abs % 10000;
-    return rest > 0 ? `${man.toLocaleString()}만 ${rest.toLocaleString()}` : `${man.toLocaleString()}만`;
+    return rest > 0 ? `${man.toLocaleString("ko-KR")}만 ${rest.toLocaleString("ko-KR")}` : `${man.toLocaleString("ko-KR")}만`;
   }
-  return abs.toLocaleString();
+  return abs.toLocaleString("ko-KR");
 }
 
 /** 금액 포맷 (콤마 + 원) */
 function fmt(value) {
   if (typeof value !== "number" || isNaN(value)) return "0원";
-  return `${Math.round(value).toLocaleString()}원`;
+  return `${Math.round(value).toLocaleString("ko-KR")}원`;
 }
 
 export default function BudgetSettingsModal({ userId, onClose, onSaved }) {

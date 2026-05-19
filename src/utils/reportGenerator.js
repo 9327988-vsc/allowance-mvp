@@ -165,7 +165,7 @@ export function generateInsights(year, month) {
     insights.push({
       type: "avg_daily",
       icon: "📊",
-      text: `하루 평균 ${current.avgDaily.toLocaleString()}원 지출 (${current.daysWithSpending}일간)`,
+      text: `하루 평균 ${current.avgDaily.toLocaleString("ko-KR")}원 지출 (${current.daysWithSpending}일간)`,
     });
   }
 

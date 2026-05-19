@@ -98,7 +98,7 @@ export default function AutoGrantModal({ childMembers = [], onClose }) {
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{s.name}</div>
                 <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                  {s.child_name} · {s.amount.toLocaleString()}원 ·{" "}
+                  {s.child_name} · {s.amount.toLocaleString("ko-KR")}원 ·{" "}
                   {s.frequency === "weekly" ? `매주 ${DAY_NAMES[s.day_of_week]}요일` : `매월 ${s.day_of_month}일`}
                 </div>
               </div>

@@ -151,7 +151,7 @@ export default function DashboardSummary({ calc, viewMonth, settings, claimStatu
               {limitInfo.limit && limitInfo.percent >= 80 && (
                 <p className="dashboard-summary__detail-skip">
                   {limitInfo.exceeded ? "⚠️" : "💡"} 한도 {limitInfo.percent}% 사용
-                  ({limitInfo.exceeded ? "초과" : `잔여 ${limitInfo.remaining.toLocaleString()}원`})
+                  ({limitInfo.exceeded ? "초과" : `잔여 ${limitInfo.remaining.toLocaleString("ko-KR")}원`})
                 </p>
               )}
             </div>

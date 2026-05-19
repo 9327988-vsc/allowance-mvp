@@ -34,7 +34,7 @@ export function useCalendar(settings) {
     }
     scheduleNext();
     return () => { mounted = false; clearTimeout(timerId); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -45,7 +45,7 @@ export function useCalendar(settings) {
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
   const todayY = parseInt(todayDate.split("-")[0], 10);
   const todayM = parseInt(todayDate.split("-")[1], 10);
 

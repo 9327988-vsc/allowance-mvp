@@ -125,7 +125,7 @@ export default function ChoresChildModal({ childMemberId, childName, onClose }) 
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{c.name}</div>
                     <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                      +{c.reward.toLocaleString()}원
+                      +{c.reward.toLocaleString("ko-KR")}원
                     </div>
                   </div>
                   <button
@@ -163,7 +163,7 @@ export default function ChoresChildModal({ childMemberId, childName, onClose }) 
                     </div>
                   </div>
                   <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>
-                    {entry.status === "approved" && <span style={{ color: "var(--color-success)" }}>+{entry.reward.toLocaleString()}원 ✓</span>}
+                    {entry.status === "approved" && <span style={{ color: "var(--color-success)" }}>+{entry.reward.toLocaleString("ko-KR")}원 ✓</span>}
                     {entry.status === "pending" && <span style={{ color: "var(--color-warning, orange)" }}>대기중</span>}
                     {entry.status === "rejected" && <span style={{ color: "var(--color-error)" }}>거절</span>}
                   </span>

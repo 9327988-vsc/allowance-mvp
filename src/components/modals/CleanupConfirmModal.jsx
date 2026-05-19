@@ -82,7 +82,7 @@ export default function CleanupConfirmModal({ onClose, onCleaned }) {
             return <li key={key}>{info.label}{info.detail}</li>;
           })}
           <li style={{ color: "var(--color-text-secondary)" }}>
-            (총 {targets.length}개월, 총 {totalBytes.toLocaleString()} bytes)
+            (총 {targets.length}개월, 총 {totalBytes.toLocaleString("ko-KR")} bytes)
           </li>
         </ul>
 

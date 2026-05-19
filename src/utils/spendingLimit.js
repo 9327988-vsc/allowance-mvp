@@ -39,7 +39,7 @@ export function notifySpendingLimit(year, month, currentTotal, settings) {
     _notified.add(`${key}_over`);
     showToast({
       type: "warning",
-      message: `이번 달 지출이 한도(${result.limit.toLocaleString()}원)를 초과했어요!`,
+      message: `이번 달 지출이 한도(${result.limit.toLocaleString("ko-KR")}원)를 초과했어요!`,
       duration: 5000,
     });
   } else if (result.percent >= 80 && !result.exceeded && !_notified.has(`${key}_warn`)) {

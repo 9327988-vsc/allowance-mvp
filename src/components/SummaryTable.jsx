@@ -105,14 +105,14 @@ export default function SummaryTable({ year, month, calc, settings, claimStatus,
         if (limitInfo.exceeded) {
           return (
             <div className="spending-limit-warn spending-limit-warn--over">
-              ⚠️ 임시 항목이 한도({limitInfo.limit.toLocaleString()}원)를 {Math.abs(limitInfo.remaining).toLocaleString()}원 초과
+              ⚠️ 임시 항목이 한도({limitInfo.limit.toLocaleString("ko-KR")}원)를 {Math.abs(limitInfo.remaining).toLocaleString("ko-KR")}원 초과
             </div>
           );
         }
         if (limitInfo.percent >= 80) {
           return (
             <div className="spending-limit-warn">
-              💡 임시 항목 한도 {limitInfo.percent}% 사용 (잔여: {limitInfo.remaining.toLocaleString()}원)
+              💡 임시 항목 한도 {limitInfo.percent}% 사용 (잔여: {limitInfo.remaining.toLocaleString("ko-KR")}원)
             </div>
           );
         }

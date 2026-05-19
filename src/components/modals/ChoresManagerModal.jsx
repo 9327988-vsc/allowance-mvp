@@ -113,7 +113,7 @@ export default function ChoresManagerModal({ childMembers = [], onClose }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{c.name}</div>
                     <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                      {c.reward.toLocaleString()}원 · {c.frequency === "daily" ? "매일" : c.frequency === "weekly" ? "매주" : "1회"}
+                      {c.reward.toLocaleString("ko-KR")}원 · {c.frequency === "daily" ? "매일" : c.frequency === "weekly" ? "매주" : "1회"}
                       {c.max_per_day > 1 && ` · 하루 ${c.max_per_day}회`}
                     </div>
                   </div>
@@ -238,7 +238,7 @@ export default function ChoresManagerModal({ childMembers = [], onClose }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{entry.chore_name}</div>
                     <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                      {entry.child_name} · {entry.reward.toLocaleString()}원 · {new Date(entry.completed_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {entry.child_name} · {entry.reward.toLocaleString("ko-KR")}원 · {new Date(entry.completed_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
                   <button onClick={() => handleApprove(entry.id)} className="btn btn--sm btn--primary" style={{ minWidth: 40 }}>✓</button>

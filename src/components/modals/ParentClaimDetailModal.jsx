@@ -333,7 +333,7 @@ export default function ParentClaimDetailModal({ claimSummary, familyContext, on
     }
     await adapter.patchClaim(claim.claim_id, patchData);
     const isPartial = paidAmount && paidAmount < (claim.snapshot?.calculation?.total || 0);
-    showToast({ type: "success", message: isPartial ? `${paidAmount.toLocaleString()}원 부분 지급 완료!` : "지급 완료!" });
+    showToast({ type: "success", message: isPartial ? `${paidAmount.toLocaleString("ko-KR")}원 부분 지급 완료!` : "지급 완료!" });
     onClose();
   }, [claim, familyContext.member_id, showToast, onClose]));
 
@@ -581,7 +581,7 @@ export default function ParentClaimDetailModal({ claimSummary, familyContext, on
                 <div className="timeline__dot timeline__dot--success" />
                 <div className="timeline__content">
                   <div className="timeline__label">
-                    💰 지급{claim.paid_amount ? ` (${claim.paid_amount.toLocaleString()}원 / ${(claim.snapshot?.calculation?.total || 0).toLocaleString()}원)` : ""}
+                    💰 지급{claim.paid_amount ? ` (${claim.paid_amount.toLocaleString("ko-KR")}원 / ${(claim.snapshot?.calculation?.total || 0).toLocaleString("ko-KR")}원)` : ""}
                   </div>
                   <div className="timeline__date">{new Date(claim.paid_at).toLocaleString("ko-KR")}</div>
                 </div>
@@ -657,7 +657,7 @@ export default function ParentClaimDetailModal({ claimSummary, familyContext, on
             {claim.status === "approved" && showPartialPay && (
               <div className="partial-pay-form" style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                 <label style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
-                  지급 금액 (청구액: {(claim.snapshot?.calculation?.total || 0).toLocaleString()}원)
+                  지급 금액 (청구액: {(claim.snapshot?.calculation?.total || 0).toLocaleString("ko-KR")}원)
                 </label>
                 <div style={{ display: "flex", gap: "var(--space-2)" }}>
                   <input

@@ -33,10 +33,10 @@ export function formatAmount(value) {
     const abs = Math.abs(value);
     const man = Math.floor(abs / 10000);
     const rest = abs % 10000;
-    if (rest === 0) return `${sign}${man.toLocaleString()}만원`;
-    return `${sign}${man}만 ${rest.toLocaleString()}원`;
+    if (rest === 0) return `${sign}${man.toLocaleString("ko-KR")}만원`;
+    return `${sign}${man}만 ${rest.toLocaleString("ko-KR")}원`;
   }
-  return `${value.toLocaleString()}원`;
+  return `${value.toLocaleString("ko-KR")}원`;
 }
 
 /**
@@ -52,8 +52,8 @@ export function formatAmountShort(value) {
     const abs = Math.abs(value);
     const man = Math.floor(abs / 10000);
     const rest = abs % 10000;
-    if (rest === 0) return `${sign}${man.toLocaleString()}만`;
-    return `${sign}${man}만 ${rest.toLocaleString()}`;
+    if (rest === 0) return `${sign}${man.toLocaleString("ko-KR")}만`;
+    return `${sign}${man}만 ${rest.toLocaleString("ko-KR")}`;
   }
-  return value.toLocaleString();
+  return value.toLocaleString("ko-KR");
 }

@@ -264,7 +264,7 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
                 return (
                   <div key={cal.key} className="diag-data-row">
                     {cal.valid ? "✅" : "⚠️"} {ym}: {cal.valid ? "정상" : "손상"}
-                    {cal.valid && <span className="diag-detail"> ({cal.size.toLocaleString()} bytes{cal.itemCount !== undefined ? `, 임시항목 ${cal.itemCount}개` : ""})</span>}
+                    {cal.valid && <span className="diag-detail"> ({cal.size.toLocaleString("ko-KR")} bytes{cal.itemCount !== undefined ? `, 임시항목 ${cal.itemCount}개` : ""})</span>}
                     {!cal.valid && (
                       <>
                         <button className="diag-action-sm" onClick={() => handleRecover(cal.key)}>복구</button>
@@ -770,7 +770,7 @@ function StatusRow({ item, label }) {
   return (
     <div className="diag-data-row">
       {item.valid ? "✅" : "⚠️"} {label}: {item.valid ? "정상" : `손상 (${item.error})`}
-      {item.valid && <span className="diag-detail"> ({item.size.toLocaleString()} bytes{item.itemCount !== undefined ? `, ${item.itemCount}개` : ""})</span>}
+      {item.valid && <span className="diag-detail"> ({item.size.toLocaleString("ko-KR")} bytes{item.itemCount !== undefined ? `, ${item.itemCount}개` : ""})</span>}
     </div>
   );
 }

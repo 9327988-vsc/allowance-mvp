@@ -66,7 +66,7 @@ export default function LineChart({ data, height = 160, color = "var(--color-pri
                 fontSize="10"
                 fill="var(--color-text-secondary)"
               >
-                {p.value >= 10000 ? `${Math.round(p.value / 10000)}만` : p.value.toLocaleString()}
+                {p.value >= 10000 ? `${Math.round(p.value / 10000)}만` : p.value.toLocaleString("ko-KR")}
               </text>
             )}
             {/* x축 라벨 */}

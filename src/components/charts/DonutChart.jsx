@@ -67,7 +67,7 @@ export default function DonutChart({ data = [], size = 180 }) {
       <div className="donut-chart__center">
         <div className="donut-chart__center-label">총합</div>
         <div className="donut-chart__center-value">
-          {total >= 10000 ? `${Math.round(total / 10000)}만` : total.toLocaleString()}
+          {total >= 10000 ? `${Math.round(total / 10000)}만` : total.toLocaleString("ko-KR")}
         </div>
       </div>
     </div>
