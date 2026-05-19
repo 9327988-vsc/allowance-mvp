@@ -12,6 +12,9 @@ import "./styles/monthSelector.css";
 import "./styles/accountSelect.css";
 import "./styles/yearlyStats.css";
 import "./styles/charts.css";
+import "./styles/parentLayout.css";
+import "./styles/calendar.css";
+import "./styles/widgets.css";
 
 // Workers 백엔드 없이 동작하도록 mock 백엔드 활성화 (동적 import로 프로덕션 번들 제외)
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";

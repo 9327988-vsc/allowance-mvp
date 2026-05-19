@@ -1,0 +1,357 @@
+/* ===== 캘린더 그리드 ===== */
+.calendar-grid {
+  padding: 0;
+  background: var(--color-bg-card);
+}
+
+.calendar-grid__header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+  padding: var(--space-3) 0;
+  background: var(--color-bg-secondary);
+}
+
+.calendar-grid__weekday {
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.calendar-grid__body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+/* ===== 캘린더 셀 ===== */
+.calendar-cell {
+  min-height: var(--cell-min-height, 64px);
+  border: none;
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  padding: var(--cell-padding, var(--space-1) 3px);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  font-size: var(--font-size-xs);
+  position: relative;
+  transition: transform var(--transition-duration, 0.2s) ease, box-shadow var(--transition-duration, 0.2s) ease, background var(--transition-duration, 0.2s) ease;
+}
+
+.calendar-cell:nth-child(7n) {
+  border-right: none;
+}
+
+.calendar-cell:hover:not(.placeholder) {
+  background: var(--color-primary-light);
+  transform: scale(1.04);
+  z-index: var(--z-base, 1);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.15);
+}
+
+.calendar-cell.placeholder {
+  cursor: default;
+  background: var(--color-bg-secondary);
+  opacity: 0.3;
+}
+
+/* 데이터 있는 셀 강조 */
+.calendar-cell--has-data {
+  background: linear-gradient(180deg, rgba(99,102,241,0.03) 0%, rgba(99,102,241,0.06) 100%);
+}
+
+.calendar-cell--today {
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  border-left: 3px solid var(--color-primary);
+}
+
+.calendar-cell--today::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: today-pulse 2s ease-in-out infinite;
+}
+
+@keyframes today-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+.calendar-cell--today:hover {
+  background: linear-gradient(135deg, rgba(var(--color-primary-rgb, 99,102,241), 0.12) 0%, rgba(var(--color-primary-rgb, 99,102,241), 0.2) 100%);
+}
+
+.calendar-cell__date {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.calendar-cell__holiday {
+  font-size: 11px;
+  color: var(--color-holiday);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-weight: var(--font-weight-medium);
+}
+
+.calendar-cell__icons {
+  display: flex;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.calendar-cell__amount {
+  font-family: var(--font-family-number);
+  font-size: 11px;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-primary);
+  margin-top: auto;
+  background: linear-gradient(135deg, rgba(var(--color-primary-rgb, 99,102,241), 0.08), rgba(var(--color-primary-rgb, 99,102,241), 0.15));
+  padding: 2px 5px;
+  border-radius: var(--radius-full);
+  letter-spacing: -0.3px;
+}
+
+@media (min-width: 768px) {
+  .calendar-cell {
+    min-height: 80px;
+    padding: var(--space-2);
+  }
+  .calendar-cell__date {
+    font-size: var(--font-size-base);
+  }
+  .calendar-cell__holiday {
+    font-size: var(--font-size-xs);
+  }
+  .calendar-cell__icons {
+    font-size: 15px;
+  }
+  .calendar-cell__amount {
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (min-width: 1024px) {
+  .calendar-cell {
+    min-height: 90px;
+  }
+}
+
+
+/* ===== 스냅샷 캘린더 (부모 상세) ===== */
+.snapshot-calendar {
+  margin-bottom: var(--space-3);
+}
+
+.snapshot-calendar__header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: var(--space-1);
+}
+
+.snapshot-calendar__weekday {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-bold);
+  padding: var(--space-1) 0;
+}
+
+.snapshot-calendar__body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.snapshot-calendar__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 3px 1px;
+  min-height: 52px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.15s;
+  position: relative;
+  font-family: var(--font-family);
+}
+
+.snapshot-calendar__cell--empty {
+  cursor: default;
+  background: transparent;
+}
+
+.snapshot-calendar__cell:not(.snapshot-calendar__cell--empty):hover {
+  background: var(--color-primary-light);
+  transform: scale(1.05);
+}
+
+.snapshot-calendar__cell:not(.snapshot-calendar__cell--empty):active {
+  transform: scale(0.95);
+}
+
+.snapshot-calendar__cell--today {
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+}
+
+.snapshot-calendar__cell--has-data {
+  background: var(--color-bg-secondary);
+}
+
+.snapshot-calendar__date {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.snapshot-calendar__icons {
+  display: flex;
+  gap: 1px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.snapshot-calendar__amount {
+  font-family: var(--font-family-number);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 0 3px;
+  border-radius: 3px;
+  margin-top: auto;
+  line-height: 1.4;
+}
+
+.snapshot-calendar__legend {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.snapshot-calendar__legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+@media (min-width: 768px) {
+  .snapshot-calendar__cell {
+    min-height: 60px;
+    padding: 4px 2px;
+  }
+  .snapshot-calendar__date {
+    font-size: var(--font-size-sm);
+  }
+  .snapshot-calendar__icons {
+    font-size: 12px;
+  }
+  .snapshot-calendar__amount {
+    font-size: 11px;
+  }
+}
+
+/* ===== 셀 편집 모달 ===== */
+.cell-edit-modal {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: 0;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  overflow: hidden;
+}
+
+/* TODO: JSX에 .cell-edit-modal__header 클래스 추가 필요 (현재 .flex.justify-between에 의존) */
+.cell-edit-modal > .flex.justify-between,
+.cell-edit-modal__header {
+  background: linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%);
+  color: #FFFFFF;
+  padding: var(--space-4) var(--space-5);
+  margin: 0;
+}
+
+.cell-edit-modal > .flex.justify-between h3,
+.cell-edit-modal__header h3 {
+  color: #FFFFFF;
+}
+
+/* TODO: JSX에 .cell-edit-modal__header-badge 클래스 추가 필요 */
+.cell-edit-modal > .flex.justify-between h3 span,
+.cell-edit-modal__header-badge {
+  color: rgba(255,255,255,0.7) !important;
+}
+
+.cell-edit-modal > .flex.justify-between button,
+.cell-edit-modal__header button {
+  color: #FFFFFF;
+  opacity: 0.8;
+}
+
+.cell-edit-modal > .flex.justify-between button:hover,
+.cell-edit-modal__header button:hover {
+  opacity: 1;
+}
+
+.cell-edit-modal > *:not(.flex):not(.justify-between):not(.cell-edit-modal__header) {
+  padding-left: var(--space-5);
+  padding-right: var(--space-5);
+}
+
+.cell-edit-modal > .flex.justify-end,
+.cell-edit-modal__footer {
+  padding-bottom: var(--space-5);
+}
+
+.cell-edit-modal .item-action-btn {
+  transition: background-color 0.15s ease;
+}
+
+.cell-edit-modal .item-action-btn:hover {
+  background-color: var(--color-surface-hover, #f8fafc);
+}
+
+[data-theme="dark"] .cell-edit-modal .item-action-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.cell-edit-modal .item-add-btn {
+  transition: background-color 0.15s ease;
+}
+
+.cell-edit-modal .item-add-btn:hover {
+  background-color: var(--color-surface-hover, #f8fafc);
+}
+
+[data-theme="dark"] .cell-edit-modal .item-add-btn:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+
