@@ -90,13 +90,11 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
   // useModalBase: ESC handler + focus trap (전체 화면이므로 scroll lock 비활성화)
   const modalRef = useModalBase(onBack, { noScrollLock: true });
 
-  // 전체 화면이므로 body 스크롤 허용 (body에 overflow:hidden이 기본 적용됨)
+  // 전체 화면이므로 body 스크롤 허용 — CSS 클래스 토글 방식 (inline style 방식은 우선순위 문제로 3회 재발)
   useEffect(() => {
-    document.body.style.overflow = "auto";
-    document.body.style.height = "auto";
+    document.body.classList.add("diagnostic-open");
     return () => {
-      document.body.style.overflow = "";
-      document.body.style.height = "";
+      document.body.classList.remove("diagnostic-open");
     };
   }, []);
 

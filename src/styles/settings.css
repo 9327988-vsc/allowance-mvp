@@ -81,6 +81,12 @@
 }
 
 /* ── S-112 DiagnosticScreen ── */
+/* body에 이 클래스가 붙으면 height/overflow 제약 해제 (스크롤 허용) */
+body.diagnostic-open {
+  height: auto !important;
+  overflow: auto !important;
+}
+
 .diagnostic-screen {
   padding: var(--space-4);
   max-width: 720px;
