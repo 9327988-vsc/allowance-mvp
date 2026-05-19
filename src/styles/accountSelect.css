@@ -1,0 +1,198 @@
+/* ===== 계정 선택 화면 ===== */
+.account-switcher {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.auth-account-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.account-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  outline: none;
+  transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
+}
+
+.account-card:hover, .account-card:focus-visible {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+}
+
+.account-card:active {
+  transform: scale(0.98);
+}
+
+.account-card__info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.account-card__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.account-card__avatar--parent {
+  background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+}
+
+.account-card__avatar--child {
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+}
+
+.account-card__avatar--general {
+  background: linear-gradient(135deg, #F0FDF4, #BBF7D0);
+}
+
+.account-card__name {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.account-card__meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.account-card__remove {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.account-card__remove:hover {
+  background: #FEE2E2;
+  color: var(--color-error);
+}
+
+.account-add-btn {
+  width: 100%;
+  padding: var(--space-4);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.account-add-btn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.account-add-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+[data-theme="dark"] .account-card {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .account-card:hover,
+[data-theme="dark"] .account-card:focus-visible {
+  border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .account-card__avatar--parent {
+  background: linear-gradient(135deg, #312e81, #3730a3);
+}
+
+[data-theme="dark"] .account-card__avatar--child {
+  background: linear-gradient(135deg, #78350f, #92400e);
+}
+
+[data-theme="dark"] .account-card__avatar--general {
+  background: linear-gradient(135deg, #14532d, #166534);
+}
+
+[data-theme="dark"] .account-card__remove:hover {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.account-admin-btn {
+  width: 100%;
+  padding: var(--space-3);
+  margin-top: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.account-admin-btn:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border-color: var(--color-text-tertiary);
+}
+
+[data-theme="dark"] .account-add-btn {
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .account-add-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: #312e81;
+}
+
+[data-theme="dark"] .account-admin-btn {
+  border-color: #334155;
+  color: #64748b;
+}
+
+[data-theme="dark"] .account-admin-btn:hover {
+  background: #1e293b;
+  color: #94a3b8;
+  border-color: #475569;
+}
+
