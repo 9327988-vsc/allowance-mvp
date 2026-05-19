@@ -208,14 +208,8 @@ export default function App() {
     />;
   } else if (screen === "signup") {
     content = <SignupScreen onComplete={handleAuthComplete} />;
-  } else if (boot._forceOnboarding) {
-    // 일반 계정은 가족 온보딩 건너뛰기
-    const activeUser = boot.activeUser || findUserById(getActiveUser());
-    if (activeUser?.role === "general") {
-      content = <GeneralMainScreen onLogout={handleLogout} />;
-    } else {
-      content = <FamilyOnboardingModal onComplete={handleFamilyJoined} />;
-    }
+  } else if (screen === "family_onboarding") {
+    content = <FamilyOnboardingModal onComplete={handleFamilyJoined} />;
   } else if (screen === "welcome_modal") {
     content = <SettingsModal mode="first" onSaved={() => {
       initApp().then(setBoot);

@@ -163,7 +163,12 @@ export function nextScreen(result) {
         if (activeUser?.role === "general") return "main_general";
       }
       if (!result.familyContext) {
-        // 자녀 계정: settings 없으면 초기 설정
+        const activeUser = result.activeUser || findUserById(getActiveUser());
+        // 부모/자녀 계정은 가족 온보딩 필요
+        if (activeUser?.role === "parent" || activeUser?.role === "child") {
+          return "family_onboarding";
+        }
+        // 일반 계정: settings 없으면 초기 설정
         return result.settings ? "main" : "welcome_modal";
       }
       if (result.familyContext.member_role === "parent") return "main_parent";
