@@ -1,0 +1,204 @@
+/* ===== 튜토리얼 온보딩 ===== */
+.tutorial-screen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-tutorial);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.4s ease;
+  overflow: hidden;
+  user-select: none;
+}
+
+.tutorial-skip {
+  position: absolute;
+  top: max(var(--space-4), env(safe-area-inset-top, 16px));
+  right: var(--space-4);
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 20px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s;
+  font-family: var(--font-family);
+}
+
+.tutorial-skip:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.tutorial-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-6);
+  max-width: 320px;
+  width: 100%;
+}
+
+.tutorial-card__icon {
+  font-size: 4.5rem;
+  margin-bottom: var(--space-6);
+  animation: tutorial-bounce 1s ease infinite alternate;
+}
+
+@keyframes tutorial-bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-8px); }
+}
+
+
+.tutorial-card__title {
+  font-size: 1.6rem;
+  font-weight: var(--font-weight-bold);
+  color: #fff;
+  margin: 0 0 var(--space-3);
+  font-family: 'Jua', var(--font-family);
+}
+
+.tutorial-card__desc {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-line;
+}
+
+.tutorial-footer {
+  position: absolute;
+  bottom: max(var(--space-8), env(safe-area-inset-bottom, 32px));
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.tutorial-dots {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tutorial-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.tutorial-dot--active {
+  width: 24px;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.tutorial-next-btn {
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  color: #374151;
+  font-size: 1rem;
+  font-weight: var(--font-weight-bold);
+  padding: 14px 48px;
+  border-radius: 28px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s, transform 0.2s;
+  font-family: var(--font-family);
+}
+
+.tutorial-next-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+
+.tutorial-next-btn:active {
+  transform: scale(0.95);
+}
+
+.tutorial-skip:focus-visible,
+.tutorial-next-btn:focus-visible,
+.tutorial-preview-btn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.tutorial-preview-btn {
+  margin-top: var(--space-4);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: var(--font-weight-medium);
+  padding: 8px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background-color 0.15s, transform 0.15s;
+  font-family: var(--font-family);
+}
+
+.tutorial-preview-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tutorial-preview-btn:active {
+  transform: scale(0.95);
+}
+
+.tutorial-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-tutorial) + 1);
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: tutorial-fade-in 0.2s ease;
+}
+
+@keyframes tutorial-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tutorial-preview-img {
+  max-width: 90%;
+  max-height: 80vh;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  object-fit: contain;
+}
+
+.tutorial-preview-close {
+  position: absolute;
+  top: max(var(--space-4), env(safe-area-inset-top, 16px));
+  right: var(--space-4);
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 1.2rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s;
+}
+
+.tutorial-preview-close:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+

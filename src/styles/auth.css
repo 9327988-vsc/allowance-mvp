@@ -1,0 +1,313 @@
+/* ===== 인증 화면 ===== */
+.auth-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(99,102,241,0.10) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 30%, rgba(139,92,246,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgba(236,72,153,0.06) 0%, transparent 40%),
+    linear-gradient(160deg, #EEF0FF 0%, #F5F0FA 30%, #FFF5F7 60%, #FAFBFE 100%);
+  padding: var(--space-4);
+}
+
+.auth-screen__inner {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  position: relative;
+}
+
+.auth-screen__theme {
+  position: absolute;
+  top: -40px;
+  right: 0;
+}
+
+.auth-screen__logo {
+  font-size: 3.5rem;
+  margin-bottom: var(--space-2);
+}
+
+.auth-screen__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.auth-screen__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-5);
+}
+
+/* 진행률 점 */
+.auth-progress {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.auth-progress__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-border);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.auth-progress__dot--active {
+  background: var(--color-primary);
+  transform: scale(1.2);
+}
+
+/* 폼 */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.auth-form__field {
+  text-align: left;
+}
+
+.auth-form__label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.auth-form__input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  transition: border-color 0.2s;
+}
+
+.auth-form__input:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.auth-form__input:focus {
+  border-color: var(--color-primary);
+}
+
+.auth-form__error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+  text-align: center;
+  margin-top: var(--space-1);
+}
+
+/* 역할 선택 */
+.auth-role-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.auth-role-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+
+.auth-role-btn:hover {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-light);
+}
+
+.auth-role-btn:active {
+  transform: scale(0.97);
+}
+
+.auth-role-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.auth-role-btn--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.auth-role-btn__icon {
+  font-size: 2rem;
+}
+
+.auth-role-btn__text {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.auth-role-btn__desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.auth-role-btn--active .auth-role-btn__desc {
+  color: var(--color-primary);
+}
+
+/* 3열 역할 선택 */
+.auth-role-picker--three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+@media (max-width: 374px) {
+  .auth-role-picker--three {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* 단계 라벨 */
+.auth-form__step-label {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-3);
+}
+
+/* 선택사항 표시 */
+.auth-form__optional {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+
+/* PIN 라벨 */
+.auth-pin-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+/* PIN 입력 */
+.pin-input {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: text;
+  padding: var(--space-3) 0;
+}
+
+.pin-input__dots {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.pin-input__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-strong);
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.pin-input__dot--filled {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  transform: scale(1.1);
+}
+
+.pin-input__hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
+.pin-input--error .pin-input__dot--filled {
+  background: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.pin-input--error {
+  animation: pin-shake 0.4s ease-in-out;
+}
+
+@keyframes pin-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+/* 다크 모드 — 인증 화면 */
+[data-theme="dark"] .auth-screen {
+  background:
+    radial-gradient(ellipse at 15% 5%, rgba(99,102,241,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 25%, rgba(139,92,246,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgba(59,130,246,0.05) 0%, transparent 40%),
+    linear-gradient(160deg, #0f172a 0%, #1e1b4b 40%, #172035 70%, #0f172a 100%);
+}
+
+[data-theme="dark"] .auth-form__input {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+[data-theme="dark"] .auth-role-btn {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .auth-role-btn:hover {
+  background: #312e81;
+  border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .auth-role-btn--active {
+  background: #312e81;
+  border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .auth-role-btn__desc {
+  color: var(--color-text-tertiary);
+}
+
+[data-theme="dark"] .auth-role-btn--active .auth-role-btn__desc {
+  color: var(--color-primary-light);
+}
+
+[data-theme="dark"] .auth-form__step-label {
+  background: #312e81;
+  color: var(--color-primary-light);
+}
+
+[data-theme="dark"] .auth-form__optional {
+  color: var(--color-text-tertiary);
+}
+
+[data-theme="dark"] .pin-input__dot {
+  border-color: #475569;
+}
+
