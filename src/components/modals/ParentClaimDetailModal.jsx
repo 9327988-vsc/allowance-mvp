@@ -1,270 +1,19 @@
 // src/components/modals/ParentClaimDetailModal.jsx — S-2-002 부모 청구 상세
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useModalBase } from "../../hooks/useModalBase";
 import { useClaim } from "../../hooks/useClaim";
-import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useToast } from "../../hooks/useToast";
-import { getKVAdapter } from "../../utils/kvAdapter";
+import { useClaimActions } from "../../hooks/useClaimActions";
 import { isOnline } from "../../utils/onlineStatus";
 import { getMessageForError } from "../../constants/errorMessages";
 import { getCategoryIcon } from "../../constants/categories";
 import StatusBadge from "../widgets/StatusBadge";
 import CommentSection from "../widgets/CommentSection";
+import SnapshotCalendar from "../widgets/SnapshotCalendar";
 import RejectionReasonModal from "./RejectionReasonModal";
 import { formatAmountShort } from "../../utils/formatAmount";
 import { loadUserPrefs } from "../../utils/userPrefs";
 import { getActiveUser } from "../../utils/authStore";
-
-const DAY_HEADERS_SUN = ["일", "월", "화", "수", "목", "금", "토"];
-const DAY_HEADERS_MON = ["월", "화", "수", "목", "금", "토", "일"];
-const WEEKDAY_KOR = { sun: "일", mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토" };
-
-/** 셀 클릭 시 나오는 상세 팝업 */
-function CellDetailPopup({ cell, customCategories, onClose }) {
-  if (!cell) return null;
-  const day = parseInt(cell.date.split("-")[2], 10);
-  const weekdayKor = WEEKDAY_KOR[cell.weekday] || "";
-  const hasExtra = cell.extra_items && cell.extra_items.length > 0;
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${day}일 (${weekdayKor}) 상세 정보`}
-      tabIndex={-1}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") {
-          e.stopPropagation();
-          onClose();
-        }
-      }}
-      style={{
-        position: "fixed", inset: 0, zIndex: "var(--z-modal-1, 200)",
-        background: "rgba(15,23,42,0.4)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "var(--space-4)",
-        animation: "backdrop-fade 0.15s ease-out",
-      }}
-    >
-      <div
-        style={{
-          background: "var(--color-bg-card)",
-          borderRadius: "var(--radius-xl)",
-          padding: 0,
-          maxWidth: 340,
-          width: "100%",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-          animation: "modal-enter 0.2s cubic-bezier(0.34,1.56,0.64,1)",
-          overflow: "hidden",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 헤더 */}
-        <div style={{
-          padding: "var(--space-3) var(--space-4)",
-          background: "linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%)",
-          color: "#fff",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}>
-          <span style={{ fontWeight: 700, fontSize: "var(--font-size-base)" }}>
-            {day}일 ({weekdayKor})
-            {cell.is_holiday && cell.holiday_name && (
-              <span style={{ fontSize: "var(--font-size-xs)", opacity: 0.8, marginLeft: 6 }}>{cell.holiday_name}</span>
-            )}
-          </span>
-          <button
-            onClick={onClose}
-            className="cell-popup-close"
-          >
-            ×
-          </button>
-        </div>
-
-        <div style={{ padding: "var(--space-4)" }}>
-          {/* 등교/학원 */}
-          {cell.school_fee > 0 && (
-            <div className="detail-row">
-              <span className="detail-row__label">🏫 학교 버스</span>
-              <span className="detail-row__amount">{formatAmountShort(cell.school_fee)}<span className="amount-unit">원</span></span>
-            </div>
-          )}
-          {cell.academy_fee > 0 && (
-            <div className="detail-row">
-              <span className="detail-row__label">✏️ 학원 버스</span>
-              <span className="detail-row__amount">{formatAmountShort(cell.academy_fee)}<span className="amount-unit">원</span></span>
-            </div>
-          )}
-
-          {/* 임시 항목 */}
-          {hasExtra && cell.extra_items.map((item, idx) => (
-            <div key={idx} className="detail-row">
-              <span className="detail-row__label">
-                {getCategoryIcon(item.category, customCategories)} {item.category}
-              </span>
-              <span className="detail-row__amount">{formatAmountShort(item.amount)}<span className="amount-unit">원</span></span>
-            </div>
-          ))}
-
-          {/* 메모 */}
-          {cell.memo && (
-            <div style={{
-              marginTop: "var(--space-2)",
-              padding: "var(--space-2) var(--space-3)",
-              background: "var(--color-bg-secondary)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-secondary)",
-            }}>
-              📝 {cell.memo}
-            </div>
-          )}
-
-          {/* 빈 상태 */}
-          {!cell.school_fee && !cell.academy_fee && !hasExtra && (
-            <div style={{
-              textAlign: "center",
-              padding: "var(--space-4)",
-              color: "var(--color-text-tertiary)",
-              fontSize: "var(--font-size-sm)",
-            }}>
-              {cell.is_holiday ? "🎉 공휴일 — 데이터 없음" : "데이터 없음"}
-            </div>
-          )}
-
-          {/* 합계 */}
-          {cell.total > 0 && (
-            <div style={{
-              borderTop: "2px solid var(--color-primary)",
-              marginTop: "var(--space-3)",
-              paddingTop: "var(--space-3)",
-              display: "flex",
-              justifyContent: "space-between",
-              fontWeight: 700,
-              color: "var(--color-primary)",
-            }}>
-              <span>합계</span>
-              <span>{formatAmountShort(cell.total)}<span className="amount-unit" style={{ color: "var(--color-primary)" }}>원</span></span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** 자녀 캘린더와 동일한 형태의 달력 */
-function SnapshotCalendar({ year, month, cells, customCategories, startDay = 0 }) {
-  const [selectedCell, setSelectedCell] = useState(null);
-  const rawFirstDay = new Date(year, month - 1, 1).getDay();
-  const firstDay = (rawFirstDay - startDay + 7) % 7;
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const DAY_HEADERS = startDay === 1 ? DAY_HEADERS_MON : DAY_HEADERS_SUN;
-  const today = new Date();
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
-
-  // date 문자열 → cell 매핑
-  const cellMap = useMemo(() => {
-    const map = {};
-    if (cells) {
-      cells.forEach((c) => { map[c.date] = c; });
-    }
-    return map;
-  }, [cells]);
-
-  function formatDate(d) {
-    return `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-  }
-
-  // 그리드 빈칸 + 날짜
-  const gridItems = [];
-  for (let i = 0; i < firstDay; i++) gridItems.push(null);
-  for (let d = 1; d <= daysInMonth; d++) gridItems.push(d);
-  while (gridItems.length % 7 !== 0) gridItems.push(null);
-
-  return (
-    <>
-      <div className="snapshot-calendar">
-        {/* 요일 헤더 */}
-        <div className="snapshot-calendar__header">
-          {DAY_HEADERS.map((label, i) => (
-            <div key={label} className="snapshot-calendar__weekday" style={{
-              color: (startDay === 1 ? i === 6 : i === 0) ? "var(--color-holiday)" : (startDay === 1 ? i === 5 : i === 6) ? "var(--color-saturday)" : undefined,
-            }}>
-              {label}
-            </div>
-          ))}
-        </div>
-
-        {/* 날짜 셀 */}
-        <div className="snapshot-calendar__body">
-          {gridItems.map((day, i) => {
-            if (day === null) {
-              return <div key={`blank-${i}`} className="snapshot-calendar__cell snapshot-calendar__cell--empty" />;
-            }
-
-            const dateStr = formatDate(day);
-            const cell = cellMap[dateStr];
-            const isToday = isCurrentMonth && day === today.getDate();
-            const hasSchool = cell?.school_fee > 0;
-            const hasAcademy = cell?.academy_fee > 0;
-            const hasExtra = cell?.extra_items?.length > 0;
-            const hasData = hasSchool || hasAcademy || hasExtra;
-            const cellTotal = cell?.total || 0;
-            const gridCol = (firstDay + day - 1) % 7;
-            const actualDow = (gridCol + startDay) % 7; // 0=일
-            const isHoliday = cell?.is_holiday || actualDow === 0;
-            const isSaturday = actualDow === 6;
-
-            return (
-              <button
-                key={day}
-                className={`snapshot-calendar__cell${isToday ? " snapshot-calendar__cell--today" : ""}${hasData ? " snapshot-calendar__cell--has-data" : ""}`}
-                onClick={() => cell && setSelectedCell(cell)}
-                disabled={!cell}
-              >
-                <span className="snapshot-calendar__date" style={{
-                  color: isHoliday ? "var(--color-holiday)" : isSaturday ? "var(--color-saturday)" : undefined,
-                }}>
-                  {day}
-                </span>
-                {hasData && (
-                  <div className="snapshot-calendar__icons">
-                    {hasSchool && <span>🏫</span>}
-                    {hasAcademy && <span>✏️</span>}
-                    {hasExtra && <span>🎒</span>}
-                  </div>
-                )}
-                {cellTotal > 0 && (
-                  <span className="snapshot-calendar__amount">
-                    {formatAmountShort(cellTotal)}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* 범례 */}
-        <div className="snapshot-calendar__legend">
-          <span><span className="snapshot-calendar__legend-dot" style={{ background: "var(--color-school)" }} />학교</span>
-          <span><span className="snapshot-calendar__legend-dot" style={{ background: "var(--color-academy)" }} />학원</span>
-          <span><span className="snapshot-calendar__legend-dot" style={{ background: "var(--color-extra)" }} />추가</span>
-        </div>
-      </div>
-
-      {/* 셀 상세 팝업 */}
-      {selectedCell && (
-        <CellDetailPopup
-          cell={selectedCell}
-          customCategories={customCategories}
-          onClose={() => setSelectedCell(null)}
-        />
-      )}
-    </>
-  );
-}
 
 /**
  * @param {{
@@ -284,6 +33,14 @@ export default function ParentClaimDetailModal({ claimSummary, familyContext, on
   const [partialAmount, setPartialAmount] = useState("");
   const { showToast } = useToast();
 
+  const {
+    approveAction,
+    payAction,
+    handleReject: handleRejectAction,
+    handleAction,
+    undoRejectAction,
+    isActing,
+  } = useClaimActions({ claim, familyContext, showToast, onClose, fetchClaim });
 
   useEffect(() => {
     fetchClaim();
@@ -300,99 +57,13 @@ export default function ParentClaimDetailModal({ claimSummary, familyContext, on
     return () => clearInterval(interval);
   }, []);
 
-  // 승인
-  const approveAction = useAsyncAction(useCallback(async () => {
-    if (!isOnline()) {
-      showToast({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
-      return;
-    }
-    const adapter = getKVAdapter();
-    await adapter.patchClaim(claim.claim_id, {
-      status: "approved",
-      decided_by_member_id: familyContext.member_id,
-      expected_updated_at: claim.updated_at,
-    });
-    showToast({ type: "success", message: "승인되었습니다!" });
-    onClose();
-  }, [claim, familyContext.member_id, showToast, onClose]));
-
-  // 지급 (전액 또는 부분)
-  const payAction = useAsyncAction(useCallback(async (paidAmount) => {
-    if (!isOnline()) {
-      showToast({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
-      return;
-    }
-    const adapter = getKVAdapter();
-    const patchData = {
-      status: "paid",
-      paid_by_member_id: familyContext.member_id,
-      expected_updated_at: claim.updated_at,
-    };
-    if (paidAmount !== undefined && paidAmount !== null) {
-      patchData.paid_amount = paidAmount;
-    }
-    await adapter.patchClaim(claim.claim_id, patchData);
-    const isPartial = paidAmount && paidAmount < (claim.snapshot?.calculation?.total || 0);
-    showToast({ type: "success", message: isPartial ? `${paidAmount.toLocaleString("ko-KR")}원 부분 지급 완료!` : "지급 완료!" });
-    onClose();
-  }, [claim, familyContext.member_id, showToast, onClose]));
-
-  // 거절 (사유 입력 후)
   async function handleReject(reason) {
-    if (!isOnline()) {
-      showToast({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
-      return;
-    }
-    const adapter = getKVAdapter();
-    try {
-      await adapter.patchClaim(claim.claim_id, {
-        status: "rejected",
-        rejection_reason: reason,
-        decided_by_member_id: familyContext.member_id,
-        expected_updated_at: claim.updated_at,
-      });
-      showToast({ type: "success", message: "거절되었습니다" });
+    const result = await handleRejectAction(reason);
+    if (result && result.success) {
       setShowRejectModal(false);
       onClose();
-    } catch (err) {
-      if (err.code === "CONFLICT") {
-        showToast({ type: "error", message: "이미 처리된 청구입니다 (다른 부모가 처리)" });
-        setShowRejectModal(false);
-        onClose();
-      } else {
-        showToast({ type: "error", message: getMessageForError(err) });
-      }
     }
   }
-
-  function handleAction(action) {
-    action.run().catch((err) => {
-      if (err.code === "CONFLICT") {
-        showToast({ type: "error", message: "이미 처리된 청구입니다 (다른 부모가 처리)" });
-        onClose();
-      } else {
-        showToast({ type: "error", message: getMessageForError(err) });
-      }
-    });
-  }
-
-  // 거절 취소 (되돌리기)
-  const undoRejectAction = useAsyncAction(useCallback(async () => {
-    if (!isOnline()) {
-      showToast({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
-      return;
-    }
-    const adapter = getKVAdapter();
-    await adapter.patchClaim(claim.claim_id, {
-      status: "pending",
-      decided_by_member_id: familyContext.member_id,
-      expected_updated_at: claim.updated_at,
-    });
-    showToast({ type: "success", message: "거절이 취소되었습니다" });
-    fetchClaim();
-  }, [claim, familyContext.member_id, showToast, fetchClaim]));
-
-  const isActing = approveAction.loading || payAction.loading || undoRejectAction.loading;
 
   if (!claim) {
     return (
