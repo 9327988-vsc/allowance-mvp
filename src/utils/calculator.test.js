@@ -1,6 +1,6 @@
 // src/utils/calculator.test.js
 import { describe, it, expect } from "vitest";
-import { calculateMonthlyAllowance, getWeekday, validateCalculation } from "./calculator";
+import { calculateMonthlyAllowance, formatDate, getWeekday, getWeekdayKor, validateCalculation } from "./calculator";
 
 const TEST_SETTINGS = {
   child_name: "자녀A",
@@ -96,6 +96,69 @@ describe("calculateMonthlyAllowance", () => {
   });
 });
 
+describe("결석 처리", () => {
+  it("skip_school='full' → 교통비 0, 등교일 미카운트", () => {
+    const settings = { ...TEST_SETTINGS, school: { ...TEST_SETTINGS.school, days: ["mon"] }, academy: { days: [] }, base_allowance: 0 };
+    // 2026-05-04 (월) 결석
+    const calendar = { cells: { "2026-05-04": { skip_school: "full" } } };
+    const calc = calculateMonthlyAllowance(2026, 5, settings, calendar, {});
+    // 5월 월요일: 4,11,18,25 = 4일 중 1일 결석 = 3일
+    expect(calc.school_days_count).toBe(3);
+  });
+
+  it("skip_school='half' → 편도만 청구, 등교일 카운트", () => {
+    const settings = { ...TEST_SETTINGS, school: { ...TEST_SETTINGS.school, days: ["mon"], fare: 1000, round_trip: true }, academy: { days: [] }, base_allowance: 0 };
+    const calendar = { cells: { "2026-05-04": { skip_school: "half" } } };
+    const calc = calculateMonthlyAllowance(2026, 5, settings, calendar, {});
+    // 3일 왕복(6000) + 1일 편도(1000) = 7000
+    expect(calc.school_total).toBe(7000);
+    expect(calc.school_days_count).toBe(4);
+  });
+
+  it("skip_academy='full' → 학원 교통비 0", () => {
+    const settings = { ...TEST_SETTINGS, school: { days: [] }, academy: { ...TEST_SETTINGS.academy, days: ["fri"] }, base_allowance: 0 };
+    // 2026-05-01 (금) 결석
+    const calendar = { cells: { "2026-05-01": { skip_academy: "full" } } };
+    const calc = calculateMonthlyAllowance(2026, 5, settings, calendar, {});
+    // 5월 금요일: 1,8,15,22,29 = 5일 중 1일 결석 = 4일
+    expect(calc.academy_days_count).toBe(4);
+  });
+});
+
+describe("정기 추가 용돈", () => {
+  it("recurring_extras 합산", () => {
+    const settings = {
+      ...TEST_SETTINGS,
+      school: { days: [] }, academy: { days: [] }, base_allowance: 0,
+      recurring_extras: [{ name: "도서비", amount: 10000 }, { name: "간식비", amount: 5000 }],
+    };
+    const calc = calculateMonthlyAllowance(2026, 5, settings, { cells: {} }, {});
+    expect(calc.recurring_extras_total).toBe(15000);
+    expect(calc.total).toBe(15000);
+  });
+
+  it("recurring_extras 없으면 0", () => {
+    const settings = { ...TEST_SETTINGS, school: { days: [] }, academy: { days: [] }, base_allowance: 0 };
+    const calc = calculateMonthlyAllowance(2026, 5, settings, { cells: {} }, {});
+    expect(calc.recurring_extras_total).toBe(0);
+  });
+});
+
+describe("calendar/holidays null 안전성", () => {
+  it("calendar null → 정상 동작", () => {
+    const settings = { ...TEST_SETTINGS, base_allowance: 10000, school: { days: [] }, academy: { days: [] } };
+    const calc = calculateMonthlyAllowance(2026, 5, settings, null, null);
+    expect(calc.total).toBe(10000);
+  });
+});
+
+describe("formatDate", () => {
+  it("YYYY-MM-DD 형식", () => {
+    expect(formatDate(2026, 1, 5)).toBe("2026-01-05");
+    expect(formatDate(2025, 12, 31)).toBe("2025-12-31");
+  });
+});
+
 describe("getWeekday", () => {
   it("2026-05-04는 월요일", () => {
     expect(getWeekday(2026, 5, 4)).toBe("mon");
@@ -105,5 +168,47 @@ describe("getWeekday", () => {
   });
   it("2026-05-03은 일요일", () => {
     expect(getWeekday(2026, 5, 3)).toBe("sun");
+  });
+});
+
+describe("getWeekdayKor", () => {
+  it("영문 → 한글 변환", () => {
+    expect(getWeekdayKor("mon")).toBe("월");
+    expect(getWeekdayKor("sun")).toBe("일");
+    expect(getWeekdayKor("sat")).toBe("토");
+  });
+  it("매핑 없는 값은 그대로", () => {
+    expect(getWeekdayKor("xyz")).toBe("xyz");
+  });
+});
+
+describe("validateCalculation", () => {
+  it("합계 불일치 감지", () => {
+    const calc = {
+      base_allowance: 50000, school_total: 8000, academy_total: 10000,
+      extra_items_total: 3000, recurring_extras_total: 5000,
+      total: 99999, school_days_count: 4, academy_days_count: 5,
+    };
+    const v = validateCalculation(calc);
+    expect(v.valid).toBe(false);
+    expect(v.errors[0]).toContain("합계 불일치");
+  });
+
+  it("등교일 31 초과 감지", () => {
+    const calc = {
+      base_allowance: 0, school_total: 0, academy_total: 0,
+      extra_items_total: 0, recurring_extras_total: 0, total: 0,
+      school_days_count: 32, academy_days_count: 0,
+    };
+    expect(validateCalculation(calc).valid).toBe(false);
+  });
+
+  it("음수 합계 감지", () => {
+    const calc = {
+      base_allowance: 0, school_total: 0, academy_total: 0,
+      extra_items_total: -100, recurring_extras_total: 0, total: -100,
+      school_days_count: 0, academy_days_count: 0,
+    };
+    expect(validateCalculation(calc).valid).toBe(false);
   });
 });
