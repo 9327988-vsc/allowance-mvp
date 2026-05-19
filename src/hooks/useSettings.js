@@ -2,6 +2,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { loadSettings, saveSettings, loadSettingsForUser, saveSettingsForUser } from "../utils/storage";
 import { getActiveUser, updateUserDisplayName } from "../utils/authStore";
+import { updateAccountDisplayName } from "../utils/accountSwitcher";
 import { loadFamilyContext, saveFamilyContext } from "../utils/familyContext";
 import { getKVAdapter } from "../utils/kvAdapter";
 
@@ -106,6 +107,7 @@ export function useSettings(mode, onSaved) {
             adapter.setFamilyCode(ctx.family_code);
             await adapter.patchMember(ctx.family_id, ctx.member_id, { display_name: trimmedName });
             saveFamilyContext({ ...ctx, member_display_name: trimmedName });
+            updateAccountDisplayName(ctx.member_id, trimmedName);
           } catch { /* 실패해도 로컬 저장은 완료됨 */ }
         }
       }

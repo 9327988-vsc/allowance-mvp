@@ -9,7 +9,7 @@ import { loadFamilyContext, saveFamilyContext, clearFamilyContext } from "../../
 import { isOnline } from "../../utils/onlineStatus";
 import { getMessageForError } from "../../constants/errorMessages";
 import { getActiveUser, updateUserDisplayName } from "../../utils/authStore";
-
+import { updateAccountDisplayName } from "../../utils/accountSwitcher";
 import { copyToClipboard } from "../../utils/clipboard";
 
 /**
@@ -81,6 +81,10 @@ export default function FamilyInfoModal({ onClose, onLeft }) {
     const activeUserId = getActiveUser();
     if (activeUserId) {
       updateUserDisplayName(activeUserId, trimmed);
+    }
+    // 계정 전환 캐시도 동기화
+    if (ctx.member_id) {
+      updateAccountDisplayName(ctx.member_id, trimmed);
     }
 
     showToast({ type: "success", message: "이름이 변경되었어요" });

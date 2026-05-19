@@ -1,7 +1,7 @@
 // src/hooks/useCalendar.js
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { loadCalendarMonth, saveCalendarMonth, saveMeta, loadMeta } from "../utils/storage";
-import { calculateMonthlyAllowance } from "../utils/calculator";
+import { calculateMonthlyAllowance, validateCalculation } from "../utils/calculator";
 import { getHolidays, getHolidaysLoadError, retryLoadHolidays } from "../utils/holidays";
 import { isNextMonthDisabled } from "../utils/dateLimit";
 import { showToast } from "../utils/toastManager";
@@ -85,7 +85,12 @@ export function useCalendar(settings) {
   const calc = useMemo(() => {
     if (!settings) return null;
     try {
-      return calculateMonthlyAllowance(viewYear, viewMonth, settings, calendar, holidays);
+      const result = calculateMonthlyAllowance(viewYear, viewMonth, settings, calendar, holidays);
+      if (process.env.NODE_ENV !== "production") {
+        const v = validateCalculation(result);
+        if (!v.valid) console.warn("[useCalendar] 계산 무결성 경고:", v.errors);
+      }
+      return result;
     } catch (e) {
       console.error("[useCalendar] 계산 오류:", e);
       return null;
