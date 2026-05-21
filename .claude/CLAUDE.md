@@ -1,105 +1,72 @@
-# 01. 영구 원칙
+# CLAUDE.md — 용돈관리 프로젝트 개발 방법론
 
-> **갱신 주기**: 거의 없음 (영구)
-> **출처**: Karpathy CLAUDE.md (선구자 정책 인용) + Hex 경험 + 세이지 검증
+이 파일은 통합 진입점이다. Claude Code는 프로젝트를 열 때 `.claude/CLAUDE.md`를 자동으로 읽는다. 아래 `@import`로 같은 `.claude/` 폴더의 규칙 모듈을 함께 불러온다.
 
-본 영역은 Claude 진화·프로젝트 변경·팀원 변경과 무관하게 영구 유지.
-
----
-
-## 1. Karpathy 4원칙 (최상위 가드레일)
-
-> 출처: https://github.com/forrestchang/andrej-karpathy-skills/blob/main/CLAUDE.md
-> "Bias toward caution over speed." — 속도보다 신중함.
-
-### 1.1 Think Before Coding
-- 가정을 명시. 불확실하면 묻기.
-- 다수 해석 가능 시 → **모두 제시** (조용히 선택 X).
-- 단순한 대안 있으면 말하기. 합당한 경우 push back.
-- 불명확하면 멈추고 묻기.
-
-### 1.2 Simplicity First
-- 요청 범위만. 추측·추상화 회피.
-- "200줄 → 50줄"로 줄일 수 있으면 재작성.
-- 시니어 엔지니어가 보면 과복잡이라 할까? 자문 의무.
-
-#### 1.2-A. 단순 대안 검토 의무 (부속)
-비표준 패턴(IIFE·중첩 클로저·복잡 구조체) 도입 직전 의무:
-1. **자문**: "이 패턴이 200줄→50줄 자문에서 어디 위치하는가?"
-2. **후보 명시**: 단순 대안 2~3개 본문 작성
-3. **근거 작성**: 채택 vs 미채택 후보 3축 비교 (가독성·유지보수·표준 정합)
-4. **미채택 본문 인용**: 미채택 후보 본문을 commit 본문에 인용
-
-### 1.3 Surgical Changes
-- 인접 코드·주석·포맷 "개선" 회피.
-- 망가지지 않은 거 리팩토링 회피.
-- 기존 스타일 따르기 (자기 취향과 달라도).
-- 모든 변경 라인이 사용자 요청에 직접 추적 의무.
-
-### 1.4 Goal-Driven Execution
-- "검증 추가" → "잘못된 입력 테스트 → 통과시키기" 등 verify 단계 명시.
-- 다단계 작업 → 짧은 계획 + 각 단계 verify.
+> **폴더 배치**
+> - `.claude/` 안: 이 파일 + 규칙 모듈 5개 (`@import` 대상). 평소 건드리지 않는다.
+> - 프로젝트 루트: 작업 파일(`BACKLOG.md`·`TASK_HISTORY.md`·`POLICIES.md`)과 `memory/` 폴더.
 
 ---
 
-## 2. 개발 코드 3대 규칙
+## 항상 활성화되는 규칙 (import)
 
-### 2.1 파일당 800줄 제한
-- 800줄 초과 시 분리 작업 BACKLOG 등록 의무
-- **자동화 의무** (Phase 2 도입): ESLint `max-lines` rule (단, 협업 환경 도입 후)
-- 위반 시 PR 자동 거부 또는 경고
-
-### 2.2 지속 개발 가능한 구조
-- 함수·변수명 의도 명시 (`processData` ❌ → `sendCampaignEmails` ✅)
-- 한 함수 = 한 일 (20~40줄 권장)
-- 하드코딩 회피 — `.env` 또는 DB `settings` 테이블 분리
-- Rule of Three — 3회 이상 반복 시 추출
-- 주석은 **왜(Why)** — 무엇(What)은 코드가 말함
-
-### 2.3 보안 체크리스트
-매 작업 시 자체 검토 의무:
-- ✅ 사용자 입력 검증 (SQL Injection·XSS·경로 조작)
-- ✅ 인증·인가 체크 누락 없음 (API 라우트 양면)
-- ✅ 비밀값 하드코딩 회피 (.env 또는 암호화)
-- ✅ 에러 메시지에 내부 정보 노출 회피
-- ✅ 로그 민감정보 마스킹 (이메일·전화·비밀번호)
-- ✅ HTTPS/TLS 유지 (`rejectUnauthorized: false` 상시 적용 회피)
-- ✅ 의존성 취약점 점검 (`npm audit` 주기)
+@PRINCIPLES_KARPATHY.md
+@CODING_RULES.md
+@OPERATING_PRINCIPLES.md
+@HEXSTACK.md
+@MEMORY_SYSTEM.md
 
 ---
 
-## 3. 절대 금지 명령
+## 우선순위
+규칙이 충돌하거나 애매하면 다음 순서로 판단한다.
+1. **Karpathy 4원칙** (`PRINCIPLES_KARPATHY.md`) — 최상위
+2. **근본 철학 — 안정성·지속성·효율성·최적화** (`CODING_RULES.md`)
+3. **3대 규칙 — 800줄·지속개발·보안** (`CODING_RULES.md`)
+4. **운영 원칙** (`OPERATING_PRINCIPLES.md`)
+5. **HexStack 워크플로우** (`HEXSTACK.md`)
+
+---
+
+## 프로젝트 선언
 
 ```
-⛔ npm run dev, npm run build
-⛔ node index.js, node server.js
-⛔ kill, pkill, lsof
-⛔ git push --force (main/master)
-⛔ DROP TABLE (security 검토 없이)
-⛔ git checkout -- . (전체 롤백 — 파일별 선택 롤백만)
-⛔ --no-verify (hook 우회)
-⛔ git rebase -i, git add -i (interactive 명령)
+MODE=improve
+TASK_SCALE=medium (기본값 — 과업별 재선언)
+EDIT_MODE=manual
 ```
 
+### 테스트 환경
+```
+- 서버 실행: 불가능 (Claude Code 세션에서 직접 띄우지 않음)
+- DB 직접 접근: 불가능 (localStorage 기반 PWA)
+- 브라우저 자동화: 불가능
+- 테스트 방법: vitest 단위/통합 테스트 + 코드 리뷰 + 정적 분석
+```
+
+### 기술 스택
+- React 18 + Vite 5 + Tailwind CSS 3
+- localStorage 기반 데이터 저장 (mock 백엔드)
+- PWA (서비스워커 + manifest)
+- vitest + jsdom 테스트
+
 ---
 
-## 4. 4기둥 (안정성·지속성·효율성·최적화)
+## 작업 관리 (프로젝트 루트)
+- **`BACKLOG.md`** — 진행 예정·진행 중 과업. 종결 시 제거.
+- **`TASK_HISTORY.md`** — 완료·폐기 과업 이력 (관리 일자 + 커밋 해시).
+- **`POLICIES.md`** — 항구적 결정 + Phase 로드맵 (정책 #NNN).
 
-우선순위 (Hex 상황 정합):
+반사 행동:
+- 사용자가 "이것도 해야 한다"·"과업으로 잡자"라고 하면 → `BACKLOG.md`에 `T-NNN`으로 등록을 먼저 제안한다.
+- 과업 완료·폐기 시 → `TASK_HISTORY.md`로 이관 + 관련 커밋 해시 기록을 제안한다.
+- "나중에"·"추후 보완" 발화가 나오면 → `POLICIES.md`에 정책으로 먼저 기록을 제안한다.
 
-| 순위 | 기둥 | 의미 | 주의 |
-|---|---|---|---|
-| 1 | **안정성** | 기존 정상 동작 보존 | 검증 안 된 "더 나은 방법" 회피 |
-| 2 | **지속성** | 6개월+ 후에도 의도 명확 | 현 시점만 편한 코드 회피 |
-| 3 | **효율성** | 자원(메모리·쿼리·네트워크) 낭비 회피 | 효율성 위해 가독성 희생 회피 |
-| 4 | **최적화** | 측정한 근거 있을 때만 | "섣부른 최적화는 모든 악의 근원" (Knuth) |
+## 메모리 (프로젝트 루트의 `memory/` 폴더)
+- 세션 간 맥락은 루트의 `memory/` 폴더에 누적한다 (`MEMORY_SYSTEM.md` 참조).
+- `memory/MEMORY.md`는 인덱스다. 본문은 유형별 개별 파일에 둔다.
 
----
-
-## 5. 본 영역 작동 검증 의무
-
-본 영역 위반 시 즉시 회복 의무:
-- Karpathy 4원칙 자기 위반 → Karpathy 2-A 부속 본격 검토
-- 800줄 초과 → 분리 작업 BACKLOG 등록
-- 절대 금지 명령 호출 → 즉시 중단 + Hex 보고
-- 4기둥 충돌 → 우선순위 따라 결정
+## 핵심 자세
+- 판단이 걸린 국면에서는 **냉정하게 분석하고 명확하게 결론**을 낸다. 형식적 칭찬·결론 회피·모호한 완충 표현을 피한다.
+- 사용자의 설계·코드에 문제가 있으면 근거와 함께 반대 의견을 낸다.
+- 변경 전에 영향 범위·롤백 방법·위험도를 먼저 요약한다.

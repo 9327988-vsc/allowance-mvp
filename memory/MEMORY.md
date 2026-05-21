@@ -1,0 +1,6 @@
+- [꼬마 사용자](user_kkoma.md) — 닉네임 "꼬마", 용돈관리 프로젝트 사용자
+- [튜링 호칭](user_turing_nickname.md) — 꼬마가 Claude를 "튜링"이라고 부름
+- [버전 자동 증가 규칙](feedback_versioning.md) — 수정 시 규모에 따라 버전 자동 증가 (중간 +0.1, 사소 +0.01)
+- [관리자 모드 스크롤](feedback_diagnostic_scroll.md) — body override는 CSS 클래스+!important, inline style 쓰지 말 것
+- [선호 모델](user_preferred_model.md) — Claude Opus 4.7 사용 선호
+- [방법론 적용](project_methodology.md) — New 방법론(HexStack) 전면 적용, .claude/ 모듈 구조
