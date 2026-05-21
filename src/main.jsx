@@ -5,6 +5,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import App from "./components/App";
 import "./styles/base.css";
 import "./styles/components.css";
+import "./styles/summaryTable.css";
 import "./styles/features.css";
 import "./styles/tabLayout.css";
 import "./styles/darkMode.css";

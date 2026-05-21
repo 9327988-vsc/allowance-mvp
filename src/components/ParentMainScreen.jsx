@@ -6,7 +6,6 @@ import { useSyncPoller } from "../hooks/useSyncPoller";
 import { useToast } from "../hooks/useToast";
 import { getKVAdapter } from "../utils/kvAdapter";
 import { isOnline } from "../utils/onlineStatus";
-import { logout } from "../utils/accountSwitcher";
 import { getMessageForError } from "../constants/errorMessages";
 import { getStatusEmoji } from "../constants/statusLabels";
 
@@ -25,10 +24,10 @@ import QnAModal from "./modals/QnAModal";
 import { generateGrantId } from "../utils/idGenerator";
 import { getDueSchedules, markScheduleRun } from "../utils/autoGrant";
 import { getGreetingMessage } from "../utils/greetingMessage";
+import ParentMyPopup from "./widgets/ParentMyPopup";
 
 // Module-level style constants (avoid re-creating on each render)
 const EMPTY_STATE_STYLE = { padding: "var(--space-10) var(--space-4)" };
-const MY_POPUP_STYLE = { maxWidth: 400, width: "92%", padding: 0 };
 
 /**
  * @param {{ familyContext: import("../utils/familyContext").FamilyContextData }} props
@@ -77,12 +76,6 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
       undoRejectRef.current.querySelector("button")?.focus();
     }
   }, [undoRejectConfirmClaim]);
-
-  // m-16: myPopup auto-focus ref
-  const myPopupRef = useRef(null);
-  useEffect(() => {
-    if (showMyPopup && myPopupRef.current) myPopupRef.current.focus();
-  }, [showMyPopup]);
 
   // m-7: 인사 메시지 메모이제이션 (하루 동안 동일, 자정에 갱신)
   const [dateKey, setDateKey] = useState(() => new Date().toDateString());
@@ -615,65 +608,15 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
 
       {/* 마이 팝업 */}
       {showMyPopup && (
-        <div className="modal-backdrop" ref={myPopupRef} onClick={() => setShowMyPopup(false)} onKeyDown={e => { if (e.key === "Escape") setShowMyPopup(false); }} tabIndex={-1}>
-          <div className="modal-content" style={MY_POPUP_STYLE} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="마이 메뉴">
-            <div className="modal-header">
-              <h2 className="modal-title">👤 마이</h2>
-              <button onClick={() => setShowMyPopup(false)} className="modal-close" aria-label="닫기">×</button>
-            </div>
-            <div className="my-tab">
-              {/* 프로필 카드 */}
-              <button className="my-tab__profile" onClick={() => { setShowMyPopup(false); setShowFamilyInfo(true); }} type="button">
-                <div className="my-tab__avatar">👨‍👩‍👧</div>
-                <div className="my-tab__info">
-                  <span className="my-tab__name">{familyContext.member_display_name || "보호자"}</span>
-                  <span className="my-tab__role">부모 · {familyContext.family_code || "우리 가족"}</span>
-                </div>
-                <span className="my-tab__arrow">›</span>
-              </button>
-
-              {/* 메뉴 리스트 */}
-              <div className="my-tab__menu">
-                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowFamilyInfo(true); }}>
-                  <span className="my-tab__menu-icon">👨‍👩‍👧</span>
-                  <span className="my-tab__menu-label">가족 정보</span>
-                  <span className="my-tab__arrow">›</span>
-                </button>
-                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowSettings(true); }}>
-                  <span className="my-tab__menu-icon">⚙️</span>
-                  <span className="my-tab__menu-label">설정</span>
-                  <span className="my-tab__arrow">›</span>
-                </button>
-                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowChores(true); }}>
-                  <span className="my-tab__menu-icon">🎯</span>
-                  <span className="my-tab__menu-label">미션 관리</span>
-                  <span className="my-tab__arrow">›</span>
-                </button>
-                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowAutoGrant(true); }}>
-                  <span className="my-tab__menu-icon">🔄</span>
-                  <span className="my-tab__menu-label">자동 지급</span>
-                  <span className="my-tab__arrow">›</span>
-                </button>
-                <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); setShowQnA(true); }}>
-                  <span className="my-tab__menu-icon">❓</span>
-                  <span className="my-tab__menu-label">Q&A</span>
-                  <span className="my-tab__arrow">›</span>
-                </button>
-              </div>
-
-              {/* 하단 메뉴 */}
-              {onLogout && (
-                <div className="my-tab__menu my-tab__menu--bottom">
-                  <button className="my-tab__menu-item" onClick={() => { setShowMyPopup(false); logout(); onLogout(); }}>
-                    <span className="my-tab__menu-icon">🔀</span>
-                    <span className="my-tab__menu-label">계정 전환</span>
-                    <span className="my-tab__arrow">›</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <ParentMyPopup
+          familyContext={familyContext}
+          onClose={() => setShowMyPopup(false)}
+          onNavigate={(key) => {
+            const navMap = { familyInfo: setShowFamilyInfo, settings: setShowSettings, chores: setShowChores, autoGrant: setShowAutoGrant, qna: setShowQnA };
+            navMap[key]?.(true);
+          }}
+          onLogout={onLogout}
+        />
       )}
 
       {/* 모달들 */}
