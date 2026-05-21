@@ -154,16 +154,3 @@
   font-size: var(--font-size-base);
 }
 
-/* ===== 정산표 합계 강조 ===== */
-.summary-table__total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-4);
-  margin: var(--space-2) calc(-1 * var(--space-3));
-  font-size: 28px;
-  font-weight: var(--font-weight-bold);
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, #F5F3FF 100%);
-  border-radius: var(--radius-lg);
-  color: var(--color-primary);
-}

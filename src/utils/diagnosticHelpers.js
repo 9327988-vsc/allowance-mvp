@@ -45,7 +45,7 @@ export function collectAllFamilies() {
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
     if (!k || !k.startsWith("mock_kv:families/") || k.includes("/members/") || k.includes("/claims/") || k.includes("/migrations/") || k.includes("/by_code/")) continue;
-    const match = k.match(/^mock_kv:families\/(fam_[a-f0-9-]+)$/);
+    const match = k.match(/^mock_kv:families\/(fam_[a-z0-9-]+)$/);
     if (!match) continue;
     const family = kvRead(`families/${match[1]}`);
     if (family) families.push(family);

@@ -1,7 +1,9 @@
-// src/components/SignupScreen.jsx — 회원가입 화면
+// src/components/SignupScreen.jsx — 회원가입 화면 (아이디+비밀번호)
 import { useState, useRef, useEffect } from "react";
-import { createUser } from "../utils/authStore";
-import PinInput from "./PinInput";
+import {
+  createUser, validateUsername, validatePassword, getPasswordStrength,
+  findUserByUsername, SECURITY_QUESTIONS,
+} from "../utils/authStore";
 import ThemeToggle from "./widgets/ThemeToggle";
 
 const TOTAL_STEPS = 4;
@@ -13,14 +15,18 @@ const TOTAL_STEPS = 4;
  * }} props
  */
 export default function SignupScreen({ onComplete, onBack }) {
-  const [step, setStep] = useState(1); // 1=계정유형, 2=개인정보, 3=PIN, 4=PIN확인
+  const [step, setStep] = useState(1); // 1=계정유형, 2=개인정보, 3=아이디+비밀번호, 4=보안질문
   const [role, setRole] = useState(""); // "child" | "parent" | "general"
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [pin, setPin] = useState("");
-  const [pinConfirm, setPinConfirm] = useState("");
-  const [pinError, setPinError] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [securityQuestion, setSecurityQuestion] = useState(SECURITY_QUESTIONS[0]);
+  const [securityAnswer, setSecurityAnswer] = useState("");
   const [formError, setFormError] = useState("");
+  const [loading, setLoading] = useState(false);
   const submittedRef = useRef(false);
   const mountedRef = useRef(true);
 
@@ -31,10 +37,7 @@ export default function SignupScreen({ onComplete, onBack }) {
 
   // Step 1: 계정 유형 선택
   function handleStep1() {
-    if (!role) {
-      setFormError("계정 유형을 선택하세요");
-      return;
-    }
+    if (!role) { setFormError("계정 유형을 선택하세요"); return; }
     setFormError("");
     setStep(2);
   }
@@ -42,79 +45,76 @@ export default function SignupScreen({ onComplete, onBack }) {
   // Step 2: 개인정보 입력
   function handleStep2() {
     const trimmed = name.trim();
-    if (!trimmed) {
-      setFormError("이름을 입력하세요");
-      return;
-    }
-    if (trimmed.length > 20) {
-      setFormError("20자 이내로 입력하세요");
-      return;
-    }
+    if (!trimmed) { setFormError("이름을 입력하세요"); return; }
+    if (trimmed.length > 20) { setFormError("20자 이내로 입력하세요"); return; }
     if (birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
-      setFormError("생년월일 형식이 올바르지 않습니다");
-      return;
+      setFormError("생년월일 형식이 올바르지 않습니다"); return;
     }
     if (birthDate) {
       const d = new Date(birthDate);
-      if (isNaN(d.getTime()) || d > new Date()) {
-        setFormError("올바른 생년월일을 입력하세요");
-        return;
+      const [y, m, day] = birthDate.split("-").map(Number);
+      if (isNaN(d.getTime()) || d.getMonth() + 1 !== m || d.getDate() !== day || d > new Date()) {
+        setFormError("올바른 생년월일을 입력하세요"); return;
       }
     }
     setFormError("");
     setStep(3);
   }
 
-  // Step 3: PIN 설정
-  function handlePinChange(val) {
-    setPin(val);
-    setPinError(false);
-    if (val.length === 4) {
-      setTimeout(() => { if (!mountedRef.current) return; setStep(4); }, 200);
-    }
+  // Step 3: 아이디+비밀번호 설정
+  function handleStep3(e) {
+    e.preventDefault();
+    const trimmedId = username.trim();
+    const idCheck = validateUsername(trimmedId);
+    if (!idCheck.valid) { setFormError(idCheck.error); return; }
+    const existing = findUserByUsername(trimmedId);
+    if (existing) { setFormError("이미 사용 중인 아이디입니다"); return; }
+    const pwCheck = validatePassword(password);
+    if (!pwCheck.valid) { setFormError(pwCheck.error); return; }
+    if (password !== passwordConfirm) { setFormError("비밀번호가 일치하지 않습니다"); return; }
+    setFormError("");
+    setStep(4);
   }
 
-  // Step 4: PIN 확인
-  function handlePinConfirmChange(val) {
-    setPinConfirm(val);
-    setPinError(false);
-    if (val.length === 4) {
-      setTimeout(async () => {
-        if (!mountedRef.current) return;
-        if (val === pin) {
-          if (submittedRef.current) return;
-          submittedRef.current = true;
-          try {
-            const user = await createUser({
-              displayName: name.trim(),
-              role,
-              pin: val,
-              birthDate: birthDate || null,
-            });
-            onComplete(user.user_id);
-          } catch {
-            setFormError("계정 생성에 실패했습니다");
-            submittedRef.current = false;
-          }
-        } else {
-          setPinError(true);
-          setPinConfirm("");
-        }
-      }, 200);
+  // Step 4: 보안 질문 설정 + 계정 생성
+  async function handleStep4(e) {
+    e.preventDefault();
+    if (!securityAnswer.trim()) { setFormError("보안 답변을 입력하세요"); return; }
+    if (securityAnswer.trim().length > 50) { setFormError("답변은 50자 이내로 입력하세요"); return; }
+    if (submittedRef.current || loading) return;
+    submittedRef.current = true;
+    setLoading(true);
+    setFormError("");
+
+    try {
+      const user = await createUser({
+        displayName: name.trim(),
+        role,
+        username: username.trim(),
+        password,
+        securityQuestion,
+        securityAnswer: securityAnswer.trim(),
+        birthDate: birthDate || null,
+      });
+      if (mountedRef.current) onComplete(user.user_id);
+    } catch (err) {
+      console.error("createUser failed:", err);
+      if (mountedRef.current) {
+        setFormError(err.message || "계정 생성에 실패했습니다");
+        submittedRef.current = false;
+      }
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
   }
 
   const roleLabel = role === "child" ? "자녀" : role === "parent" ? "부모" : role === "general" ? "일반" : "";
+  const pwStrength = getPasswordStrength(password);
 
   return (
     <div className="auth-screen">
       <div className="auth-screen__inner">
-        {/* 테마 전환 */}
-        <div className="auth-screen__theme">
-          <ThemeToggle size="sm" />
-        </div>
-
-        {/* 로고 */}
+        <div className="auth-screen__theme"><ThemeToggle size="sm" /></div>
         <div className="auth-screen__logo">💰</div>
         <h1 className="auth-screen__title">용돈 관리</h1>
         <p className="auth-screen__subtitle">계정을 만들어 시작하세요</p>
@@ -218,41 +218,142 @@ export default function SignupScreen({ onComplete, onBack }) {
           </div>
         )}
 
-        {/* Step 3: PIN 설정 */}
+        {/* Step 3: 아이디 + 비밀번호 설정 */}
         {step === 3 && (
-          <div className="auth-form fade-in">
-            <p className="auth-pin-label">4자리 PIN을 설정하세요</p>
-            <PinInput value={pin} onChange={handlePinChange} error={false} />
+          <form onSubmit={handleStep3} className="auth-form fade-in">
+            <p className="auth-form__step-label">아이디 & 비밀번호 설정</p>
+
+            <div className="auth-form__field">
+              <label className="auth-form__label">아이디</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => { setUsername(e.target.value); setFormError(""); }}
+                placeholder="영문 또는 영문+숫자 (3~20자)"
+                maxLength={20}
+                className="auth-form__input"
+                autoFocus
+                autoComplete="username"
+              />
+            </div>
+
+            <div className="auth-form__field">
+              <label className="auth-form__label">비밀번호</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setFormError(""); }}
+                  placeholder="영문+숫자 필수, 8자 이상"
+                  className="auth-form__input"
+                  autoComplete="new-password"
+                  style={{ paddingRight: "3rem" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer", padding: "0.25rem",
+                    fontSize: "var(--font-size-sm)", color: "var(--color-text-tertiary)"
+                  }}
+                  tabIndex={-1}
+                >
+                  {showPassword ? "숨김" : "보기"}
+                </button>
+              </div>
+              {password && (
+                <div style={{ marginTop: "var(--space-1)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--color-border)" }}>
+                    <div style={{
+                      width: `${(pwStrength.level / 3) * 100}%`, height: "100%", borderRadius: 2,
+                      background: pwStrength.level === 1 ? "var(--color-danger)" : pwStrength.level === 2 ? "var(--color-warning)" : "var(--color-success)",
+                      transition: "width 0.2s"
+                    }} />
+                  </div>
+                  <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-tertiary)", whiteSpace: "nowrap" }}>
+                    {pwStrength.label}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="auth-form__field">
+              <label className="auth-form__label">비밀번호 확인</label>
+              <input
+                type="password"
+                value={passwordConfirm}
+                onChange={(e) => { setPasswordConfirm(e.target.value); setFormError(""); }}
+                placeholder="비밀번호 재입력"
+                className="auth-form__input"
+                autoComplete="new-password"
+              />
+            </div>
+
+            {formError && <p className="auth-form__error">{formError}</p>}
+
+            <button type="submit" className="btn btn--primary btn--full btn--lg">
+              다음
+            </button>
             <button
-              onClick={() => { setStep(2); setPin(""); setFormError(""); }}
+              type="button"
+              onClick={() => { setStep(2); setFormError(""); }}
               className="btn btn--ghost"
-              style={{ marginTop: "var(--space-3)" }}
+              style={{ marginTop: "var(--space-2)" }}
             >
               ← 이전
             </button>
-          </div>
+          </form>
         )}
 
-        {/* Step 4: PIN 확인 */}
+        {/* Step 4: 보안 질문 설정 */}
         {step === 4 && (
-          <div className="auth-form fade-in">
-            <p className="auth-pin-label">PIN을 다시 입력하세요</p>
-            <PinInput
-              value={pinConfirm}
-              onChange={handlePinConfirmChange}
-              error={pinError}
-              autoFocus
-            />
-            {pinError && <p className="auth-form__error">PIN이 일치하지 않습니다</p>}
+          <form onSubmit={handleStep4} className="auth-form fade-in">
+            <p className="auth-form__step-label">보안 질문 설정</p>
+            <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", marginBottom: "var(--space-3)" }}>
+              비밀번호 분실 시 초기화에 사용됩니다
+            </p>
+
+            <div className="auth-form__field">
+              <label className="auth-form__label">보안 질문</label>
+              <select
+                value={securityQuestion}
+                onChange={(e) => setSecurityQuestion(e.target.value)}
+                className="auth-form__input"
+              >
+                {SECURITY_QUESTIONS.map((q) => (
+                  <option key={q} value={q}>{q}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="auth-form__field">
+              <label className="auth-form__label">답변</label>
+              <input
+                type="text"
+                value={securityAnswer}
+                onChange={(e) => { setSecurityAnswer(e.target.value); setFormError(""); }}
+                placeholder="답변 입력"
+                maxLength={50}
+                className="auth-form__input"
+                autoFocus
+              />
+            </div>
+
             {formError && <p className="auth-form__error">{formError}</p>}
-            <button
-              onClick={() => { setStep(3); setPin(""); setPinConfirm(""); setPinError(false); setFormError(""); submittedRef.current = false; }}
-              className="btn btn--ghost"
-              style={{ marginTop: "var(--space-3)" }}
-            >
-              ← 다시 설정
+
+            <button type="submit" disabled={loading} className="btn btn--primary btn--full btn--lg">
+              {loading ? "생성 중..." : "계정 만들기"}
             </button>
-          </div>
+            <button
+              type="button"
+              onClick={() => { setStep(3); setFormError(""); submittedRef.current = false; }}
+              className="btn btn--ghost"
+              style={{ marginTop: "var(--space-2)" }}
+            >
+              ← 이전
+            </button>
+          </form>
         )}
       </div>
     </div>

@@ -126,11 +126,6 @@
   background: rgba(99,102,241,0.12);
 }
 
-[data-theme="dark"] .summary-table__total {
-  background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
-  color: #a5b4fc;
-}
-
 [data-theme="dark"] .claim-card {
   background-color: #1e293b;
   border-color: #334155;

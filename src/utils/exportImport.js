@@ -60,7 +60,7 @@ export async function exportData(options = {}) {
   try {
     const v = JSON.parse(localStorage.getItem("user_accounts_v1") || "null");
     if (v) {
-      data.user_accounts = (Array.isArray(v) ? v : []).map(({ pin_hash, pin_salt, pin_reset_pending, birth_date, ...rest }) => rest);
+      data.user_accounts = (Array.isArray(v) ? v : []).map(({ pin_hash, pin_salt, pin_reset_pending, password_hash, password_salt, security_answer_hash, security_answer_salt, birth_date, ...rest }) => rest);
     }
   } catch { /* ignored */ }
 

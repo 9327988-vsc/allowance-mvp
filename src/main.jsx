@@ -45,7 +45,7 @@ mockReady.then(() => {
       </ErrorBoundary>
     </React.StrictMode>
   );
-});
+}).catch(console.error);
 
 // PWA 서비스워커 등록
 if ("serviceWorker" in navigator) {

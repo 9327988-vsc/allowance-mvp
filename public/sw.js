@@ -1,5 +1,5 @@
 // sw.js — 서비스워커 (오프라인 캐시 + 앱 셸)
-const CACHE_NAME = "allowance-v8.7";
+const CACHE_NAME = "allowance-v9.0";
 const APP_SHELL = [
   "/allowance-mvp/",
   "/allowance-mvp/index.html",
@@ -11,9 +11,8 @@ const APP_SHELL = [
 // 설치: 앱 셸 캐시
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 // 활성화: 이전 캐시 제거

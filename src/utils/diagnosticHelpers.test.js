@@ -210,6 +210,13 @@ describe("collectAllFamilies", () => {
     expect(result[0].id).toBe("fam_aaa111-bbb222-ccc333");
   });
 
+  it("g-z 문자가 포함된 family ID도 수집한다", () => {
+    kvSet("families/fam_xyz789-test456", { family_id: "fam_xyz789-test456", name: "테스트" });
+    const result = collectAllFamilies();
+    expect(result).toHaveLength(1);
+    expect(result[0].family_id).toBe("fam_xyz789-test456");
+  });
+
   it("mock_kv 접두사 없는 키는 무시", () => {
     localStorage.setItem("families/fam_aaa111-bbb222-ccc333", JSON.stringify({ id: "test" }));
     expect(collectAllFamilies()).toEqual([]);

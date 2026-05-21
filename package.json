@@ -1,6 +1,6 @@
 {
   "name": "allowance-mvp",
-  "version": "8.7.0",
+  "version": "9.0.0",
   "type": "module",
   "private": true,
   "scripts": {

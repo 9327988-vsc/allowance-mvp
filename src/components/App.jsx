@@ -14,7 +14,6 @@ import ImportModal from "./modals/ImportModal";
 import CleanupConfirmModal from "./modals/CleanupConfirmModal";
 import ResetAllDataModal from "./modals/ResetAllDataModal";
 import CategoryManager from "./drawers/CategoryManager";
-import PinResetModal from "./modals/PinResetModal";
 import StorageDisabledModal from "./modals/StorageDisabledModal";
 import DataCorruptedModal from "./modals/DataCorruptedModal";
 import FamilyOnboardingModal from "./modals/FamilyOnboardingModal";
@@ -44,7 +43,6 @@ export default function App() {
   const [showCleanup, setShowCleanup] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [showPinManage, setShowPinManage] = useState(false);
   const [showTutorial, setShowTutorial] = useState(null); // null | "child" | "parent"
   const [showTutorialPicker, setShowTutorialPicker] = useState(false);
   const tutorialPickerRef = useModalBase(() => setShowTutorialPicker(false), { active: showTutorialPicker });
@@ -164,7 +162,6 @@ export default function App() {
           onCategoryManage={() => setShowCategoryManager(true)}
           onCleanup={handleCleanupClick}
           onReset={() => setShowReset(true)}
-          onPinManage={() => setShowPinManage(true)}
         />
         {showExport && <ExportModal onClose={() => setShowExport(false)} />}
         {showImport && (
@@ -181,7 +178,6 @@ export default function App() {
         )}
         {showReset && <ResetAllDataModal onClose={() => setShowReset(false)} />}
         {showCategoryManager && <CategoryManager onClose={() => setShowCategoryManager(false)} />}
-        {showPinManage && <PinResetModal onClose={() => setShowPinManage(false)} currentUserId={getActiveUser()} />}
         <ToastContainer />
       </>
     );

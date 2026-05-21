@@ -122,12 +122,13 @@ describe("getBase64Size", () => {
 
 describe("resizeImage", () => {
   let mockCanvas;
+  const origCreateElement = document.createElement.bind(document);
 
   beforeEach(() => {
     mockCanvas = createMockCanvas("data:image/jpeg;base64,abc");
     vi.spyOn(document, "createElement").mockImplementation((tag) => {
       if (tag === "canvas") return mockCanvas;
-      return document.createElement(tag);
+      return origCreateElement(tag);
     });
   });
 
@@ -275,7 +276,7 @@ describe("resizeImage", () => {
       mockCanvas = createMockCanvas([largeDataUrl, smallDataUrl]);
       vi.spyOn(document, "createElement").mockImplementation((tag) => {
         if (tag === "canvas") return mockCanvas;
-        return document.createElement(tag);
+        return origCreateElement(tag);
       });
 
       mockImageLoad({ width: 100, height: 100 });
@@ -294,7 +295,7 @@ describe("resizeImage", () => {
       mockCanvas = createMockCanvas(alwaysLargeUrl);
       vi.spyOn(document, "createElement").mockImplementation((tag) => {
         if (tag === "canvas") return mockCanvas;
-        return document.createElement(tag);
+        return origCreateElement(tag);
       });
 
       mockImageLoad({ width: 100, height: 100 });
@@ -330,7 +331,7 @@ describe("resizeImage", () => {
       mockCanvas.getContext = vi.fn(() => null);
       vi.spyOn(document, "createElement").mockImplementation((tag) => {
         if (tag === "canvas") return mockCanvas;
-        return document.createElement(tag);
+        return origCreateElement(tag);
       });
 
       mockImageLoad({ width: 100, height: 100 });

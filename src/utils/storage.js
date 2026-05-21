@@ -167,7 +167,7 @@ function getTodayYearMonth() {
 
 // 키 관리
 export const APP_KEY_PATTERNS = {
-  exact: ["settings_v1", "custom_categories_v1", "meta_v1", "family_context_v1", "family_accounts_v1", "device_id_v1", "submitted_claims_v1", "theme_v1", "user_accounts_v1", "auth_migrated_v1", "user_prefs_v1", "pin_reset_requests_v1", "migration_done_v1", "saved_family_accounts_v1", "phase2_migrated_v1"],
+  exact: ["settings_v1", "custom_categories_v1", "meta_v1", "family_context_v1", "family_accounts_v1", "device_id_v1", "submitted_claims_v1", "theme_v1", "user_accounts_v1", "auth_migrated_v1", "user_prefs_v1", "migration_done_v1", "saved_family_accounts_v1", "phase2_migrated_v1", "auth_password_migrated_v1"],
   prefix: ["calendar_v1_", "mock_kv:", "settings_v1_u_", "notifications_v1_u_", "badges_earned_v1_u_", "chores_v1_f_", "chore_log_v1_f_", "auto_grant_schedules_v1_f_", "auto_grant_last_run_v1_f_", "qna_v1_f_"],
   contains: ["_corrupted_"]
 };

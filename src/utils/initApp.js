@@ -5,7 +5,7 @@ import {
 } from "./storage";
 import { loadHolidays } from "./holidays";
 import { loadFamilyContext } from "./familyContext";
-import { loadUserAccounts, getActiveUser, findUserById, migrateFromLegacyAccounts } from "./authStore";
+import { loadUserAccounts, getActiveUser, findUserById, migrateFromLegacyAccounts, migrateToPasswordAuth } from "./authStore";
 import { loadUserPrefs, applyPrefs } from "./userPrefs";
 import { recoverFromCrashedImport } from "./exportImport";
 
@@ -87,6 +87,9 @@ export async function initApp() {
 
   // 1.5b. 레거시 계정 마이그레이션 (스토리지 확인 후)
   migrateFromLegacyAccounts();
+
+  // 1.5c. PIN → 비밀번호 인증 마이그레이션
+  await migrateToPasswordAuth();
 
   // 1.6. Phase-2 키 마이그레이션 (글로벌 → 스코프드)
   migratePhase2Keys();

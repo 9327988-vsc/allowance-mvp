@@ -99,6 +99,11 @@ describe("toastManager", () => {
       showToast({ type: "error", message: "수동", duration: 0 });
       expect(capturedToasts[0].duration).toBe(0);
     });
+
+    it("duration이 null이면 기본 duration을 사용한다", () => {
+      showToast({ type: "success", message: "null dur", duration: null });
+      expect(capturedToasts[0].duration).toBe(3000);
+    });
   });
 
   // ------------------------------------------------------------------

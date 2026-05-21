@@ -26,6 +26,7 @@ vi.mock("./authStore", () => ({
   getActiveUser: vi.fn(() => null),
   findUserById: vi.fn(() => null),
   migrateFromLegacyAccounts: vi.fn(),
+  migrateToPasswordAuth: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("./userPrefs", () => ({

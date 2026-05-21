@@ -1,4 +1,10 @@
 /* ===== 부모 화면 레이아웃 ===== */
+/* body에 이 클래스가 붙으면 height/overflow 제약 해제 (스크롤 허용) */
+body.parent-main-active {
+  overflow: auto !important;
+  height: auto !important;
+}
+
 .parent-screen {
   display: flex;
   flex-direction: column;

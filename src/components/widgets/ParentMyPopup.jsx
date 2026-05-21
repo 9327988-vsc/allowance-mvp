@@ -11,8 +11,10 @@ export default function ParentMyPopup({ familyContext, onClose, onNavigate, onLo
 
   const nav = (key) => { onClose(); onNavigate(key); };
 
+  if (!familyContext) return null;
+
   return (
-    <div className="modal-backdrop" ref={popupRef} onClick={onClose} onKeyDown={e => { if (e.key === "Escape") onClose(); }} tabIndex={-1}>
+    <div className="modal-backdrop" role="presentation" ref={popupRef} onClick={onClose} onKeyDown={e => { if (e.key === "Escape") onClose(); }} tabIndex={-1}>
       <div className="modal-content" style={MY_POPUP_STYLE} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="마이 메뉴">
         <div className="modal-header">
           <h2 className="modal-title">👤 마이</h2>

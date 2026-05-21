@@ -16,7 +16,7 @@ import DiagSettingsSection from "../diagnostic/DiagSettingsSection";
 import DiagLogsSection from "../diagnostic/DiagLogsSection";
 import DiagQnaSection from "../diagnostic/DiagQnaSection";
 
-export default function DiagnosticScreen({ onBack, onExport, onImport, onCategoryManage, onCleanup, onReset, onPinManage }) {
+export default function DiagnosticScreen({ onBack, onExport, onImport, onCategoryManage, onCleanup, onReset }) {
   // useModalBase: ESC handler + focus trap (전체 화면이므로 scroll lock 비활성화)
   const modalRef = useModalBase(onBack, { noScrollLock: true });
 
@@ -239,7 +239,7 @@ export default function DiagnosticScreen({ onBack, onExport, onImport, onCategor
           {onImport && <button className="diag-btn" onClick={onImport}>📥 데이터 가져오기</button>}
           {onCategoryManage && <button className="diag-btn" onClick={onCategoryManage}>🏷 카테고리 관리</button>}
           {onCleanup && <button className="diag-btn" onClick={onCleanup}>🧹 오래된 데이터 정리</button>}
-          {onPinManage && <button className="diag-btn" onClick={onPinManage}>🔑 비밀번호 관리</button>}
+
           {onReset && <button className="diag-btn diag-btn--danger" onClick={onReset}>🗑 모든 데이터 초기화</button>}
         </div>
       </section>

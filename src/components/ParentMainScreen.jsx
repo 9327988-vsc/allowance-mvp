@@ -91,11 +91,9 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
 
   // 부모 화면은 스크롤 허용
   useEffect(() => {
-    document.body.style.overflow = "auto";
-    document.body.style.height = "auto";
+    document.body.classList.add("parent-main-active");
     return () => {
-      document.body.style.overflow = "";
-      document.body.style.height = "";
+      document.body.classList.remove("parent-main-active");
     };
   }, []);
 
@@ -318,10 +316,9 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
     return claims.filter(c => c.child_member_id === selectedChild);
   }, [claims, selectedChild]);
 
-  const pendingClaims = useMemo(() => filteredClaims.filter((c) => c.type !== "grant" && c.status === "pending"), [filteredClaims]);
-  const inProgressClaims = useMemo(() => filteredClaims.filter((c) => c.type !== "grant" && (c.status === "approved" || c.status === "paid")), [filteredClaims]);
-  const completedClaims = useMemo(() => filteredClaims.filter((c) => c.type !== "grant" && (c.status === "received" || c.status === "rejected")), [filteredClaims]);
-  const grantClaims = useMemo(() => filteredClaims.filter((c) => c.type === "grant"), [filteredClaims]);
+  const pendingClaims = useMemo(() => filteredClaims.filter((c) => c.status === "pending"), [filteredClaims]);
+  const inProgressClaims = useMemo(() => filteredClaims.filter((c) => c.status === "approved" || c.status === "granted"), [filteredClaims]);
+  const completedClaims = useMemo(() => filteredClaims.filter((c) => c.status === "paid" || c.status === "received" || c.status === "rejected"), [filteredClaims]);
 
   return (
     <div className="parent-screen">
@@ -463,29 +460,21 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
             {/* 완료 탭 */}
             {filter === "completed" && (
               <section className="claim-section">
-                <div className="claim-section__list">
-                  {completedClaims.map((c, i) => (
-                    <ClaimCard
-                      key={c.claim_id}
-                      claim={c}
-                      childName={getChildName(c.child_member_id)}
-                      onClick={handleClaimClick}
-                      onQuickUndoReject={c.status === "rejected" ? handleQuickUndoReject : undefined}
-                      quickLoading={quickActionId === c.claim_id}
-                      style={{ "--anim-delay": `${i * 0.06}s` }}
-                    />
-                  ))}
-                  {grantClaims.map((g, i) => (
-                    <ClaimCard
-                      key={g.claim_id}
-                      claim={g}
-                      childName={getChildName(g.child_member_id)}
-                      onClick={handleClaimClick}
-                      style={{ "--anim-delay": `${(completedClaims.length + i) * 0.06}s` }}
-                    />
-                  ))}
-                </div>
-                {completedClaims.length === 0 && grantClaims.length === 0 && (
+                {completedClaims.length > 0 ? (
+                  <div className="claim-section__list">
+                    {completedClaims.map((c, i) => (
+                      <ClaimCard
+                        key={c.claim_id}
+                        claim={c}
+                        childName={getChildName(c.child_member_id)}
+                        onClick={handleClaimClick}
+                        onQuickUndoReject={c.status === "rejected" ? handleQuickUndoReject : undefined}
+                        quickLoading={quickActionId === c.claim_id}
+                        style={{ "--anim-delay": `${i * 0.06}s` }}
+                      />
+                    ))}
+                  </div>
+                ) : (
                   <div className="modal-empty" style={{ padding: "var(--space-6) 0" }}>
                     <div className="modal-empty__icon">📭</div>
                     <p className="modal-empty__text">처리된 청구가 없어요</p>
@@ -545,22 +534,6 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
                           onClick={handleClaimClick}
                           onQuickUndoReject={c.status === "rejected" ? handleQuickUndoReject : undefined}
                           quickLoading={quickActionId === c.claim_id}
-                          style={{ "--anim-delay": `${i * 0.06}s` }}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
-                {grantClaims.length > 0 && (
-                  <section className="claim-section">
-                    <h2 className="claim-section__title">💝 추가 지급 ({grantClaims.length})</h2>
-                    <div className="claim-section__list">
-                      {grantClaims.map((g, i) => (
-                        <ClaimCard
-                          key={g.claim_id}
-                          claim={g}
-                          childName={getChildName(g.child_member_id)}
-                          onClick={handleClaimClick}
                           style={{ "--anim-delay": `${i * 0.06}s` }}
                         />
                       ))}
