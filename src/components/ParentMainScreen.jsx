@@ -167,6 +167,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
     }
     runDueSchedules();
     return () => { mounted = false; };
+  // 초기 마운트 1회만 실행 — 재실행 시 중복 자동지급 위험
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -20,10 +20,12 @@ import "./styles/parentLayout.css";
 import "./styles/calendar.css";
 import "./styles/widgets.css";
 
-// Workers 백엔드 없이 동작하도록 mock 백엔드 활성화 (동적 import로 프로덕션 번들 제외)
+// Workers 백엔드 설정: VITE_API_BASE가 없으면 mock 백엔드 자동 활성화
+const hasRealBackend = !!import.meta.env.VITE_API_BASE;
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
+const useMock = !hasRealBackend || import.meta.env.VITE_USE_MOCK === "true";
 let mockReady = Promise.resolve();
-if (import.meta.env.DEV || import.meta.env.VITE_USE_MOCK === "true") {
+if (useMock) {
   mockReady = import("./utils/mockBackend").then(({ enableMockBackend }) => {
     enableMockBackend(apiBase);
   }).catch((err) => {

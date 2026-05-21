@@ -64,7 +64,7 @@ export function useGeneralCalendar() {
           setHolidays(h);
           holidayRetried.current = false;
         }
-      }).catch(() => {});
+      }).catch((err) => { console.warn("useGeneralCalendar:", err); });
     }
     return () => { mounted = false; };
   }, []);
