@@ -15,7 +15,7 @@ export function useAsyncAction(asyncFn) {
   const mountedRef = useRef(true);
   const asyncFnRef = useRef(asyncFn);
   useEffect(() => { asyncFnRef.current = asyncFn; });
-  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   const run = useCallback(async (...args) => {
     if (runningRef.current) return;
