@@ -1,6 +1,6 @@
 // src/components/ParentMainScreen.jsx — 부모 메인 (리디자인: 탭바 + FAB + 칩 선택기)
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useClaims } from "../hooks/useClaims";
 import { useSyncPoller } from "../hooks/useSyncPoller";
 import { useToast } from "../hooks/useToast";
@@ -10,21 +10,22 @@ import { getMessageForError } from "../constants/errorMessages";
 import { getStatusEmoji } from "../constants/statusLabels";
 
 import ClaimCard from "./widgets/ClaimCard";
-import ParentClaimDetailModal from "./modals/ParentClaimDetailModal";
-import FamilyInfoModal from "./modals/FamilyInfoModal";
-import RejectionReasonModal from "./modals/RejectionReasonModal";
-import ParentSettingsModal from "./modals/ParentSettingsModal";
-import CreateGrantModal from "./modals/CreateGrantModal";
-import AutoGrantModal from "./modals/AutoGrantModal";
-import ChoresManagerModal from "./modals/ChoresManagerModal";
-import NotificationCenterModal from "./modals/NotificationCenterModal";
 import { getUnreadCount, addNotification } from "../utils/notifications";
-import SpendingStatsModal from "./modals/SpendingStatsModal";
-import QnAModal from "./modals/QnAModal";
 import { generateGrantId } from "../utils/idGenerator";
 import { getDueSchedules, markScheduleRun } from "../utils/autoGrant";
 import { getGreetingMessage } from "../utils/greetingMessage";
 import ParentMyPopup from "./widgets/ParentMyPopup";
+
+const ParentClaimDetailModal = lazy(() => import("./modals/ParentClaimDetailModal"));
+const FamilyInfoModal = lazy(() => import("./modals/FamilyInfoModal"));
+const RejectionReasonModal = lazy(() => import("./modals/RejectionReasonModal"));
+const ParentSettingsModal = lazy(() => import("./modals/ParentSettingsModal"));
+const CreateGrantModal = lazy(() => import("./modals/CreateGrantModal"));
+const AutoGrantModal = lazy(() => import("./modals/AutoGrantModal"));
+const ChoresManagerModal = lazy(() => import("./modals/ChoresManagerModal"));
+const NotificationCenterModal = lazy(() => import("./modals/NotificationCenterModal"));
+const SpendingStatsModal = lazy(() => import("./modals/SpendingStatsModal"));
+const QnAModal = lazy(() => import("./modals/QnAModal"));
 
 // Module-level style constants (avoid re-creating on each render)
 const EMPTY_STATE_STYLE = { padding: "var(--space-10) var(--space-4)" };
@@ -592,7 +593,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         />
       )}
 
-      {/* 모달들 */}
+      <Suspense fallback={null}>
       {selectedClaim && (
         <ParentClaimDetailModal
           claimSummary={selectedClaim}
@@ -684,6 +685,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
           userRole="parent"
         />
       )}
+      </Suspense>
     </div>
   );
 }

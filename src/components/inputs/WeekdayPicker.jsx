@@ -46,7 +46,7 @@ export default function WeekdayPicker({ value = [], onChange, includeSatSun = fa
               className="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
               style={{
                 background: selected ? "var(--color-primary)" : "var(--color-bg-secondary)",
-                color: selected ? "#fff" : "var(--color-text-primary)",
+                color: selected ? "var(--color-on-primary, #fff)" : "var(--color-text-primary)",
                 border: `1px solid ${selected ? "var(--color-primary)" : "var(--color-border)"}`,
                 minWidth: "40px"
               }}

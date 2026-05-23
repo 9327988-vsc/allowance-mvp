@@ -1,33 +1,34 @@
 // src/components/App.jsx
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, lazy, Suspense } from "react";
 import { useModalBase } from "../hooks/useModalBase";
 import { initApp, nextScreen } from "../utils/initApp";
 import { registerCorruptedCallback, cleanupOldCalendars } from "../utils/storage";
 import { showToast } from "../utils/toastManager";
 import ToastContainer from "./widgets/ToastContainer";
 import Splash from "./Splash";
-import SettingsModal from "./modals/SettingsModal";
-import MainScreen from "./MainScreen";
-import DiagnosticScreen from "./modals/DiagnosticScreen";
-import ExportModal from "./modals/ExportModal";
-import ImportModal from "./modals/ImportModal";
-import CleanupConfirmModal from "./modals/CleanupConfirmModal";
-import ResetAllDataModal from "./modals/ResetAllDataModal";
-import CategoryManager from "./drawers/CategoryManager";
-import StorageDisabledModal from "./modals/StorageDisabledModal";
-import DataCorruptedModal from "./modals/DataCorruptedModal";
-import FamilyOnboardingModal from "./modals/FamilyOnboardingModal";
-import ParentMainScreen from "./ParentMainScreen";
-import GeneralMainScreen from "./GeneralMainScreen";
 import LoginScreen from "./LoginScreen";
-import SignupScreen from "./SignupScreen";
-import TutorialScreen from "./TutorialScreen";
+import MainScreen from "./MainScreen";
 import { loadFamilyContext, saveFamilyContext, clearFamilyContext } from "../utils/familyContext";
 import { setActiveUser, findUserById, clearActiveUser, updateUserFamilyContext, getActiveUser, clearOnboardingDeferred } from "../utils/authStore";
 import { loadUserPrefs, applyPrefs, clearPrefsOverrides } from "../utils/userPrefs";
 import { resetKVAdapter } from "../utils/kvAdapter";
 import { resetSpendingLimitCache } from "../utils/spendingLimit";
-import PasswordMigrationInfoModal from "./modals/PasswordMigrationInfoModal";
+
+const SettingsModal = lazy(() => import("./modals/SettingsModal"));
+const DiagnosticScreen = lazy(() => import("./modals/DiagnosticScreen"));
+const ExportModal = lazy(() => import("./modals/ExportModal"));
+const ImportModal = lazy(() => import("./modals/ImportModal"));
+const CleanupConfirmModal = lazy(() => import("./modals/CleanupConfirmModal"));
+const ResetAllDataModal = lazy(() => import("./modals/ResetAllDataModal"));
+const CategoryManager = lazy(() => import("./drawers/CategoryManager"));
+const StorageDisabledModal = lazy(() => import("./modals/StorageDisabledModal"));
+const DataCorruptedModal = lazy(() => import("./modals/DataCorruptedModal"));
+const FamilyOnboardingModal = lazy(() => import("./modals/FamilyOnboardingModal"));
+const ParentMainScreen = lazy(() => import("./ParentMainScreen"));
+const GeneralMainScreen = lazy(() => import("./GeneralMainScreen"));
+const SignupScreen = lazy(() => import("./SignupScreen"));
+const TutorialScreen = lazy(() => import("./TutorialScreen"));
+const PasswordMigrationInfoModal = lazy(() => import("./modals/PasswordMigrationInfoModal"));
 
 function isAdminMode() {
   if (!import.meta.env.DEV) return false;
@@ -162,7 +163,7 @@ export default function App() {
   // 4-A. 관리자 모드
   if (adminMode) {
     return (
-      <>
+      <Suspense fallback={<Splash />}>
         <DiagnosticScreen
           key={diagKey}
           onBack={handleBackToNormal}
@@ -188,7 +189,7 @@ export default function App() {
         {showReset && <ResetAllDataModal onClose={() => setShowReset(false)} />}
         {showCategoryManager && <CategoryManager onClose={() => setShowCategoryManager(false)} />}
         <ToastContainer />
-      </>
+      </Suspense>
     );
   }
 
@@ -233,7 +234,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <Suspense fallback={<Splash />}>
       {content}
       {showTutorialPicker && (
         <div className="modal-backdrop" onClick={() => setShowTutorialPicker(false)}>
@@ -274,6 +275,6 @@ export default function App() {
         />
       )}
       <ToastContainer />
-    </>
+    </Suspense>
   );
 }

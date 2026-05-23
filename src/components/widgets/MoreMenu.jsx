@@ -9,7 +9,7 @@ const MENU_STYLE = {
   background: "var(--color-bg-primary)",
   border: "1px solid var(--color-border)",
   borderRadius: "var(--radius-lg, 12px)",
-  boxShadow: "0 -4px 20px rgba(0,0,0,0.15)",
+  boxShadow: "var(--shadow-menu, 0 -4px 20px rgba(0,0,0,0.15))",
   padding: "var(--space-2)",
   minWidth: 140,
   zIndex: 100,

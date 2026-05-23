@@ -1,5 +1,5 @@
 // src/components/MainScreen.jsx — S-001 메인 캘린더
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { useCalendar } from "../hooks/useCalendar";
 import { generateMessage } from "../utils/messageTemplate";
 import { copyToClipboard } from "../utils/clipboard";
@@ -20,23 +20,23 @@ import MonthNavigator from "./MonthNavigator";
 import CalendarGrid from "./CalendarGrid";
 import DashboardSummary from "./widgets/DashboardSummary";
 import EmptyState from "./widgets/EmptyState";
-
-import CellEditModal from "./modals/CellEditModal";
-import SettingsModal from "./modals/SettingsModal";
-import SubmitClaimModal from "./modals/SubmitClaimModal";
-import FamilyOnboardingModal from "./modals/FamilyOnboardingModal";
-import ClipboardFallbackModal from "./modals/ClipboardFallbackModal";
-import CopyOptionsModal from "./modals/CopyOptionsModal";
-import YearlyStatsModal from "./modals/YearlyStatsModal";
-import StorageFullModal from "./modals/StorageFullModal";
-import ProfileModal from "./modals/ProfileModal";
-import MonthSelector from "./drawers/MonthSelector";
 import { useClaims } from "../hooks/useClaims";
-import ChoresChildModal from "./modals/ChoresChildModal";
-import NotificationCenterModal from "./modals/NotificationCenterModal";
-import BadgesModal from "./modals/BadgesModal";
-import QnAModal from "./modals/QnAModal";
 import { getUnreadCount } from "../utils/notifications";
+
+const CellEditModal = lazy(() => import("./modals/CellEditModal"));
+const SettingsModal = lazy(() => import("./modals/SettingsModal"));
+const SubmitClaimModal = lazy(() => import("./modals/SubmitClaimModal"));
+const FamilyOnboardingModal = lazy(() => import("./modals/FamilyOnboardingModal"));
+const ClipboardFallbackModal = lazy(() => import("./modals/ClipboardFallbackModal"));
+const CopyOptionsModal = lazy(() => import("./modals/CopyOptionsModal"));
+const YearlyStatsModal = lazy(() => import("./modals/YearlyStatsModal"));
+const StorageFullModal = lazy(() => import("./modals/StorageFullModal"));
+const ProfileModal = lazy(() => import("./modals/ProfileModal"));
+const MonthSelector = lazy(() => import("./drawers/MonthSelector"));
+const ChoresChildModal = lazy(() => import("./modals/ChoresChildModal"));
+const NotificationCenterModal = lazy(() => import("./modals/NotificationCenterModal"));
+const BadgesModal = lazy(() => import("./modals/BadgesModal"));
+const QnAModal = lazy(() => import("./modals/QnAModal"));
 
 function createConfetti(confettiRef, confettiTimerRef) {
   // H-28 / L-11: 이전 confetti가 있으면 제거
@@ -456,6 +456,7 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
         </div>
       )}
 
+      <Suspense fallback={null}>
       {/* 설정 모달 (마이에서 열림) */}
       {showSettings && (
         <SettingsModal
@@ -607,6 +608,7 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
           <span className="tab-bar__label">마이</span>
         </button>
       </nav>
+      </Suspense>
     </div>
   );
 }

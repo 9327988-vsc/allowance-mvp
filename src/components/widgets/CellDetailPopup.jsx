@@ -23,7 +23,7 @@ export default function CellDetailPopup({ cell, customCategories, onClose }) {
       }}
       style={{
         position: "fixed", inset: 0, zIndex: "var(--z-modal-1, 200)",
-        background: "rgba(15,23,42,0.4)",
+        background: "var(--color-backdrop, rgba(15,23,42,0.4))",
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "var(--space-4)",
         animation: "backdrop-fade 0.15s ease-out",
@@ -36,7 +36,7 @@ export default function CellDetailPopup({ cell, customCategories, onClose }) {
           padding: 0,
           maxWidth: 340,
           width: "100%",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          boxShadow: "var(--shadow-modal, 0 20px 60px rgba(0,0,0,0.2))",
           animation: "modal-enter 0.2s cubic-bezier(0.34,1.56,0.64,1)",
           overflow: "hidden",
         }}
@@ -46,7 +46,7 @@ export default function CellDetailPopup({ cell, customCategories, onClose }) {
         <div style={{
           padding: "var(--space-3) var(--space-4)",
           background: "linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%)",
-          color: "#fff",
+          color: "var(--color-on-primary, #fff)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
