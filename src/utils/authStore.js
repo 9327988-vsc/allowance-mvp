@@ -205,6 +205,10 @@ export async function verifyPassword(username, password) {
     if (!user.password_hash) return { success: false, error: "비밀번호가 설정되지 않았습니다" };
     const hash = await hashPassword(password, user.password_salt);
     if (constantTimeEqual(user.password_hash, hash)) {
+      serverRegister({
+        username, password, display_name: user.display_name, role: user.role,
+        security_question: user.security_question, security_answer: null,
+      }).catch(() => {});
       return { success: true, userId: user.user_id };
     }
     return { success: false, error: "비밀번호가 일치하지 않습니다" };
