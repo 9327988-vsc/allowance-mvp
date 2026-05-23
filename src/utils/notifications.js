@@ -118,6 +118,20 @@ export function addNotificationForUser(userId, notification) {
   try { localStorage.setItem(key, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS))); } catch (e) { console.warn("[notifications] addNotificationForUser save failed:", e); }
 }
 
+export function mergeServerNotifications(userId, serverNotifs) {
+  if (!userId || !serverNotifs?.length) return 0;
+  const key = "notifications_v1_u_" + userId;
+  let list;
+  try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch { list = []; }
+  if (!Array.isArray(list)) list = [];
+  const existingIds = new Set(list.map(n => n.id));
+  const newNotifs = serverNotifs.filter(n => !existingIds.has(n.id));
+  if (newNotifs.length === 0) return 0;
+  const merged = [...newNotifs, ...list].slice(0, MAX_NOTIFICATIONS);
+  try { localStorage.setItem(key, JSON.stringify(merged)); } catch {}
+  return newNotifs.length;
+}
+
 function getDefaultIcon(type) {
   switch (type) {
     case "claim_approved": return "✅";

@@ -3,6 +3,7 @@ import { useAsyncAction } from "./useAsyncAction";
 import { getKVAdapter } from "../utils/kvAdapter";
 import { isOnline } from "../utils/onlineStatus";
 import { getMessageForError } from "../constants/errorMessages";
+import { sendServerNotification } from "../utils/serverNotifications";
 
 export function useClaimActions({ claim, familyContext, showToast, onClose, fetchClaim }) {
   // 승인
@@ -18,6 +19,9 @@ export function useClaimActions({ claim, familyContext, showToast, onClose, fetc
       expected_updated_at: claim.updated_at,
     });
     showToast({ type: "success", message: "승인되었습니다!" });
+    sendServerNotification(familyContext.family_code, claim.child_member_id, {
+      type: "claim_approved", title: "청구 승인", message: `${claim.month || ""}월 용돈 청구가 승인되었어요!`,
+    });
     onClose();
   }, [claim, familyContext.member_id, showToast, onClose]));
 
@@ -39,6 +43,9 @@ export function useClaimActions({ claim, familyContext, showToast, onClose, fetc
     await adapter.patchClaim(claim.claim_id, patchData);
     const isPartial = paidAmount && paidAmount < (claim.snapshot?.calculation?.total || 0);
     showToast({ type: "success", message: isPartial ? `${paidAmount.toLocaleString("ko-KR")}원 부분 지급 완료!` : "지급 완료!" });
+    sendServerNotification(familyContext.family_code, claim.child_member_id, {
+      type: "claim_paid", title: "용돈 지급", message: `${claim.month || ""}월 용돈이 지급되었어요!`,
+    });
     onClose();
   }, [claim, familyContext.member_id, showToast, onClose]));
 
@@ -57,6 +64,9 @@ export function useClaimActions({ claim, familyContext, showToast, onClose, fetc
         expected_updated_at: claim.updated_at,
       });
       showToast({ type: "success", message: "거절되었습니다" });
+      sendServerNotification(familyContext.family_code, claim.child_member_id, {
+        type: "claim_rejected", title: "청구 거절", message: `${claim.month || ""}월 용돈 청구가 거절되었어요`,
+      });
       return { success: true };
     } catch (err) {
       if (err.code === "CONFLICT") {

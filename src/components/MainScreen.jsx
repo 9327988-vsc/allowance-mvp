@@ -22,6 +22,7 @@ import DashboardSummary from "./widgets/DashboardSummary";
 import EmptyState from "./widgets/EmptyState";
 import { useClaims } from "../hooks/useClaims";
 import { getUnreadCount } from "../utils/notifications";
+import { syncServerNotifications } from "../utils/serverNotifications";
 
 const CellEditModal = lazy(() => import("./modals/CellEditModal"));
 const SettingsModal = lazy(() => import("./modals/SettingsModal"));
@@ -107,14 +108,24 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
     setSubmittedStatus(null);
   }, [viewYear, viewMonth]);
 
-  // m-4: 알림 배지 실시간 갱신 (visibility 복귀 시)
+  // m-4: 알림 배지 실시간 갱신 + 서버 알림 동기화 (visibility 복귀 시)
   useEffect(() => {
+    async function syncAndRefresh() {
+      if (familyCtx) {
+        const uid = getActiveUser();
+        if (uid) {
+          try { await syncServerNotifications(familyCtx.family_code, familyCtx.member_id, uid); } catch {}
+        }
+      }
+      setUnreadCount(getUnreadCount());
+    }
+    syncAndRefresh();
     function handleVisibility() {
-      if (document.visibilityState === "visible") setUnreadCount(getUnreadCount());
+      if (document.visibilityState === "visible") syncAndRefresh();
     }
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, []);
+  }, [familyCtx]);
 
   // H-28: confetti DOM cleanup on unmount
   const confettiRef = useRef(null);
@@ -147,11 +158,15 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
       if (!familyCtx) return;
       const adapter = getKVAdapter();
       const { claims } = await adapter.listClaims(familyCtx.family_id);
-      // 서버 데이터로 로컬 캐시 동기화
       syncSubmittedClaims(claims);
       const updated = getSubmittedClaimForMonth(viewYear, viewMonth);
       if (updated?.status && updated.status !== claimStatusRef.current) {
         setSubmittedStatus(updated.status);
+      }
+      const uid = getActiveUser();
+      if (uid) {
+        const newCount = await syncServerNotifications(familyCtx.family_code, familyCtx.member_id, uid);
+        if (newCount > 0) setUnreadCount(getUnreadCount());
       }
     } catch {
       // 폴링 실패는 무시

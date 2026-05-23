@@ -14,6 +14,7 @@ import { getUnreadCount, addNotification } from "../utils/notifications";
 import { generateGrantId } from "../utils/idGenerator";
 import { getDueSchedules, markScheduleRun } from "../utils/autoGrant";
 import { getGreetingMessage } from "../utils/greetingMessage";
+import { sendServerNotification } from "../utils/serverNotifications";
 import ParentMyPopup from "./widgets/ParentMyPopup";
 
 const ParentClaimDetailModal = lazy(() => import("./modals/ParentClaimDetailModal"));
@@ -203,6 +204,9 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
       });
       showToastRef.current({ type: "success", message: `${claim.month}월 청구 승인 완료!` });
       notifyRef.current({ type: "claim_approved", title: `${claim.month}월 청구 승인`, message: `${getChildName(claim.child_member_id)}의 청구가 승인되었어요` });
+      sendServerNotification(familyContext.family_code, claim.child_member_id, {
+        type: "claim_approved", title: "청구 승인", message: `${claim.month}월 용돈 청구가 승인되었어요!`,
+      });
       await fetchClaims();
     } catch (err) {
       if (err.code === "CONFLICT") {
@@ -236,6 +240,9 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
       });
       showToast({ type: "success", message: "거절되었습니다" });
       notify({ type: "claim_rejected", title: "청구 거절", message: `${getChildName(quickRejectTarget.child_member_id)}의 ${quickRejectTarget.month}월 청구가 거절되었어요` });
+      sendServerNotification(familyContext.family_code, quickRejectTarget.child_member_id, {
+        type: "claim_rejected", title: "청구 거절", message: `${quickRejectTarget.month}월 용돈 청구가 거절되었어요`,
+      });
       setQuickRejectTarget(null);
       await fetchClaims();
     } catch (err) {
@@ -266,6 +273,9 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
       });
       showToast({ type: "success", message: `${getStatusEmoji("granted")} ${input.name} 지급 등록 완료!` });
       notify({ type: "grant_received", title: "추가 지급", message: `${getChildName(input.child_member_id)}에게 ${input.name} 지급 완료` });
+      sendServerNotification(familyContext.family_code, input.child_member_id, {
+        type: "grant_received", title: "추가 지급", message: `${input.name || "추가 용돈"}이 지급되었어요!`,
+      });
       setShowGrantModal(false);
       await fetchClaims();
     } catch (err) {
