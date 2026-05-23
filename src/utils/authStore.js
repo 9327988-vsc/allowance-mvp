@@ -18,8 +18,6 @@ const PASSWORD_MIGRATED_KEY = "auth_password_migrated_v1";
  * @property {string|null} security_question
  * @property {string|null} security_answer_hash
  * @property {string|null} security_answer_salt
- * @property {string|null} pin_hash         - 레거시 (마이그레이션용)
- * @property {string|null} pin_salt         - 레거시 (마이그레이션용)
  * @property {string|null} avatar_emoji
  * @property {string|null} birth_date
  * @property {string} created_at
@@ -217,9 +215,6 @@ export async function setUserPassword(userId, password) {
   delete accounts[idx].password_must_change;
   return saveUserAccounts(accounts);
 }
-
-// 레거시 호환: setUserPin → setUserPassword
-export const setUserPin = setUserPassword;
 
 // ── 보안 질문 기반 비밀번호 초기화 ──
 
@@ -436,21 +431,3 @@ export function clearOnboardingDeferred() {
   localStorage.removeItem(ONBOARDING_DEFERRED_KEY);
 }
 
-// ── 레거시 PIN 관련 (하위 호환, 제거 예정) ──
-
-export function loadPinResetRequests() { return []; }
-export function requestPinReset() { return false; }
-export function approvePinReset() { return false; }
-export function rejectPinReset() { return false; }
-export function clearResolvedPinResets() {}
-
-/** 레거시 verifyPin — 기존 코드 호환용 (새 비밀번호 인증 사용 권장) */
-export async function verifyPin(userId, pin) {
-  const user = findUserById(userId);
-  if (!user) return false;
-  if (!user.pin_hash) return false;
-  if (user.pin_hash.startsWith("pbkdf2v4:")) {
-    return constantTimeEqual(user.pin_hash, await hashPassword(pin, user.pin_salt));
-  }
-  return false;
-}

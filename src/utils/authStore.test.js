@@ -9,7 +9,6 @@ import {
   loadUserAccounts,
   verifyPassword,
   setUserPassword,
-  setUserPin,
   updateUserDisplayName,
   updateUserAvatar,
   removeUser,
@@ -213,9 +212,6 @@ describe("setUserPassword", () => {
     expect((await verifyPassword("pwchange", "Pass2222")).success).toBe(true);
   });
 
-  it("setUserPin은 setUserPassword의 별칭이다", () => {
-    expect(setUserPin).toBe(setUserPassword);
-  });
 });
 
 describe("보안 질문 기반 비밀번호 초기화", () => {

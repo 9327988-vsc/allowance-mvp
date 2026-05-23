@@ -83,14 +83,16 @@ describe("exportData", () => {
     expect(data.custom_categories.categories).toHaveLength(1);
   });
 
-  it("user_accounts에서 pin_hash/pin_salt 제거", async () => {
+  it("user_accounts에서 인증 필드 제거", async () => {
     localStorage.setItem("user_accounts_v1", JSON.stringify([
-      { user_id: "u1", display_name: "홍길동", pin_hash: "secret", pin_salt: "salt123", birth_date: "2015-01-01" },
+      { user_id: "u1", display_name: "홍길동", pin_hash: "secret", pin_salt: "salt123", password_hash: "phash", password_salt: "psalt", birth_date: "2015-01-01" },
     ]));
     const data = await exportData();
     expect(data.user_accounts[0].display_name).toBe("홍길동");
     expect(data.user_accounts[0].pin_hash).toBeUndefined();
     expect(data.user_accounts[0].pin_salt).toBeUndefined();
+    expect(data.user_accounts[0].password_hash).toBeUndefined();
+    expect(data.user_accounts[0].password_salt).toBeUndefined();
     expect(data.user_accounts[0].birth_date).toBeUndefined();
   });
 

@@ -56,7 +56,7 @@ export async function exportData(options = {}) {
     try { const v = JSON.parse(localStorage.getItem("chore_log_v1_f_" + fid) || "null"); if (v) data.chore_log = v; } catch { /* ignored */ }
     try { const v = JSON.parse(localStorage.getItem("qna_v1_f_" + fid) || "null"); if (v) data.qna = v; } catch { /* ignored */ }
   }
-  // user_accounts 포함 (pin_hash/pin_salt 제거하여 보안 보호)
+  // user_accounts 포함 (인증 필드 제거하여 보안 보호)
   try {
     const v = JSON.parse(localStorage.getItem("user_accounts_v1") || "null");
     if (v) {
