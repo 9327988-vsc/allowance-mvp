@@ -1,6 +1,7 @@
 // src/utils/authStore.js — 로컬 유저 계정 + 아이디/비밀번호 인증
 
 import { nanoid } from "./idGenerator";
+import { serverRegister, serverLogin } from "./serverAuth";
 
 const ACCOUNTS_KEY = "user_accounts_v1";
 const ACTIVE_KEY = "active_user_v1";
@@ -175,6 +176,12 @@ export async function createUser({ displayName, role, username, password, securi
   if (saveResult && !saveResult.success) {
     throw new Error(saveResult.error || "계정 저장 실패");
   }
+
+  serverRegister({
+    username, password, display_name: displayName, role,
+    security_question: securityQuestion, security_answer: securityAnswer,
+  }).catch(() => {});
+
   return account;
 }
 
@@ -191,17 +198,34 @@ export function findUserByUsername(username) {
 
 // ── 비밀번호 인증 ──
 
-/** 비밀번호 검증 */
+/** 비밀번호 검증 (로컬 → 서버 폴백) */
 export async function verifyPassword(username, password) {
   const user = findUserByUsername(username);
-  if (!user) return { success: false, error: "존재하지 않는 아이디입니다" };
-  if (!user.password_hash) return { success: false, error: "비밀번호가 설정되지 않았습니다" };
-
-  const hash = await hashPassword(password, user.password_salt);
-  if (constantTimeEqual(user.password_hash, hash)) {
-    return { success: true, userId: user.user_id };
+  if (user) {
+    if (!user.password_hash) return { success: false, error: "비밀번호가 설정되지 않았습니다" };
+    const hash = await hashPassword(password, user.password_salt);
+    if (constantTimeEqual(user.password_hash, hash)) {
+      return { success: true, userId: user.user_id };
+    }
+    return { success: false, error: "비밀번호가 일치하지 않습니다" };
   }
-  return { success: false, error: "비밀번호가 일치하지 않습니다" };
+
+  const serverResult = await serverLogin(username, password);
+  if (serverResult.success && serverResult.user) {
+    const newAccount = await createUser({
+      displayName: serverResult.user.display_name,
+      role: serverResult.user.role,
+      username,
+      password,
+      securityQuestion: serverResult.user.security_question,
+      securityAnswer: null,
+    }).catch(() => null);
+    if (newAccount) return { success: true, userId: newAccount.user_id };
+  }
+  if (serverResult.error === "NETWORK_ERROR") {
+    return { success: false, error: "존재하지 않는 아이디입니다" };
+  }
+  return { success: false, error: serverResult.error || "존재하지 않는 아이디입니다" };
 }
 
 /** 비밀번호 변경 */
