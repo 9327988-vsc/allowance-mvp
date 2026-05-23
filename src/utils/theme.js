@@ -53,8 +53,14 @@ export function toggleTheme() {
 }
 
 /**
- * 앱 시작 시 호출 — 저장된 테마 적용
+ * 앱 시작 시 호출 — 저장된 테마 적용 + OS 테마 변경 리스너 등록
  */
 export function initTheme() {
   applyTheme(loadTheme());
+  try {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener("change", () => {
+      if (!localStorage.getItem(THEME_KEY)) applyTheme(loadTheme());
+    });
+  } catch { /* matchMedia 미지원 환경 무시 */ }
 }

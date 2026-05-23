@@ -8,6 +8,7 @@ import { loadFamilyContext } from "./familyContext";
 import { loadUserAccounts, getActiveUser, findUserById, migrateFromLegacyAccounts, migrateToPasswordAuth, isOnboardingDeferred } from "./authStore";
 import { loadUserPrefs, applyPrefs } from "./userPrefs";
 import { recoverFromCrashedImport } from "./exportImport";
+import { showToast } from "./toastManager";
 
 /**
  * Phase-2 키 마이그레이션: 글로벌 키 → 스코프드 키
@@ -100,6 +101,7 @@ export async function initApp() {
     holidays = await loadHolidays();
   } catch (e) {
     console.warn("[initApp] holidays.json 로드 실패:", e);
+    showToast({ type: "warning", message: "공휴일 데이터를 불러오지 못했습니다. 새로고침하면 다시 시도합니다.", duration: 6000 });
   }
 
   // 3. settings 로드 (인증된 유저가 있으면 유저별 설정 우선)

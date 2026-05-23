@@ -43,7 +43,7 @@ export default class ErrorBoundary extends Component {
             padding: 32,
             borderRadius: 16,
             backgroundColor: "var(--color-bg-card, #fff)",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+            boxShadow: "var(--shadow-lg, 0 4px 24px rgba(0,0,0,0.08))",
           }}>
             <div style={{ fontSize: "3rem", marginBottom: 16 }}>😵</div>
             <h1 style={{
