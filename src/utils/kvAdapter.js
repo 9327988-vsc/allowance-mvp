@@ -2,6 +2,9 @@
 
 import { getDeviceId } from "./deviceId";
 import { loadFamilyContext } from "./familyContext";
+import { isOnline, subscribeOnlineStatus } from "./onlineStatus";
+import { cacheGet, cacheSet, enqueueOffline, replayQueue } from "./offlineStore";
+import { showToast } from "./toastManager";
 
 class KVError extends Error {
   constructor(code, message) {
@@ -47,7 +50,7 @@ export class KVAdapter {
     this._memberId = id;
   }
 
-  async _request(method, path, body = null, options = {}) {
+  async _fetch(method, path, body, options) {
     const timeout = options.timeout ?? DEFAULT_TIMEOUT;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -92,6 +95,48 @@ export class KVAdapter {
         throw new KVError("TIMEOUT", "요청 시간 초과");
       }
       throw new KVError("NETWORK_ERROR", (err.name && err.message) ? `${err.name}: ${err.message}` : "네트워크 오류");
+    }
+  }
+
+  _throwQueued(message) {
+    const err = new KVError("QUEUED_OFFLINE", message);
+    err.queued = true;
+    return err;
+  }
+
+  async _request(method, path, body = null, options = {}) {
+    // GET: 네트워크 우선, 실패 시 캐시 폴백
+    if (method === "GET") {
+      try {
+        const data = await this._fetch(method, path, body, options);
+        cacheSet(path, data).catch(() => {});
+        return data;
+      } catch (err) {
+        const cached = await cacheGet(path);
+        if (cached) return cached;
+        throw err;
+      }
+    }
+
+    // 쓰기: 오프라인이면 즉시 큐
+    if (!isOnline()) {
+      await enqueueOffline({ method, path, body });
+      throw this._throwQueued("오프라인 — 연결 시 자동 전송됩니다");
+    }
+
+    // 온라인이지만 네트워크 실패 시에도 큐
+    try {
+      return await this._fetch(method, path, body, options);
+    } catch (err) {
+      if (err.code === "NETWORK_ERROR" || err.code === "TIMEOUT") {
+        try {
+          await enqueueOffline({ method, path, body });
+          throw this._throwQueued("네트워크 오류 — 연결 시 자동 전송됩니다");
+        } catch (qErr) {
+          if (qErr.code === "QUEUED_OFFLINE") throw qErr;
+        }
+      }
+      throw err;
     }
   }
 
@@ -200,3 +245,19 @@ export function getKVAdapter() {
 export function resetKVAdapter() {
   _instance = null;
 }
+
+// 재접속 시 큐 replay
+subscribeOnlineStatus((online) => {
+  if (!online) return;
+  const adapter = _instance;
+  if (!adapter) return;
+  replayQueue((method, path, body) =>
+    adapter._fetch(method, path, body, {})
+  ).then(({ success, failed }) => {
+    if (success > 0) {
+      showToast({ type: "success", message: `📤 대기 작업 ${success}건 전송 완료${failed > 0 ? ` (충돌 ${failed}건 건너뜀)` : ""}` });
+    } else if (failed > 0) {
+      showToast({ type: "warning", message: `⚠ 대기 작업 ${failed}건 충돌로 건너뜀` });
+    }
+  }).catch(() => {});
+});

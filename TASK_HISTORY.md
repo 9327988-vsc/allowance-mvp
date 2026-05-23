@@ -59,3 +59,19 @@
   - C-14: initApp holidays 실패 시 warning toast 추가
   - M-34: theme.js에 matchMedia change 리스너 추가 (OS 다크모드 런타임 자동 반영) + ErrorBoundary shadow CSS 변수 전환
   - M-35: 이미 완료 확인 (tabLayout.css 전역 prefers-reduced-motion)
+
+## T-003 — 오프라인 동작 강화 (PWA) ✅
+
+- **등록일**: 2026-05-23
+- **착수일**: 2026-05-23
+- **종결일**: 2026-05-23
+- **상태**: ✅ 완료
+- **버전**: v9.2.0
+- **내용**: IndexedDB 기반 오프라인 큐 + 읽기 캐시 + 오프라인 배너 구현.
+  - `offlineStore.js`: IndexedDB 래퍼 (api_cache + offline_queue 2개 store, 큐 구독, replay 로직)
+  - `kvAdapter.js`: GET 응답 자동 캐시 + 오프라인 시 캐시 폴백, 쓰기 실패 시 큐에 자동 저장
+  - `OfflineBanner.jsx`: 오프라인 상태 + 대기 작업 수 실시간 표시
+  - 재접속 시 큐 자동 replay + CONFLICT/DUPLICATE 충돌 자동 건너뜀 + toast 알림
+  - `errorMessages.js`: QUEUED_OFFLINE 메시지 추가
+- **신규 파일**: 2개 (offlineStore.js, OfflineBanner.jsx)
+- **수정 파일**: 3개 (kvAdapter.js, App.jsx, errorMessages.js)

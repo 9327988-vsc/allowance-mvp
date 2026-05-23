@@ -4,6 +4,7 @@ export const ERROR_MESSAGES = {
   // 네트워크 / 시스템
   NETWORK_ERROR: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
   TIMEOUT: "응답 시간 초과. 잠시 후 다시 시도해 주세요.",
+  QUEUED_OFFLINE: "📡 오프라인 — 연결 시 자동 전송됩니다.",
   RATE_LIMITED: "잠시 후 다시 시도해 주세요.",
   STORAGE_DISABLED: "저장소를 사용할 수 없어요. 브라우저 설정을 확인해 주세요.",
   INTERNAL_ERROR: "오류가 발생했어요. 관리자에게 문의해 주세요.",

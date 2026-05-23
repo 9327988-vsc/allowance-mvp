@@ -5,6 +5,7 @@ import { initApp, nextScreen } from "../utils/initApp";
 import { registerCorruptedCallback, cleanupOldCalendars } from "../utils/storage";
 import { showToast } from "../utils/toastManager";
 import ToastContainer from "./widgets/ToastContainer";
+import OfflineBanner from "./widgets/OfflineBanner";
 import Splash from "./Splash";
 import LoginScreen from "./LoginScreen";
 import MainScreen from "./MainScreen";
@@ -235,6 +236,7 @@ export default function App() {
 
   return (
     <Suspense fallback={<Splash />}>
+      <OfflineBanner />
       {content}
       {showTutorialPicker && (
         <div className="modal-backdrop" onClick={() => setShowTutorialPicker(false)}>
