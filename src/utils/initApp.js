@@ -5,7 +5,7 @@ import {
 } from "./storage";
 import { loadHolidays } from "./holidays";
 import { loadFamilyContext } from "./familyContext";
-import { loadUserAccounts, getActiveUser, findUserById, migrateFromLegacyAccounts, migrateToPasswordAuth } from "./authStore";
+import { loadUserAccounts, getActiveUser, findUserById, migrateFromLegacyAccounts, migrateToPasswordAuth, isOnboardingDeferred } from "./authStore";
 import { loadUserPrefs, applyPrefs } from "./userPrefs";
 import { recoverFromCrashedImport } from "./exportImport";
 
@@ -89,7 +89,7 @@ export async function initApp() {
   migrateFromLegacyAccounts();
 
   // 1.5c. PIN → 비밀번호 인증 마이그레이션
-  await migrateToPasswordAuth();
+  const migrationResult = await migrateToPasswordAuth();
 
   // 1.6. Phase-2 키 마이그레이션 (글로벌 → 스코프드)
   migratePhase2Keys();
@@ -116,9 +116,9 @@ export async function initApp() {
     const authenticated = !!activeUserId;
     // 일반계정은 settings 없이도 정상 부팅 (ok 상태로 반환)
     if (activeUser?.role === "general") {
-      return { status: "ok", settings: null, holidays, familyContext, authenticated, activeUser };
+      return { status: "ok", settings: null, holidays, familyContext, authenticated, activeUser, migrationResult };
     }
-    return { status: "first_use", holidays, familyContext, authenticated, activeUser };
+    return { status: "first_use", holidays, familyContext, authenticated, activeUser, migrationResult };
   }
 
   // 4. meta 보장 + 갱신
@@ -142,7 +142,7 @@ export async function initApp() {
     applyPrefs(loadUserPrefs(activeUserId));
   }
 
-  return { status: "ok", settings, meta, holidays, familyContext, authenticated, activeUser };
+  return { status: "ok", settings, meta, holidays, familyContext, authenticated, activeUser, migrationResult };
 }
 
 /**
@@ -167,9 +167,9 @@ export function nextScreen(result) {
       }
       if (!result.familyContext) {
         const activeUser = result.activeUser || findUserById(getActiveUser());
-        // 부모/자녀 계정은 가족 온보딩 필요
+        // 부모/자녀 계정은 가족 온보딩 필요 (연기한 경우 메인으로)
         if (activeUser?.role === "parent" || activeUser?.role === "child") {
-          return "family_onboarding";
+          return isOnboardingDeferred() ? "main" : "family_onboarding";
         }
         // 일반 계정: settings 없으면 초기 설정
         return result.settings ? "main" : "welcome_modal";

@@ -3,37 +3,37 @@ import { useEffect, useRef } from "react";
 
 // Modal stack: 가장 마지막에 등록된(최상위) 모달만 ESC로 닫힘
 const _modalStack = [];
+// Scroll lock counter: ESC 스택과 분리 — noScrollLock 모달은 카운트하지 않음
+let _scrollLockCount = 0;
+let _scrollLockSavedY = 0;
 
 export function useModalBase(onClose, options = {}) {
   const { active = true, noScrollLock = false } = options;
   const contentRef = useRef(null);
-  const prevScrollY = useRef(0);
   const prevFocus = useRef(null);
   const stackIdRef = useRef(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; });
 
-  // Body scroll lock (iOS Safari compatible) — 중첩 시 최초 모달만 lock/unlock
+  // Body scroll lock (iOS Safari compatible) — 카운터 기반: noScrollLock 모달과 독립
   useEffect(() => {
     if (!active || noScrollLock) return;
-    const alreadyLocked = document.body.style.position === 'fixed';
-    if (!alreadyLocked) {
-      const scrollY = window.scrollY;
-      prevScrollY.current = scrollY;
+    if (_scrollLockCount === 0) {
+      _scrollLockSavedY = window.scrollY;
       document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
+      document.body.style.top = `-${_scrollLockSavedY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
     }
+    _scrollLockCount++;
     return () => {
-      // 다른 활성 모달이 스택에 남아있으면 잠금 유지
-      const othersActive = _modalStack.length > 0;
-      if (!othersActive) {
+      _scrollLockCount--;
+      if (_scrollLockCount === 0) {
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
         document.body.style.overflow = '';
-        window.scrollTo(0, prevScrollY.current);
+        window.scrollTo(0, _scrollLockSavedY);
       }
     };
   }, [active, noScrollLock]);

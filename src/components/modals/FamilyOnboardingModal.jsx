@@ -8,6 +8,7 @@ import { useToast } from "../../hooks/useToast";
 import { getKVAdapter } from "../../utils/kvAdapter";
 import { saveFamilyContext } from "../../utils/familyContext";
 import { isOnline } from "../../utils/onlineStatus";
+import { setOnboardingDeferred } from "../../utils/authStore";
 import { getMessageForError } from "../../constants/errorMessages";
 import JoinFamilyModal from "./JoinFamilyModal";
 import CodeShareModal from "./CodeShareModal";
@@ -254,7 +255,7 @@ export default function FamilyOnboardingModal({ onComplete }) {
           </div>
 
           <button
-            onClick={onComplete}
+            onClick={() => { setOnboardingDeferred(); onComplete(); }}
             className="btn btn--ghost"
             style={{ marginTop: "var(--space-4)" }}
           >

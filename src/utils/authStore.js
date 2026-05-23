@@ -214,6 +214,7 @@ export async function setUserPassword(userId, password) {
   const salt = generateSalt();
   accounts[idx].password_hash = await hashPassword(password, salt);
   accounts[idx].password_salt = salt;
+  delete accounts[idx].password_must_change;
   return saveUserAccounts(accounts);
 }
 
@@ -300,15 +301,15 @@ export function removeUser(userId) {
 // ── 세션 관리 ──
 
 export function setActiveUser(userId) {
-  sessionStorage.setItem(ACTIVE_KEY, userId);
+  localStorage.setItem(ACTIVE_KEY, userId);
 }
 
 export function getActiveUser() {
-  return sessionStorage.getItem(ACTIVE_KEY) || null;
+  return localStorage.getItem(ACTIVE_KEY) || null;
 }
 
 export function clearActiveUser() {
-  sessionStorage.removeItem(ACTIVE_KEY);
+  localStorage.removeItem(ACTIVE_KEY);
 }
 
 // ── 레거시 마이그레이션 ──
@@ -365,10 +366,11 @@ export function migrateFromLegacyAccounts() {
 
 /** PIN 기반 계정 → 비밀번호 기반 계정 마이그레이션 (기존 계정에 기본 자격증명 부여) */
 export async function migrateToPasswordAuth() {
-  if (localStorage.getItem(PASSWORD_MIGRATED_KEY)) return;
+  if (localStorage.getItem(PASSWORD_MIGRATED_KEY)) return { migrated: false, accounts: [] };
 
   const accounts = loadUserAccounts();
   let changed = false;
+  const migratedAccounts = [];
 
   for (let i = 0; i < accounts.length; i++) {
     const acct = accounts[i];
@@ -398,6 +400,7 @@ export async function migrateToPasswordAuth() {
     accounts[i].username = candidate;
     accounts[i].password_hash = await hashPassword(defaultPassword, salt);
     accounts[i].password_salt = salt;
+    accounts[i].password_must_change = true;
 
     const questionSalt = generateSalt();
     accounts[i].security_question = SECURITY_QUESTIONS[0];
@@ -405,16 +408,32 @@ export async function migrateToPasswordAuth() {
     accounts[i].security_answer_salt = questionSalt;
 
     changed = true;
+    migratedAccounts.push({ username: candidate, password: defaultPassword, role: acct.role, display_name: acct.display_name });
   }
 
   if (changed) {
     saveUserAccounts(accounts);
   }
 
-  // 레거시 PIN 초기화 요청 데이터 제거
   try { localStorage.removeItem("pin_reset_requests_v1"); } catch { /* ignored */ }
 
   localStorage.setItem(PASSWORD_MIGRATED_KEY, "1");
+  return { migrated: changed, accounts: migratedAccounts };
+}
+
+// ── 온보딩 연기 플래그 ──
+const ONBOARDING_DEFERRED_KEY = "onboarding_deferred_v1";
+
+export function setOnboardingDeferred() {
+  localStorage.setItem(ONBOARDING_DEFERRED_KEY, "1");
+}
+
+export function isOnboardingDeferred() {
+  return localStorage.getItem(ONBOARDING_DEFERRED_KEY) === "1";
+}
+
+export function clearOnboardingDeferred() {
+  localStorage.removeItem(ONBOARDING_DEFERRED_KEY);
 }
 
 // ── 레거시 PIN 관련 (하위 호환, 제거 예정) ──

@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   verifyPassword, removeUser, loadUserAccounts,
   getSecurityQuestion, resetPasswordWithAnswer,
-  validatePassword,
+  validatePassword, findUserById, setUserPassword,
 } from "../utils/authStore";
 import ThemeToggle from "./widgets/ThemeToggle";
 
@@ -54,7 +54,10 @@ function _clearLockout() {
  * }} props
  */
 export default function LoginScreen({ onComplete, onNewAccount, onAdmin, onTutorial }) {
-  const [view, setView] = useState("login"); // "login" | "forgot" | "reset"
+  const [view, setView] = useState("login"); // "login" | "forgot" | "reset" | "force_change"
+  const [forceChangeUserId, setForceChangeUserId] = useState(null);
+  const [forceNewPw, setForceNewPw] = useState("");
+  const [forceNewPwConfirm, setForceNewPwConfirm] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -116,6 +119,13 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin, onTutor
       if (!mountedRef.current) return;
       if (result.success) {
         _clearLockout();
+        const user = findUserById(result.userId);
+        if (user?.password_must_change) {
+          setForceChangeUserId(result.userId);
+          setView("force_change");
+          setFormError("");
+          return;
+        }
         onComplete(result.userId);
       } else {
         attemptsRef.current += 1;
@@ -196,6 +206,76 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin, onTutor
     setFormError("");
     setUsername("");
     setPassword("");
+  }
+
+  // ── 강제 비밀번호 변경 (마이그레이션 후 첫 로그인) ──
+  if (view === "force_change") {
+    async function handleForceChange(e) {
+      e.preventDefault();
+      if (loading) return;
+      if (!forceNewPw) { setFormError("새 비밀번호를 입력하세요"); return; }
+      const pwCheck = validatePassword(forceNewPw);
+      if (!pwCheck.valid) { setFormError(pwCheck.error); return; }
+      if (forceNewPw !== forceNewPwConfirm) { setFormError("비밀번호가 일치하지 않습니다"); return; }
+
+      setLoading(true);
+      setFormError("");
+      try {
+        const result = await setUserPassword(forceChangeUserId, forceNewPw);
+        if (!mountedRef.current) return;
+        if (result.success) {
+          onComplete(forceChangeUserId);
+        } else {
+          setFormError("비밀번호 변경에 실패했습니다");
+        }
+      } catch (err) {
+        console.error("Force password change failed:", err);
+        if (mountedRef.current) setFormError("비밀번호 변경 중 오류가 발생했습니다");
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    }
+
+    return (
+      <div className="auth-screen">
+        <div className="auth-screen__inner">
+          <div className="auth-screen__theme"><ThemeToggle size="sm" /></div>
+          <div className="auth-screen__logo">🔑</div>
+          <h1 className="auth-screen__title">비밀번호 변경 필요</h1>
+          <p className="auth-screen__subtitle">보안을 위해 새 비밀번호를 설정해 주세요</p>
+
+          <form onSubmit={handleForceChange} className="auth-form fade-in">
+            <div className="auth-form__field">
+              <label className="auth-form__label">새 비밀번호</label>
+              <input
+                type="password"
+                value={forceNewPw}
+                onChange={(e) => { setForceNewPw(e.target.value); setFormError(""); }}
+                className="auth-form__input"
+                placeholder="영문+숫자 필수, 8자 이상"
+                autoFocus
+              />
+            </div>
+            <div className="auth-form__field">
+              <label className="auth-form__label">새 비밀번호 확인</label>
+              <input
+                type="password"
+                value={forceNewPwConfirm}
+                onChange={(e) => { setForceNewPwConfirm(e.target.value); setFormError(""); }}
+                className="auth-form__input"
+                placeholder="비밀번호 재입력"
+              />
+            </div>
+
+            {formError && <p className="auth-form__error">{formError}</p>}
+
+            <button type="submit" disabled={loading} className="btn btn--primary btn--full btn--lg">
+              {loading ? "처리 중..." : "비밀번호 변경"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   // ── 비밀번호 찾기: 보안 질문 답변 + 새 비밀번호 ──

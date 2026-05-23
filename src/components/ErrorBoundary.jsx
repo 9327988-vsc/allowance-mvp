@@ -101,7 +101,7 @@ export default class ErrorBoundary extends Component {
                 🔄 새로고침
               </button>
               <button
-                onClick={() => { sessionStorage.clear(); window.location.reload(); }}
+                onClick={() => { localStorage.removeItem("active_user_v1"); sessionStorage.clear(); window.location.reload(); }}
                 className="btn btn--secondary"
                 style={{ flex: 1 }}
               >

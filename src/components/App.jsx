@@ -23,10 +23,11 @@ import LoginScreen from "./LoginScreen";
 import SignupScreen from "./SignupScreen";
 import TutorialScreen from "./TutorialScreen";
 import { loadFamilyContext, saveFamilyContext, clearFamilyContext } from "../utils/familyContext";
-import { setActiveUser, findUserById, clearActiveUser, updateUserFamilyContext, getActiveUser } from "../utils/authStore";
+import { setActiveUser, findUserById, clearActiveUser, updateUserFamilyContext, getActiveUser, clearOnboardingDeferred } from "../utils/authStore";
 import { loadUserPrefs, applyPrefs, clearPrefsOverrides } from "../utils/userPrefs";
 import { resetKVAdapter } from "../utils/kvAdapter";
 import { resetSpendingLimitCache } from "../utils/spendingLimit";
+import PasswordMigrationInfoModal from "./modals/PasswordMigrationInfoModal";
 
 function isAdminMode() {
   if (!import.meta.env.DEV) return false;
@@ -45,6 +46,7 @@ export default function App() {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showTutorial, setShowTutorial] = useState(null); // null | "child" | "parent"
   const [showTutorialPicker, setShowTutorialPicker] = useState(false);
+  const [showMigrationInfo, setShowMigrationInfo] = useState(null);
   const tutorialPickerRef = useModalBase(() => setShowTutorialPicker(false), { active: showTutorialPicker });
 
   // 9.1 콘솔 디버그용: window.openAdmin() — DEV 전용
@@ -62,7 +64,13 @@ export default function App() {
     mountedRef.current = true;
     if (initInProgress.current) return;
     initInProgress.current = true;
-    initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
+    initApp().then(result => {
+      if (!mountedRef.current) return;
+      setBoot(result);
+      if (result.migrationResult?.migrated) {
+        setShowMigrationInfo(result.migrationResult.accounts);
+      }
+    }).finally(() => { initInProgress.current = false; });
     return () => { mountedRef.current = false; };
   }, []);
 
@@ -102,6 +110,7 @@ export default function App() {
     clearActiveUser();
     clearFamilyContext();
     clearPrefsOverrides();
+    clearOnboardingDeferred();
     resetKVAdapter();
     resetSpendingLimitCache();
     initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
@@ -256,6 +265,12 @@ export default function App() {
         <TutorialScreen
           role={showTutorial}
           onComplete={() => setShowTutorial(null)}
+        />
+      )}
+      {showMigrationInfo && (
+        <PasswordMigrationInfoModal
+          accounts={showMigrationInfo}
+          onConfirm={() => setShowMigrationInfo(null)}
         />
       )}
       <ToastContainer />

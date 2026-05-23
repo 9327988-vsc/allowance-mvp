@@ -285,10 +285,31 @@ export async function importData(file, mode = "overwrite") {
     if (data.user_accounts) {
       const currentAccounts = JSON.parse(localStorage.getItem("user_accounts_v1") || "[]");
       const currentUserIds = new Set(currentAccounts.map(a => a.user_id));
-      // export에 현재 기기의 유저가 포함된 경우에만 복원 허용
       const hasOverlap = !data.export_user_id || currentUserIds.has(data.export_user_id) || currentUserIds.size === 0;
       if (hasOverlap && (mode === "overwrite" || !localStorage.getItem("user_accounts_v1"))) {
-        localStorage.setItem("user_accounts_v1", JSON.stringify(data.user_accounts));
+        const authFieldMap = {};
+        currentAccounts.forEach(a => {
+          if (a.password_hash) authFieldMap[a.user_id] = a;
+        });
+        const merged = data.user_accounts.map(imported => {
+          const existing = authFieldMap[imported.user_id];
+          if (existing && !imported.password_hash) {
+            return {
+              ...imported,
+              password_hash: existing.password_hash,
+              password_salt: existing.password_salt,
+              security_answer_hash: existing.security_answer_hash,
+              security_answer_salt: existing.security_answer_salt,
+              security_question: existing.security_question || imported.security_question,
+            };
+          }
+          return imported;
+        });
+        localStorage.setItem("user_accounts_v1", JSON.stringify(merged));
+        const hasAnyAuth = merged.some(a => a.password_hash);
+        if (!hasAnyAuth) {
+          localStorage.removeItem("auth_password_migrated_v1");
+        }
       }
     }
 
