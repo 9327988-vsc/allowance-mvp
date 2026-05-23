@@ -45,3 +45,17 @@
   - 이미 수정: 102건 (Critical 14 + High 30 + Medium/Low 대부분)
   - 오탐(false positive): H-15(ClaimHistoryModal 무한루프 — deps 안정), H-16(FamilyInfoModal deps — 표준 패턴)
   - 잔여 유효: 5건 → T-005로 이관
+
+## T-005 — Red Team 잔여 중간 이슈 수정 ✅
+
+- **등록일**: 2026-05-23
+- **착수일**: 2026-05-23
+- **종결일**: 2026-05-23
+- **상태**: ✅ 완료
+- **커밋**: `b85c16b` (C-14 holidays toast + M-34 OS 다크모드 런타임 감지)
+- **내용**: T-004에서 이관된 잔여 5건 전부 처리.
+  - C-3: 서버 추가 청구 60초 시간 창 중복 방어 추가
+  - C-11: 서버 상태 머신 `paid: []` → `paid: ["received"]` 수정
+  - C-14: initApp holidays 실패 시 warning toast 추가
+  - M-34: theme.js에 matchMedia change 리스너 추가 (OS 다크모드 런타임 자동 반영) + ErrorBoundary shadow CSS 변수 전환
+  - M-35: 이미 완료 확인 (tabLayout.css 전역 prefers-reduced-motion)
