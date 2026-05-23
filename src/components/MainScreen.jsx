@@ -38,6 +38,7 @@ const ChoresChildModal = lazy(() => import("./modals/ChoresChildModal"));
 const NotificationCenterModal = lazy(() => import("./modals/NotificationCenterModal"));
 const BadgesModal = lazy(() => import("./modals/BadgesModal"));
 const QnAModal = lazy(() => import("./modals/QnAModal"));
+const ClaimHistoryModal = lazy(() => import("./modals/ClaimHistoryModal"));
 
 function createConfetti(confettiRef, confettiTimerRef) {
   // H-28 / L-11: 이전 confetti가 있으면 제거
@@ -102,6 +103,7 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
   const [unreadCount, setUnreadCount] = useState(() => getUnreadCount());
   const [showBadges, setShowBadges] = useState(false);
   const [showQnA, setShowQnA] = useState(false);
+  const [showClaimHistory, setShowClaimHistory] = useState(false);
 
   // 월 변경 시 submittedStatus 초기화
   useEffect(() => {
@@ -419,6 +421,13 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
               {/* 메뉴 리스트 */}
               <div className="my-tab__menu">
                 {inFamily && (
+                  <button className="my-tab__menu-item" onClick={() => { setShowMyTab(false); setShowClaimHistory(true); }}>
+                    <span className="my-tab__menu-icon">📋</span>
+                    <span className="my-tab__menu-label">청구 이력</span>
+                    <span className="my-tab__arrow">›</span>
+                  </button>
+                )}
+                {inFamily && (
                   <button className="my-tab__menu-item" onClick={() => { setShowMyTab(false); setShowChores(true); }}>
                     <span className="my-tab__menu-icon">🎯</span>
                     <span className="my-tab__menu-label">미션 보드</span>
@@ -585,6 +594,11 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
           childName={familyCtx.member_display_name || "자녀"}
           onClose={() => setShowChores(false)}
         />
+      )}
+
+      {/* 청구 이력 */}
+      {showClaimHistory && (
+        <ClaimHistoryModal onClose={() => setShowClaimHistory(false)} />
       )}
 
       {/* S-108 스토리지 부족 */}
