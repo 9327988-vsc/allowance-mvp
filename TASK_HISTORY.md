@@ -32,3 +32,16 @@
 - **커밋**: `40ebea7`
 - **내용**: PinInput.jsx, PinResetModal.jsx 삭제. authStore에서 verifyPin, setUserPin 등 레거시 함수 7개 제거. -224줄.
 - **관련 정책**: #001 Phase 2 완료
+
+## T-004 — Red Team 잔여 이슈 정리 ✅
+
+- **등록일**: 2026-05-23
+- **착수일**: 2026-05-23
+- **종결일**: 2026-05-23
+- **상태**: ✅ 완료
+- **커밋**: `0d11860` (코드 스플리팅 + 다크모드 색상), `5812f08` (BACKLOG 등록)
+- **내용**: Red Team 검수 보고서 107건 전수 분류. Critical 14건 + High 30건 전부 수정 완료 확인. Medium 이슈 7건(C-13, H-7, H-14, H-15, H-16, H-20, H-21) 코드 실측 검증 → 이미 수정됨 또는 오탐 확인. 유효 잔여 5건(C-3, C-11, C-14, M-34, M-35)을 T-005로 등록.
+- **분류 결과**:
+  - 이미 수정: 102건 (Critical 14 + High 30 + Medium/Low 대부분)
+  - 오탐(false positive): H-15(ClaimHistoryModal 무한루프 — deps 안정), H-16(FamilyInfoModal deps — 표준 패턴)
+  - 잔여 유효: 5건 → T-005로 이관

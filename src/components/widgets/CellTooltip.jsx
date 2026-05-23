@@ -63,10 +63,9 @@ export default function CellTooltip({ cell, anchorRect, settings }) {
   if (!hasContent) return null;
   const cellTotal = cell.total || 0;
 
-  // 학교/학원 단가 계산
+  // 학교 교통비 단가 계산
   const busTrips = settings?.school?.round_trip ? 2 : 1;
-  const busFare = settings?.school?.fare || 0;
-  const schoolPerTrip = busFare * busTrips;
+  const perTripFare = settings?.school?.fare || 0;
 
   const truncatedMemo = memo && memo.length > 50 ? memo.slice(0, 50) + "..." : memo;
 
@@ -90,8 +89,8 @@ export default function CellTooltip({ cell, anchorRect, settings }) {
       <div className="cell-tooltip__body">
         {school_fee > 0 && (
           <div className="cell-tooltip__row">
-            🏫 학교: {schoolPerTrip > 0
-              ? `${formatAmountShort(busFare)} × ${busTrips} = ${formatAmountShort(school_fee)}`
+            🏫 학교: {perTripFare > 0
+              ? `${formatAmountShort(perTripFare)} × ${busTrips} = ${formatAmountShort(school_fee)}`
               : formatAmountShort(school_fee)
             }
           </div>
