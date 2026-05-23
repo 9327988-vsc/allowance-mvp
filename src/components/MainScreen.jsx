@@ -111,10 +111,10 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
   // m-4: 알림 배지 실시간 갱신 + 서버 알림 동기화 (visibility 복귀 시)
   useEffect(() => {
     async function syncAndRefresh() {
-      if (familyCtx) {
+      if (familyContext) {
         const uid = getActiveUser();
         if (uid) {
-          try { await syncServerNotifications(familyCtx.family_code, familyCtx.member_id, uid); } catch {}
+          try { await syncServerNotifications(familyContext.family_code, familyContext.member_id, uid); } catch {}
         }
       }
       setUnreadCount(getUnreadCount());
@@ -125,7 +125,7 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
     }
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [familyCtx]);
+  }, [familyContext]);
 
   // H-28: confetti DOM cleanup on unmount
   const confettiRef = useRef(null);
