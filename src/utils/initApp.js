@@ -157,10 +157,9 @@ export function nextScreen(result) {
     case "settings_corrupted": return "corrupted_modal";
     case "first_use":
     case "ok":
-      // 인증 게이트: 로그인 안 된 상태
+      // 인증 게이트: 로그인 안 된 상태 → 항상 로그인 화면 (회원가입 버튼 포함)
       if (!result.authenticated) {
-        if (loadUserAccounts().length > 0) return "login";
-        return "signup";
+        return "login";
       }
       // 인증 완료 후 화면 분기 — 계정 유형(role) 기반
       {

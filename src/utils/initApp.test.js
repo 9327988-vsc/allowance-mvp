@@ -175,14 +175,14 @@ describe("nextScreen", () => {
     expect(nextScreen({ status: "ok", authenticated: false })).toBe("login");
   });
 
-  it("미인증 + 계정 없음 → signup", () => {
+  it("미인증 + 계정 없음 → login", () => {
     loadUserAccounts.mockReturnValue([]);
-    expect(nextScreen({ status: "ok", authenticated: false })).toBe("signup");
+    expect(nextScreen({ status: "ok", authenticated: false })).toBe("login");
   });
 
-  it("미인증 + first_use + 계정 없음 → signup", () => {
+  it("미인증 + first_use + 계정 없음 → login", () => {
     loadUserAccounts.mockReturnValue([]);
-    expect(nextScreen({ status: "first_use", authenticated: false })).toBe("signup");
+    expect(nextScreen({ status: "first_use", authenticated: false })).toBe("login");
   });
 
   // --- 인증 후: general 계정 ---

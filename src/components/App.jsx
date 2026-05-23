@@ -213,8 +213,6 @@ export default function App() {
       onAdmin={import.meta.env.DEV ? () => setAdminMode(true) : undefined}
       onTutorial={() => setShowTutorialPicker(true)}
     />;
-  } else if (screen === "signup") {
-    content = <SignupScreen onComplete={handleAuthComplete} />;
   } else if (screen === "family_onboarding") {
     content = <FamilyOnboardingModal onComplete={handleFamilyJoined} />;
   } else if (screen === "welcome_modal") {
