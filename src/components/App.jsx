@@ -210,7 +210,7 @@ export default function App() {
     content = <LoginScreen
       onComplete={handleAuthComplete}
       onNewAccount={() => setBoot({ ...boot, _forceSignup: true })}
-      onAdmin={import.meta.env.DEV ? () => setAdminMode(true) : undefined}
+      onAdmin={() => setAdminMode(true)}
       onTutorial={() => setShowTutorialPicker(true)}
     />;
   } else if (screen === "family_onboarding") {
