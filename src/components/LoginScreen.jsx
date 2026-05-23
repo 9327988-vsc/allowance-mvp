@@ -66,7 +66,6 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin, onTutor
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [adminTaps, setAdminTaps] = useState(0);
 
   // 잠금 상태
   const [attempts, setAttempts] = useState(() => {
@@ -402,7 +401,7 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin, onTutor
     <div className="auth-screen">
       <div className="auth-screen__inner">
         <div className="auth-screen__theme"><ThemeToggle size="sm" /></div>
-        <div className="auth-screen__logo" onClick={() => setAdminTaps(p => p + 1)}>💰</div>
+        <div className="auth-screen__logo">💰</div>
         <h1 className="auth-screen__title">용돈 관리</h1>
         <p className="auth-screen__subtitle">로그인</p>
 
@@ -469,18 +468,11 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin, onTutor
             </button>
           </div>
 
-          {(onAdmin || onTutorial || adminTaps >= 5) && (
+          {onTutorial && (
             <div style={{ display: "flex", justifyContent: "center", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
-              {(onAdmin || adminTaps >= 5) && (
-                <button type="button" onClick={onAdmin} className="account-admin-btn">
-                  🔧 관리자
-                </button>
-              )}
-              {onTutorial && (
-                <button type="button" onClick={onTutorial} className="account-admin-btn">
-                  📖 튜토리얼
-                </button>
-              )}
+              <button type="button" onClick={onTutorial} className="account-admin-btn">
+                📖 튜토리얼
+              </button>
             </div>
           )}
         </form>
