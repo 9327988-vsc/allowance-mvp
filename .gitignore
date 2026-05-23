@@ -28,3 +28,22 @@ coverage/
 
 # Vitest
 __test_artifacts__/
+
+# Windows
+desktop.ini
+
+# 기획/분석 문서 (로컬 전용)
+PRD_*.md
+ALLOWANCE_MVP_*.md
+CODE_REVIEW_*.txt
+UI_UX_*.md
+해외_*.md
+SW제작 모음집/
+세션별_브리핑/
+용돈 관리 시스템 프롬포트와 정리.txt
+05_Agent_*.md
+claude.md.md
+claude.md.txt
+
+# Wrangler (Cloudflare Workers 로컬 상태)
+workers/.wrangler/
