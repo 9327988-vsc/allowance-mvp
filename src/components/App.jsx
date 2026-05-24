@@ -79,44 +79,57 @@ export default function App() {
         } catch (e) { console.error("[forceSync] 사용자 업로드 실패:", e); }
       }
     };
-    console.info("[App] v9.2-sync loaded");
+    console.info("[App] v9.3-autosync loaded");
     return () => { delete window.openAdmin; delete window.forceSync; };
   }, []);
 
-  // 1. 부팅 처리
+  // 1. 부팅 처리 (다운로드 → initApp → 업로드)
   const initInProgress = useRef(false);
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
     if (initInProgress.current) return;
     initInProgress.current = true;
-    initApp().then(async result => {
-      if (!mountedRef.current) return;
-      const ctx = loadFamilyContext();
-      const uid = getActiveUser();
-      const user = uid ? findUserById(uid) : null;
-      let famCount = 0, usrResult = null;
-      if (ctx?.family_code) {
-        try { famCount = await uploadFamilyData(ctx.family_code) || 0; }
-        catch (e) { showToast({ type: "warning", message: `가족 업로드 실패: ${e.message}`, duration: 5000 }); }
-      }
-      if (user?.username) {
-        try { usrResult = await uploadUserData(user.username) || null; }
-        catch (e) { showToast({ type: "warning", message: `사용자 업로드 실패: ${e.message}`, duration: 5000 }); }
-      }
-      if (ctx && user?.username) {
-        serverUpdateProfile(user.username, { family_context: ctx }).catch(() => {});
-      }
-      const usrTotal = usrResult?.total || 0;
-      const calCount = usrResult?.calendar || 0;
-      if (famCount + usrTotal > 0) {
-        showToast({ type: "success", message: `클라우드: 가족${famCount} 개인${usrTotal}(캘린더${calCount})건 업로드`, duration: 5000 });
-      }
-      setBoot(result);
-      if (result.migrationResult?.migrated) {
-        setShowMigrationInfo(result.migrationResult.accounts);
-      }
-    }).finally(() => { initInProgress.current = false; });
+    (async () => {
+      try {
+        const ctx = loadFamilyContext();
+        const uid = getActiveUser();
+        const user = uid ? findUserById(uid) : null;
+        let famDl = 0, usrDlResult = null;
+        if (ctx?.family_code) {
+          try { famDl = await downloadFamilyData(ctx.family_code) || 0; }
+          catch (e) { console.warn("[App] boot family dl:", e); }
+          try { if (user?.username) usrDlResult = await downloadUserData(user.username) || null; }
+          catch (e) { console.warn("[App] boot user dl:", e); }
+        }
+        const result = await initApp();
+        if (!mountedRef.current) return;
+        let famUp = 0, usrUpResult = null;
+        if (ctx?.family_code) {
+          try { famUp = await uploadFamilyData(ctx.family_code) || 0; }
+          catch (e) { showToast({ type: "warning", message: `가족 업로드 실패: ${e.message}`, duration: 5000 }); }
+        }
+        if (user?.username) {
+          try { usrUpResult = await uploadUserData(user.username) || null; }
+          catch (e) { showToast({ type: "warning", message: `사용자 업로드 실패: ${e.message}`, duration: 5000 }); }
+        }
+        if (ctx && user?.username) {
+          serverUpdateProfile(user.username, { family_context: ctx }).catch(() => {});
+        }
+        const usrDl = usrDlResult?.total || 0;
+        const calDl = usrDlResult?.calendar || 0;
+        const usrUp = usrUpResult?.total || 0;
+        if (famDl + usrDl > 0) {
+          showToast({ type: "success", message: `동기화: ↓${famDl + usrDl}건(캘${calDl}) ↑${famUp + usrUp}건`, duration: 5000 });
+        } else if (famUp + usrUp > 0) {
+          showToast({ type: "success", message: `클라우드: ${famUp + usrUp}건 업로드`, duration: 5000 });
+        }
+        setBoot(result);
+        if (result.migrationResult?.migrated) {
+          setShowMigrationInfo(result.migrationResult.accounts);
+        }
+      } finally { initInProgress.current = false; }
+    })();
     return () => { mountedRef.current = false; };
   }, []);
 
@@ -152,6 +165,23 @@ export default function App() {
     }
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
+  // 4. 자동 동기화: 데이터 변경 시 디바운스 업로드 (3초)
+  useEffect(() => {
+    let timer = null;
+    function handleMutation() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const ctx = loadFamilyContext();
+        if (!ctx?.family_code) return;
+        const user = findUserById(getActiveUser());
+        uploadFamilyData(ctx.family_code).catch(e => console.warn("[App] auto-sync family:", e));
+        if (user?.username) uploadUserData(user.username).catch(e => console.warn("[App] auto-sync user:", e));
+      }, 3000);
+    }
+    window.addEventListener("mock-data-mutated", handleMutation);
+    return () => { window.removeEventListener("mock-data-mutated", handleMutation); if (timer) clearTimeout(timer); };
   }, []);
 
   // 인증 완료 콜백 (훅은 early return 위에 위치해야 — Rules of Hooks)

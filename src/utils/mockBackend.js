@@ -259,18 +259,7 @@ function handleSubmitClaim(ctx, body) {
     return err(409, "DUPLICATE_CLAIM_ID", "이미 존재하는 청구 ID입니다");
   }
 
-  // NOTE: N+1 issue — currently loads all claims to check for duplicates.
-  // When scaling, add a by-month index (e.g. claims/by-month/YYYY-MM/{claim_id})
-  // and use prefix scan instead of iterating the full claims list.
-  if (!is_extra) {
-    const claimsList = kvGet(`families/${ctx.familyId}/claims/list`) || [];
-    for (const cid of claimsList) {
-      const c = kvGet(`families/${ctx.familyId}/claims/${cid}`);
-      if (c && c.year === year && c.month === month && !c.is_extra && (c.status === "pending" || c.status === "approved")) {
-        return err(409, "DUPLICATE_CLAIM", "이미 검토 중인 청구가 있습니다");
-      }
-    }
-  }
+  // 같은 달 중복 청구 허용 (pending/approved 상태여도 재제출 가능)
 
   const now = new Date().toISOString();
   const claim = {
@@ -663,6 +652,10 @@ export function enableMockBackend(apiBase) {
     if (mockDelay > 0) await new Promise(r => setTimeout(r, mockDelay));
 
     const result = route(method, path, body, headers);
+
+    if (method !== "GET" && result.status >= 200 && result.status < 300) {
+      window.dispatchEvent(new CustomEvent("mock-data-mutated"));
+    }
 
     return new Response(JSON.stringify(result.body), {
       status: result.status,
