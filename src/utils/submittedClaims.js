@@ -64,13 +64,8 @@ export function syncSubmittedClaims(serverClaims) {
     }
   }
 
-  // 서버에 없는 로컬 청구 제거
-  // Only prune if server returned data (non-empty response means sync is authoritative)
-  // Don't prune if server returned an empty array AND we have local data (could be a server error)
-  const shouldPrune = serverClaims.length > 0 || list.length === 0;
-  const prunedList = shouldPrune
-    ? list.filter((c) => serverIds.has(c.claim_id))
-    : list;
+  // 서버에 없는 로컬 청구 제거 — 서버 응답을 항상 신뢰
+  const prunedList = list.filter((c) => serverIds.has(c.claim_id));
   if (prunedList.length !== list.length) {
     changed = true;
   }

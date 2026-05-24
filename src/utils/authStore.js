@@ -180,6 +180,7 @@ export async function createUser({ displayName, role, username, password, securi
   serverRegister({
     username, password, display_name: displayName, role,
     security_question: securityQuestion, security_answer: securityAnswer,
+    family_context: familyContext || null,
   }).catch(() => {});
 
   return account;
@@ -225,8 +226,14 @@ export async function verifyPassword(username, password) {
       securityQuestion: serverResult.user.security_question,
       securityAnswer: null,
       familyContext: serverResult.user.family_context || null,
-    }).catch(() => null);
+    }).catch(e => {
+      console.warn("[authStore] createUser after serverLogin failed:", e.message);
+      return null;
+    });
     if (newAccount) return { success: true, userId: newAccount.user_id };
+    // createUser 실패 시 (이미 존재하는 로컬 계정 등) — 기존 계정으로 재시도
+    const existing = findUserByUsername(username);
+    if (existing) return { success: true, userId: existing.user_id };
   }
   if (serverResult.error === "NETWORK_ERROR") {
     return { success: false, error: "존재하지 않는 아이디입니다" };

@@ -10,7 +10,7 @@ import Splash from "./Splash";
 import LoginScreen from "./LoginScreen";
 import MainScreen from "./MainScreen";
 import { loadFamilyContext, saveFamilyContext, clearFamilyContext } from "../utils/familyContext";
-import { setActiveUser, findUserById, clearActiveUser, updateUserFamilyContext, getActiveUser, clearOnboardingDeferred } from "../utils/authStore";
+import { setActiveUser, findUserById, clearActiveUser, updateUserFamilyContext, getActiveUser, clearOnboardingDeferred, loadUserAccounts } from "../utils/authStore";
 import { loadUserPrefs, applyPrefs, clearPrefsOverrides } from "../utils/userPrefs";
 import { resetKVAdapter } from "../utils/kvAdapter";
 import { resetSpendingLimitCache } from "../utils/spendingLimit";
@@ -112,7 +112,8 @@ export default function App() {
         uploadFamilyData(ctx.family_code).catch(e => console.warn("[App] vis upload:", e));
         if (user?.username) uploadUserData(user.username).catch(e => console.warn("[App] vis user upload:", e));
       } else if (document.visibilityState === "visible") {
-        downloadFamilyData(ctx.family_code).catch(e => console.warn("[App] vis download:", e));
+        downloadFamilyData(ctx.family_code).catch(e => console.warn("[App] vis family dl:", e));
+        if (user?.username) downloadUserData(user.username).catch(e => console.warn("[App] vis user dl:", e));
       }
     }
     document.addEventListener("visibilitychange", handleVisibility);
@@ -175,7 +176,18 @@ export default function App() {
     const activeId = getActiveUser();
     if (ctx && activeId) {
       updateUserFamilyContext(activeId, ctx);
-      uploadFamilyData(ctx.family_code).catch(e => console.warn("[App] onboard upload:", e));
+      // 모든 가족 구성원의 family_context를 서버에 동기화
+      const allAccounts = loadUserAccounts();
+      for (const acc of allAccounts) {
+        if (acc.user_id !== activeId && acc.username) {
+          updateUserFamilyContext(acc.user_id, ctx);
+        }
+      }
+      const user = findUserById(activeId);
+      uploadFamilyData(ctx.family_code).catch(e => console.warn("[App] onboard family upload:", e));
+      if (user?.username) {
+        uploadUserData(user.username).catch(e => console.warn("[App] onboard user upload:", e));
+      }
     }
     const role = ctx?.member_role;
     if (role === "parent" || role === "child") {
@@ -184,7 +196,7 @@ export default function App() {
     import("../utils/accountSwitcher").then(({ saveCurrentAccount }) => {
       saveCurrentAccount();
       initApp().then(result => { if (mountedRef.current) setBoot(result); });
-    }).catch(() => { /* 모듈 로드 실패 시 무시 */ });
+    }).catch(() => {});
   }
 
   // 3. 부팅 중 표시
