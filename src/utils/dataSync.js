@@ -103,17 +103,21 @@ export async function downloadFamilyData(familyCode) {
 
 function rebindDeviceId() {
   const ctx = loadFamilyContext();
-  if (!ctx?.family_id || !ctx?.member_id) return;
-  const memberKey = `mock_kv:families/${ctx.family_id}/members/${ctx.member_id}`;
+  if (!ctx?.family_id) return;
+  const currentDeviceId = getDeviceId();
+  const prefix = `mock_kv:families/${ctx.family_id}/members/`;
   try {
-    const raw = localStorage.getItem(memberKey);
-    if (!raw) return;
-    const member = JSON.parse(raw);
-    const currentDeviceId = getDeviceId();
-    if (member.device_id !== currentDeviceId) {
-      member.device_id = currentDeviceId;
-      localStorage.setItem(memberKey, JSON.stringify(member));
-      console.info("[dataSync] rebound device_id for member", ctx.member_id);
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith(prefix)) continue;
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const member = JSON.parse(raw);
+      if (member.device_id !== currentDeviceId) {
+        member.device_id = currentDeviceId;
+        localStorage.setItem(k, JSON.stringify(member));
+        console.info("[dataSync] rebound device_id for", k.slice(prefix.length));
+      }
     }
   } catch (e) {
     console.warn("[dataSync] rebindDeviceId failed:", e);

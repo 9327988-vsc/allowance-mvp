@@ -15,6 +15,7 @@ import { loadUserPrefs, applyPrefs, clearPrefsOverrides } from "../utils/userPre
 import { resetKVAdapter } from "../utils/kvAdapter";
 import { resetSpendingLimitCache } from "../utils/spendingLimit";
 import { downloadFamilyData, downloadUserData, uploadFamilyData, uploadUserData } from "../utils/dataSync";
+import { serverUpdateProfile } from "../utils/serverAuth";
 
 const SettingsModal = lazy(() => import("./modals/SettingsModal"));
 const DiagnosticScreen = lazy(() => import("./modals/DiagnosticScreen"));
@@ -102,6 +103,9 @@ export default function App() {
       if (user?.username) {
         try { usrCount = await uploadUserData(user.username) || 0; }
         catch (e) { showToast({ type: "warning", message: `사용자 업로드 실패: ${e.message}`, duration: 5000 }); }
+      }
+      if (ctx && user?.username) {
+        serverUpdateProfile(user.username, { family_context: ctx }).catch(() => {});
       }
       if (famCount + usrCount > 0) {
         showToast({ type: "success", message: `클라우드 동기화: 가족 ${famCount}건 + 개인 ${usrCount}건 업로드`, duration: 4000 });
