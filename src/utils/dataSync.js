@@ -143,10 +143,3 @@ export async function downloadUserData(username) {
   console.info("[dataSync] downloaded user data:", count, "keys (cal:", calCount, ") for", username, keys);
   return { total: count, calendar: calCount };
 }
-
-export async function downloadUserData(username) {
-  const entries = await syncGet("usr", username);
-  const count = restoreEntries(entries);
-  console.info("[dataSync] downloaded user data:", count, "keys for", username, entries ? Object.keys(entries) : []);
-  return count;
-}
