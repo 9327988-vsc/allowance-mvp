@@ -64,16 +64,12 @@ function restoreEntries(entries) {
 }
 
 async function syncPost(type, key, entries) {
-  try {
-    const res = await fetch(`${BASE}/api/data-sync`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, key, entries }),
-    });
-    if (!res.ok) console.warn("[dataSync] upload failed:", res.status);
-  } catch (e) {
-    console.warn("[dataSync] upload error:", e.message);
-  }
+  const res = await fetch(`${BASE}/api/data-sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, key, entries }),
+  });
+  if (!res.ok) throw new Error(`서버 응답 ${res.status}`);
 }
 
 async function syncGet(type, key) {
