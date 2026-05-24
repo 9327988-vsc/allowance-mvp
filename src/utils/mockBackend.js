@@ -95,6 +95,7 @@ function authenticate(headers) {
       return { family, member: m, familyId };
     }
   }
+  console.warn("[mockBackend] auth failed: deviceId=", deviceId, "familyCode=", familyCode, "memberId=", memberId, "members=", memberIds.map(mid => { const mm = kvGet(`families/${familyId}/members/${mid}`); return mm ? { mid, device_id: mm.device_id, role: mm.role } : mid; }));
   return null;
 }
 

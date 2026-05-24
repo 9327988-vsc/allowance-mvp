@@ -399,7 +399,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         ) : claimsError && claims.length === 0 ? (
           <div className="empty-state" style={EMPTY_STATE_STYLE}>
             <div className="empty-state__icon">⚠️</div>
-            <div className="empty-state__title">데이터를 불러오지 못했어요</div>
+            <div className="empty-state__title">데이터를 불러오지 못했어요 ({claimsError?.message || claimsError?.code || "알 수 없음"})</div>
             <button className="btn btn--secondary" style={{ marginTop: "var(--space-3)" }} onClick={fetchClaims}>다시 시도</button>
           </div>
         ) : filteredClaims.length === 0 ? (
