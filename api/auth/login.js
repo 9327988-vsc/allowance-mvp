@@ -45,6 +45,7 @@ export default async function handler(req, res) {
         display_name: userData.display_name,
         role: userData.role,
         security_question: userData.security_question,
+        family_context: userData.family_context || null,
       },
     });
   } catch (e) {

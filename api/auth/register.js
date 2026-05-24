@@ -27,9 +27,22 @@ export default async function handler(req, res) {
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
     if (!url || !token) return res.status(500).json({ error: "Server configuration error" });
 
+    const { family_context } = req.body || {};
     const key = `user:${username.toLowerCase()}`;
     const existing = await redis(url, token, ["GET", key]);
-    if (existing.result) return res.status(409).json({ error: "이미 사용 중인 아이디입니다" });
+
+    if (existing.result) {
+      const existingData = JSON.parse(existing.result);
+      const inputHash = hash(password, existingData.password_salt);
+      if (inputHash !== existingData.password_hash) {
+        return res.status(409).json({ error: "이미 사용 중인 아이디입니다" });
+      }
+      if (display_name) existingData.display_name = display_name;
+      if (role) existingData.role = role;
+      if (family_context !== undefined) existingData.family_context = family_context;
+      await redis(url, token, ["SET", key, JSON.stringify(existingData)]);
+      return res.status(200).json({ success: true, username: existingData.username, updated: true });
+    }
 
     const salt = randomBytes(16).toString("hex");
     const password_hash = hash(password, salt);
@@ -43,6 +56,7 @@ export default async function handler(req, res) {
       security_question: security_question || null,
       security_answer_hash: null,
       security_answer_salt: null,
+      family_context: family_context || null,
       created_at: new Date().toISOString(),
     };
 

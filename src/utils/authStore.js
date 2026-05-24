@@ -1,7 +1,7 @@
 // src/utils/authStore.js — 로컬 유저 계정 + 아이디/비밀번호 인증
 
 import { nanoid } from "./idGenerator";
-import { serverRegister, serverLogin } from "./serverAuth";
+import { serverRegister, serverLogin, serverUpdateProfile } from "./serverAuth";
 
 const ACCOUNTS_KEY = "user_accounts_v1";
 const ACTIVE_KEY = "active_user_v1";
@@ -137,7 +137,7 @@ function saveUserAccounts(accounts) {
 // ── 유저 생성/조회 ──
 
 /** 유저 생성 (아이디+비밀번호+보안질문) */
-export async function createUser({ displayName, role, username, password, securityQuestion, securityAnswer, birthDate = null }) {
+export async function createUser({ displayName, role, username, password, securityQuestion, securityAnswer, birthDate = null, familyContext = null }) {
   const usernameCheck = validateUsername(username);
   if (!usernameCheck.valid) throw new Error(usernameCheck.error);
   const passwordCheck = validatePassword(password);
@@ -162,7 +162,7 @@ export async function createUser({ displayName, role, username, password, securi
     avatar_emoji: null,
     birth_date: birthDate,
     created_at: new Date().toISOString(),
-    family_context: null,
+    family_context: familyContext || null,
   };
 
   if (securityAnswer) {
@@ -208,6 +208,7 @@ export async function verifyPassword(username, password) {
       serverRegister({
         username, password, display_name: user.display_name, role: user.role,
         security_question: user.security_question, security_answer: null,
+        family_context: user.family_context || null,
       }).catch(() => {});
       return { success: true, userId: user.user_id };
     }
@@ -223,6 +224,7 @@ export async function verifyPassword(username, password) {
       password,
       securityQuestion: serverResult.user.security_question,
       securityAnswer: null,
+      familyContext: serverResult.user.family_context || null,
     }).catch(() => null);
     if (newAccount) return { success: true, userId: newAccount.user_id };
   }
@@ -303,6 +305,9 @@ export function updateUserFamilyContext(userId, familyContext) {
   if (idx < 0) return;
   accounts[idx].family_context = familyContext;
   saveUserAccounts(accounts);
+  if (accounts[idx].username) {
+    serverUpdateProfile(accounts[idx].username, { family_context: familyContext }).catch(() => {});
+  }
 }
 
 export function removeUser(userId) {
