@@ -1,6 +1,12 @@
 const BASE = import.meta.env.VITE_API_URL || "";
-const MOCK_PREFIX = "mock_kv:";
-const USER_PREFIXES = ["calendar_v1_", "settings_v1_u_", "submitted_claims_v1", "custom_categories_v1"];
+const FAMILY_PREFIXES = [
+  "mock_kv:", "chores_v1_f_", "chore_log_v1_f_",
+  "auto_grant_schedules_v1_f_", "auto_grant_last_run_v1_f_", "qna_v1_f_",
+];
+const USER_PREFIXES = [
+  "calendar_v1_", "settings_v1", "settings_v1_u_", "custom_categories_v1",
+  "submitted_claims_v1", "user_prefs_v1", "badges_earned_v1_u_",
+];
 
 function gatherByPrefix(prefixes) {
   const entries = {};
@@ -46,7 +52,7 @@ async function syncGet(type, key) {
 }
 
 export async function uploadFamilyData(familyCode) {
-  const entries = gatherByPrefix([MOCK_PREFIX]);
+  const entries = gatherByPrefix(FAMILY_PREFIXES);
   if (Object.keys(entries).length === 0) return;
   await syncPost("fam", familyCode, entries);
 }

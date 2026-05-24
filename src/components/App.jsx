@@ -67,8 +67,17 @@ export default function App() {
     mountedRef.current = true;
     if (initInProgress.current) return;
     initInProgress.current = true;
-    initApp().then(result => {
+    initApp().then(async result => {
       if (!mountedRef.current) return;
+      const ctx = loadFamilyContext();
+      const uid = getActiveUser();
+      const user = uid ? findUserById(uid) : null;
+      if (ctx?.family_code) {
+        uploadFamilyData(ctx.family_code).catch(() => {});
+      }
+      if (user?.username) {
+        uploadUserData(user.username).catch(() => {});
+      }
       setBoot(result);
       if (result.migrationResult?.migrated) {
         setShowMigrationInfo(result.migrationResult.accounts);
