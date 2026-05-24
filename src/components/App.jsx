@@ -52,12 +52,34 @@ export default function App() {
   const [showMigrationInfo, setShowMigrationInfo] = useState(null);
   const tutorialPickerRef = useModalBase(() => setShowTutorialPicker(false), { active: showTutorialPicker });
 
-  // 9.1 콘솔 디버그용: window.openAdmin() — DEV 전용
+  // 9.1 콘솔 디버그용
   useEffect(() => {
     if (import.meta.env.DEV) {
       window.openAdmin = () => setAdminMode(true);
-      return () => { delete window.openAdmin; };
     }
+    // 수동 동기화 + 디버그용 (운영 환경 포함)
+    window.forceSync = async () => {
+      const ctx = loadFamilyContext();
+      const uid = getActiveUser();
+      const user = uid ? findUserById(uid) : null;
+      console.info("[forceSync] family_context:", ctx);
+      console.info("[forceSync] user:", user?.username, "uid:", uid);
+      if (!ctx?.family_code) { console.warn("[forceSync] 가족 코드 없음"); return; }
+      try {
+        await uploadFamilyData(ctx.family_code);
+        console.info("[forceSync] 가족 데이터 업로드 완료");
+        showToast({ type: "success", message: "가족 데이터 업로드 완료", duration: 3000 });
+      } catch (e) { console.error("[forceSync] 가족 업로드 실패:", e); }
+      if (user?.username) {
+        try {
+          await uploadUserData(user.username);
+          console.info("[forceSync] 사용자 데이터 업로드 완료");
+          showToast({ type: "success", message: "사용자 데이터 업로드 완료", duration: 3000 });
+        } catch (e) { console.error("[forceSync] 사용자 업로드 실패:", e); }
+      }
+    };
+    console.info("[App] v9.2-sync loaded");
+    return () => { delete window.openAdmin; delete window.forceSync; };
   }, []);
 
   // 1. 부팅 처리
@@ -72,11 +94,25 @@ export default function App() {
       const ctx = loadFamilyContext();
       const uid = getActiveUser();
       const user = uid ? findUserById(uid) : null;
+      let syncCount = 0;
       if (ctx?.family_code) {
-        await uploadFamilyData(ctx.family_code).catch(e => console.warn("[App] boot family upload:", e));
+        try {
+          await uploadFamilyData(ctx.family_code);
+          syncCount++;
+        } catch (e) {
+          showToast({ type: "warning", message: `동기화 업로드 실패: ${e.message}`, duration: 5000 });
+        }
       }
       if (user?.username) {
-        await uploadUserData(user.username).catch(e => console.warn("[App] boot user upload:", e));
+        try {
+          await uploadUserData(user.username);
+          syncCount++;
+        } catch (e) {
+          showToast({ type: "warning", message: `사용자 데이터 업로드 실패: ${e.message}`, duration: 5000 });
+        }
+      }
+      if (syncCount > 0) {
+        showToast({ type: "success", message: `클라우드 동기화 완료`, duration: 3000 });
       }
       setBoot(result);
       if (result.migrationResult?.migrated) {
@@ -126,14 +162,26 @@ export default function App() {
     initInProgress.current = true;
     setActiveUser(userId);
     const user = findUserById(userId);
+    let dlCount = 0;
     if (user?.family_context) {
       saveFamilyContext(user.family_context);
-      await downloadFamilyData(user.family_context.family_code).catch(e => console.warn("[App] login family dl:", e));
-      uploadFamilyData(user.family_context.family_code).catch(e => console.warn("[App] login family ul:", e));
+      try {
+        dlCount += await downloadFamilyData(user.family_context.family_code) || 0;
+      } catch (e) { showToast({ type: "warning", message: `가족 데이터 다운로드 실패: ${e.message}`, duration: 5000 }); }
+      uploadFamilyData(user.family_context.family_code).catch(() => {});
+    } else {
+      showToast({ type: "info", message: "서버에 가족 정보가 없습니다. PC에서 먼저 새로고침해 주세요.", duration: 6000 });
     }
     if (user?.username) {
-      await downloadUserData(user.username).catch(e => console.warn("[App] login user dl:", e));
-      uploadUserData(user.username).catch(e => console.warn("[App] login user ul:", e));
+      try {
+        dlCount += await downloadUserData(user.username) || 0;
+      } catch (e) { showToast({ type: "warning", message: `사용자 데이터 다운로드 실패: ${e.message}`, duration: 5000 }); }
+      uploadUserData(user.username).catch(() => {});
+    }
+    if (dlCount > 0) {
+      showToast({ type: "success", message: `클라우드에서 ${dlCount}건 동기화 완료`, duration: 3000 });
+    } else if (user?.family_context) {
+      showToast({ type: "info", message: "클라우드에 데이터가 없습니다. PC에서 앱을 먼저 열어주세요.", duration: 6000 });
     }
     applyPrefs(loadUserPrefs(userId));
     initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
