@@ -87,9 +87,10 @@ async function syncGet(type, key) {
 export async function uploadFamilyData(familyCode) {
   const entries = gatherByPrefix(FAMILY_PREFIXES);
   const count = Object.keys(entries).length;
-  if (count === 0) return;
+  if (count === 0) return 0;
   console.info("[dataSync] uploading family data:", count, "keys for", familyCode);
   await syncPost("fam", familyCode, entries);
+  return count;
 }
 
 export async function downloadFamilyData(familyCode) {
@@ -122,9 +123,10 @@ function rebindDeviceId() {
 export async function uploadUserData(username) {
   const entries = gatherByPrefix(USER_PREFIXES);
   const count = Object.keys(entries).length;
-  if (count === 0) return;
+  if (count === 0) return 0;
   console.info("[dataSync] uploading user data:", count, "keys for", username);
   await syncPost("usr", username, entries);
+  return count;
 }
 
 export async function downloadUserData(username) {

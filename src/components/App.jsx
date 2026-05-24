@@ -94,25 +94,17 @@ export default function App() {
       const ctx = loadFamilyContext();
       const uid = getActiveUser();
       const user = uid ? findUserById(uid) : null;
-      let syncCount = 0;
+      let famCount = 0, usrCount = 0;
       if (ctx?.family_code) {
-        try {
-          await uploadFamilyData(ctx.family_code);
-          syncCount++;
-        } catch (e) {
-          showToast({ type: "warning", message: `동기화 업로드 실패: ${e.message}`, duration: 5000 });
-        }
+        try { famCount = await uploadFamilyData(ctx.family_code) || 0; }
+        catch (e) { showToast({ type: "warning", message: `가족 업로드 실패: ${e.message}`, duration: 5000 }); }
       }
       if (user?.username) {
-        try {
-          await uploadUserData(user.username);
-          syncCount++;
-        } catch (e) {
-          showToast({ type: "warning", message: `사용자 데이터 업로드 실패: ${e.message}`, duration: 5000 });
-        }
+        try { usrCount = await uploadUserData(user.username) || 0; }
+        catch (e) { showToast({ type: "warning", message: `사용자 업로드 실패: ${e.message}`, duration: 5000 }); }
       }
-      if (syncCount > 0) {
-        showToast({ type: "success", message: `클라우드 동기화 완료`, duration: 3000 });
+      if (famCount + usrCount > 0) {
+        showToast({ type: "success", message: `클라우드 동기화: 가족 ${famCount}건 + 개인 ${usrCount}건 업로드`, duration: 4000 });
       }
       setBoot(result);
       if (result.migrationResult?.migrated) {
@@ -162,26 +154,26 @@ export default function App() {
     initInProgress.current = true;
     setActiveUser(userId);
     const user = findUserById(userId);
-    let dlCount = 0;
+    let famDl = 0, usrDl = 0;
     if (user?.family_context) {
       saveFamilyContext(user.family_context);
       try {
-        dlCount += await downloadFamilyData(user.family_context.family_code) || 0;
-      } catch (e) { showToast({ type: "warning", message: `가족 데이터 다운로드 실패: ${e.message}`, duration: 5000 }); }
+        famDl = await downloadFamilyData(user.family_context.family_code) || 0;
+      } catch (e) { showToast({ type: "warning", message: `가족 다운로드 실패: ${e.message}`, duration: 5000 }); }
       uploadFamilyData(user.family_context.family_code).catch(() => {});
     } else {
-      showToast({ type: "info", message: "서버에 가족 정보가 없습니다. PC에서 먼저 새로고침해 주세요.", duration: 6000 });
+      showToast({ type: "info", message: "서버에 가족 정보가 없습니다", duration: 5000 });
     }
     if (user?.username) {
       try {
-        dlCount += await downloadUserData(user.username) || 0;
-      } catch (e) { showToast({ type: "warning", message: `사용자 데이터 다운로드 실패: ${e.message}`, duration: 5000 }); }
+        usrDl = await downloadUserData(user.username) || 0;
+      } catch (e) { showToast({ type: "warning", message: `개인 다운로드 실패: ${e.message}`, duration: 5000 }); }
       uploadUserData(user.username).catch(() => {});
     }
-    if (dlCount > 0) {
-      showToast({ type: "success", message: `클라우드에서 ${dlCount}건 동기화 완료`, duration: 3000 });
+    if (famDl + usrDl > 0) {
+      showToast({ type: "success", message: `동기화 완료: 가족 ${famDl}건 + 개인 ${usrDl}건`, duration: 4000 });
     } else if (user?.family_context) {
-      showToast({ type: "info", message: "클라우드에 데이터가 없습니다. PC에서 앱을 먼저 열어주세요.", duration: 6000 });
+      showToast({ type: "info", message: "클라우드에 데이터 없음. PC에서 앱을 먼저 열어주세요", duration: 5000 });
     }
     applyPrefs(loadUserPrefs(userId));
     initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
