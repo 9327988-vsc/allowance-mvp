@@ -45,18 +45,15 @@ function _clearLockout() {
   try { sessionStorage.removeItem(_LOCKOUT_KEY); } catch { /* ignored */ }
 }
 
-const _ADMIN_ID_HASH = "1w3ifc8";
-const _ADMIN_PW_HASH = "1dyglt4";
 
 /**
  * @param {{
  *   onComplete: (userId: string) => void,
  *   onNewAccount: () => void,
- *   onAdmin?: () => void,
  *   onTutorial?: () => void
  * }} props
  */
-export default function LoginScreen({ onComplete, onNewAccount, onAdmin, onTutorial }) {
+export default function LoginScreen({ onComplete, onNewAccount, onTutorial }) {
   const [view, setView] = useState("login"); // "login" | "forgot" | "reset" | "force_change"
   const [forceChangeUserId, setForceChangeUserId] = useState(null);
   const [forceNewPw, setForceNewPw] = useState("");
@@ -117,10 +114,6 @@ export default function LoginScreen({ onComplete, onNewAccount, onAdmin, onTutor
 
     setLoading(true);
     setFormError("");
-
-    if (_simpleHash(username.trim()) === _ADMIN_ID_HASH && _simpleHash(password) === _ADMIN_PW_HASH) {
-      if (onAdmin) { onAdmin(); return; }
-    }
 
     try {
       const result = await verifyPassword(username.trim(), password);

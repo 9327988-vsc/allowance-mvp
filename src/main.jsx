@@ -34,6 +34,11 @@ if (useMock) {
   });
 }
 
+// 미처리 Promise 에러 감지
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("Unhandled promise rejection:", event.reason);
+});
+
 // 저장된 테마 적용 (FOUC 방지)
 initTheme();
 
