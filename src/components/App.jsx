@@ -391,7 +391,7 @@ export default function App() {
           onConfirm={() => setShowMigrationInfo(null)}
         />
       )}
-      {boot?.familyContext && (
+      {boot && (
         <button
           onClick={handleManualSync}
           disabled={syncing}
