@@ -50,6 +50,7 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(null); // null | "child" | "parent"
   const [showTutorialPicker, setShowTutorialPicker] = useState(false);
   const [showMigrationInfo, setShowMigrationInfo] = useState(null);
+  const [syncing, setSyncing] = useState(false);
   const tutorialPickerRef = useModalBase(() => setShowTutorialPicker(false), { active: showTutorialPicker });
 
   // 9.1 콘솔 디버그용
@@ -199,6 +200,28 @@ export default function App() {
     resetSpendingLimitCache();
     initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
   }, []);
+
+  // 수동 동기화 버튼 핸들러
+  async function handleManualSync() {
+    if (syncing) return;
+    setSyncing(true);
+    const ctx = loadFamilyContext();
+    const uid = getActiveUser();
+    const user = uid ? findUserById(uid) : null;
+    if (!ctx?.family_code) {
+      showToast({ type: "warning", message: "가족 코드가 없어서 동기화할 수 없습니다", duration: 4000 });
+      setSyncing(false);
+      return;
+    }
+    try {
+      await uploadFamilyData(ctx.family_code);
+      if (user?.username) await uploadUserData(user.username);
+      showToast({ type: "success", message: "클라우드 동기화 완료!", duration: 3000 });
+    } catch (e) {
+      showToast({ type: "warning", message: `동기화 실패: ${e.message}`, duration: 5000 });
+    }
+    setSyncing(false);
+  }
 
   // BTN-A-001: 일반 모드로 돌아가기
   function handleBackToNormal() {
@@ -367,6 +390,23 @@ export default function App() {
           accounts={showMigrationInfo}
           onConfirm={() => setShowMigrationInfo(null)}
         />
+      )}
+      {boot?.familyContext && (
+        <button
+          onClick={handleManualSync}
+          disabled={syncing}
+          aria-label="클라우드 동기화"
+          style={{
+            position: "fixed", bottom: 80, right: 16, zIndex: 900,
+            width: 48, height: 48, borderRadius: "50%",
+            background: syncing ? "var(--color-text-muted)" : "var(--color-primary)",
+            color: "#fff", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 22, cursor: syncing ? "wait" : "pointer",
+          }}
+        >
+          {syncing ? "..." : "☁"}
+        </button>
       )}
       <ToastContainer />
     </Suspense>
