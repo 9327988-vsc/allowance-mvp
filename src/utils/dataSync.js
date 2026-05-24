@@ -88,7 +88,7 @@ export async function uploadFamilyData(familyCode) {
   const entries = gatherByPrefix(FAMILY_PREFIXES);
   const count = Object.keys(entries).length;
   if (count === 0) return 0;
-  console.info("[dataSync] uploading family data:", count, "keys for", familyCode);
+  console.info("[dataSync] uploading family data:", count, "keys for", familyCode, Object.keys(entries));
   await syncPost("fam", familyCode, entries);
   return count;
 }
@@ -96,7 +96,7 @@ export async function uploadFamilyData(familyCode) {
 export async function downloadFamilyData(familyCode) {
   const entries = await syncGet("fam", familyCode);
   const count = restoreEntries(entries);
-  console.info("[dataSync] downloaded family data:", count, "keys for", familyCode);
+  console.info("[dataSync] downloaded family data:", count, "keys for", familyCode, entries ? Object.keys(entries) : []);
   if (count > 0) rebindDeviceId();
   return count;
 }
@@ -126,16 +126,27 @@ function rebindDeviceId() {
 
 export async function uploadUserData(username) {
   const entries = gatherByPrefix(USER_PREFIXES);
-  const count = Object.keys(entries).length;
+  const keys = Object.keys(entries);
+  const count = keys.length;
   if (count === 0) return 0;
-  console.info("[dataSync] uploading user data:", count, "keys for", username);
+  const calCount = keys.filter(k => k.startsWith("calendar_v1_") && !k.includes("_corrupted_")).length;
+  console.info("[dataSync] uploading user data:", count, "keys (cal:", calCount, ") for", username, keys);
   await syncPost("usr", username, entries);
-  return count;
+  return { total: count, calendar: calCount };
 }
 
 export async function downloadUserData(username) {
   const entries = await syncGet("usr", username);
   const count = restoreEntries(entries);
-  console.info("[dataSync] downloaded user data:", count, "keys for", username);
+  const keys = entries ? Object.keys(entries) : [];
+  const calCount = keys.filter(k => k.startsWith("calendar_v1_") && !k.includes("_corrupted_")).length;
+  console.info("[dataSync] downloaded user data:", count, "keys (cal:", calCount, ") for", username, keys);
+  return { total: count, calendar: calCount };
+}
+
+export async function downloadUserData(username) {
+  const entries = await syncGet("usr", username);
+  const count = restoreEntries(entries);
+  console.info("[dataSync] downloaded user data:", count, "keys for", username, entries ? Object.keys(entries) : []);
   return count;
 }
