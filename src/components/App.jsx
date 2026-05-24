@@ -73,10 +73,10 @@ export default function App() {
       const uid = getActiveUser();
       const user = uid ? findUserById(uid) : null;
       if (ctx?.family_code) {
-        uploadFamilyData(ctx.family_code).catch(() => {});
+        await uploadFamilyData(ctx.family_code).catch(e => console.warn("[App] boot family upload:", e));
       }
       if (user?.username) {
-        uploadUserData(user.username).catch(() => {});
+        await uploadUserData(user.username).catch(e => console.warn("[App] boot user upload:", e));
       }
       setBoot(result);
       if (result.migrationResult?.migrated) {
@@ -109,10 +109,10 @@ export default function App() {
       if (!ctx?.family_code) return;
       const user = findUserById(getActiveUser());
       if (document.visibilityState === "hidden") {
-        uploadFamilyData(ctx.family_code).catch(() => {});
-        if (user?.username) uploadUserData(user.username).catch(() => {});
+        uploadFamilyData(ctx.family_code).catch(e => console.warn("[App] vis upload:", e));
+        if (user?.username) uploadUserData(user.username).catch(e => console.warn("[App] vis user upload:", e));
       } else if (document.visibilityState === "visible") {
-        downloadFamilyData(ctx.family_code).catch(() => {});
+        downloadFamilyData(ctx.family_code).catch(e => console.warn("[App] vis download:", e));
       }
     }
     document.addEventListener("visibilitychange", handleVisibility);
@@ -127,12 +127,12 @@ export default function App() {
     const user = findUserById(userId);
     if (user?.family_context) {
       saveFamilyContext(user.family_context);
-      await downloadFamilyData(user.family_context.family_code).catch(() => {});
-      uploadFamilyData(user.family_context.family_code).catch(() => {});
+      await downloadFamilyData(user.family_context.family_code).catch(e => console.warn("[App] login family dl:", e));
+      uploadFamilyData(user.family_context.family_code).catch(e => console.warn("[App] login family ul:", e));
     }
     if (user?.username) {
-      await downloadUserData(user.username).catch(() => {});
-      uploadUserData(user.username).catch(() => {});
+      await downloadUserData(user.username).catch(e => console.warn("[App] login user dl:", e));
+      uploadUserData(user.username).catch(e => console.warn("[App] login user ul:", e));
     }
     applyPrefs(loadUserPrefs(userId));
     initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
@@ -175,7 +175,7 @@ export default function App() {
     const activeId = getActiveUser();
     if (ctx && activeId) {
       updateUserFamilyContext(activeId, ctx);
-      uploadFamilyData(ctx.family_code).catch(() => {});
+      uploadFamilyData(ctx.family_code).catch(e => console.warn("[App] onboard upload:", e));
     }
     const role = ctx?.member_role;
     if (role === "parent" || role === "child") {
