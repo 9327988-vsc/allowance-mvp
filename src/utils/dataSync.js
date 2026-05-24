@@ -1,3 +1,6 @@
+import { getDeviceId } from "./deviceId";
+import { loadFamilyContext } from "./familyContext";
+
 const BASE = import.meta.env.VITE_API_URL || "";
 const FAMILY_PREFIXES = [
   "mock_kv:", "chores_v1_f_", "chore_log_v1_f_",
@@ -97,7 +100,27 @@ export async function downloadFamilyData(familyCode) {
   const entries = await syncGet("fam", familyCode);
   const count = restoreEntries(entries);
   console.info("[dataSync] downloaded family data:", count, "keys for", familyCode);
+  if (count > 0) rebindDeviceId();
   return count;
+}
+
+function rebindDeviceId() {
+  const ctx = loadFamilyContext();
+  if (!ctx?.family_id || !ctx?.member_id) return;
+  const memberKey = `mock_kv:families/${ctx.family_id}/members/${ctx.member_id}`;
+  try {
+    const raw = localStorage.getItem(memberKey);
+    if (!raw) return;
+    const member = JSON.parse(raw);
+    const currentDeviceId = getDeviceId();
+    if (member.device_id !== currentDeviceId) {
+      member.device_id = currentDeviceId;
+      localStorage.setItem(memberKey, JSON.stringify(member));
+      console.info("[dataSync] rebound device_id for member", ctx.member_id);
+    }
+  } catch (e) {
+    console.warn("[dataSync] rebindDeviceId failed:", e);
+  }
 }
 
 export async function uploadUserData(username) {
