@@ -193,10 +193,11 @@ export default function App() {
     let famDl = 0, usrDlResult = null;
     if (user?.family_context) {
       saveFamilyContext(user.family_context);
+      try { await uploadFamilyData(user.family_context.family_code); } catch {}
+      if (user.username) { try { await uploadUserData(user.username); } catch {} }
       try {
         famDl = await downloadFamilyData(user.family_context.family_code) || 0;
       } catch (e) { showToast({ type: "warning", message: `가족 다운로드 실패: ${e.message}`, duration: 5000 }); }
-      uploadFamilyData(user.family_context.family_code).catch(() => {});
     } else {
       showToast({ type: "info", message: "서버에 가족 정보가 없습니다", duration: 5000 });
     }
@@ -204,7 +205,6 @@ export default function App() {
       try {
         usrDlResult = await downloadUserData(user.username) || null;
       } catch (e) { showToast({ type: "warning", message: `개인 다운로드 실패: ${e.message}`, duration: 5000 }); }
-      uploadUserData(user.username).catch(() => {});
     }
     const usrDl = usrDlResult?.total || 0;
     const calDl = usrDlResult?.calendar || 0;
@@ -217,10 +217,16 @@ export default function App() {
     initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
   }, []);
 
-  // 로그아웃 콜백
-  const handleLogout = useCallback(() => {
+  // 로그아웃 콜백 (전환 전 업로드 → 컨텍스트 정리)
+  const handleLogout = useCallback(async () => {
     if (initInProgress.current) return;
     initInProgress.current = true;
+    const ctx = loadFamilyContext();
+    const user = findUserById(getActiveUser());
+    if (ctx?.family_code) {
+      try { await uploadFamilyData(ctx.family_code); } catch {}
+      if (user?.username) { try { await uploadUserData(user.username); } catch {} }
+    }
     clearActiveUser();
     clearFamilyContext();
     clearPrefsOverrides();

@@ -15,6 +15,8 @@ const USER_PREFIXES = [
 ];
 
 const MERGE_KEYS = new Set(["user_accounts_v1"]);
+const LIST_MERGE_SUFFIX = "/claims/list";
+const MEMBER_LIST_SUFFIX = "/members/list";
 
 function gatherByPrefix(prefixes) {
   const entries = {};
@@ -47,6 +49,24 @@ function mergeAccountEntries(key, remoteValue) {
   }
 }
 
+function mergeArrayList(key, remoteValue) {
+  try {
+    const remote = JSON.parse(remoteValue);
+    if (!Array.isArray(remote)) { localStorage.setItem(key, remoteValue); return; }
+    const localStr = localStorage.getItem(key);
+    const local = localStr ? JSON.parse(localStr) : [];
+    if (!Array.isArray(local)) { localStorage.setItem(key, remoteValue); return; }
+    const merged = [...new Set([...local, ...remote])];
+    localStorage.setItem(key, JSON.stringify(merged));
+  } catch {
+    localStorage.setItem(key, remoteValue);
+  }
+}
+
+function isListKey(k) {
+  return k.endsWith(LIST_MERGE_SUFFIX) || k.endsWith(MEMBER_LIST_SUFFIX);
+}
+
 function restoreEntries(entries) {
   if (!entries) return 0;
   let count = 0;
@@ -55,6 +75,8 @@ function restoreEntries(entries) {
     try {
       if (MERGE_KEYS.has(k)) {
         mergeAccountEntries(k, v);
+      } else if (isListKey(k)) {
+        mergeArrayList(k, v);
       } else {
         localStorage.setItem(k, v);
       }

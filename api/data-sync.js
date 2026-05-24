@@ -19,8 +19,16 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "type, key, entries required" });
       }
       const redisKey = `sync:${type}:${key}`;
-      await redis(url, token, ["SET", redisKey, JSON.stringify(entries), "EX", 7776000]);
-      return res.status(200).json({ success: true, count: Object.keys(entries).length });
+      const existing = await redis(url, token, ["GET", redisKey]);
+      let merged = entries;
+      if (existing.result) {
+        try {
+          const old = JSON.parse(existing.result);
+          merged = { ...old, ...entries };
+        } catch { /* use entries as-is */ }
+      }
+      await redis(url, token, ["SET", redisKey, JSON.stringify(merged), "EX", 7776000]);
+      return res.status(200).json({ success: true, count: Object.keys(merged).length });
     }
 
     if (req.method === "GET") {
