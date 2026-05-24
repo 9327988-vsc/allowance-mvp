@@ -1,5 +1,6 @@
 import { getDeviceId } from "./deviceId";
 import { loadFamilyContext } from "./familyContext";
+import { getActiveUser } from "./authStore";
 
 const BASE = import.meta.env.VITE_API_URL || "";
 const FAMILY_PREFIXES = [
@@ -135,9 +136,45 @@ export async function uploadUserData(username) {
   return { total: count, calendar: calCount };
 }
 
+const USER_SCOPED_PREFIXES = ["settings_v1_u_", "badges_earned_v1_u_", "notifications_v1_u_"];
+
+function remapUserScopedKeys(entries) {
+  const currentUserId = getActiveUser();
+  if (!currentUserId || !entries) return;
+  for (const key of Object.keys(entries)) {
+    for (const prefix of USER_SCOPED_PREFIXES) {
+      if (!key.startsWith(prefix)) continue;
+      const oldUserId = key.slice(prefix.length);
+      if (oldUserId === currentUserId) break;
+      const newKey = prefix + currentUserId;
+      if (!localStorage.getItem(newKey)) {
+        localStorage.setItem(newKey, entries[key]);
+        console.info("[dataSync] remapped", key, "→", newKey);
+      }
+      break;
+    }
+  }
+  remapUserPrefs(entries, currentUserId);
+}
+
+function remapUserPrefs(entries, currentUserId) {
+  const raw = entries["user_prefs_v1"];
+  if (!raw) return;
+  try {
+    const prefs = JSON.parse(raw);
+    if (prefs[currentUserId]) return;
+    const otherIds = Object.keys(prefs).filter(id => id !== currentUserId);
+    if (otherIds.length === 0) return;
+    prefs[currentUserId] = prefs[otherIds[0]];
+    localStorage.setItem("user_prefs_v1", JSON.stringify(prefs));
+    console.info("[dataSync] remapped user_prefs_v1 from", otherIds[0], "→", currentUserId);
+  } catch {}
+}
+
 export async function downloadUserData(username) {
   const entries = await syncGet("usr", username);
   const count = restoreEntries(entries);
+  remapUserScopedKeys(entries);
   const keys = entries ? Object.keys(entries) : [];
   const calCount = keys.filter(k => k.startsWith("calendar_v1_") && !k.includes("_corrupted_")).length;
   console.info("[dataSync] downloaded user data:", count, "keys (cal:", calCount, ") for", username, keys);
