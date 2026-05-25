@@ -74,6 +74,39 @@ function generateSalt() {
   return Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function generateRandomPassword() {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghjkmnpqrstuvwxyz';
+  const digits = '23456789';
+  const special = '!@#$';
+  const arr = new Uint8Array(10);
+  crypto.getRandomValues(arr);
+  const chars = [
+    upper[arr[0] % upper.length],
+    lower[arr[1] % lower.length],
+    lower[arr[2] % lower.length],
+    digits[arr[3] % digits.length],
+    special[arr[4] % special.length],
+    lower[arr[5] % lower.length],
+    upper[arr[6] % upper.length],
+    digits[arr[7] % digits.length],
+  ];
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = arr[i + 2] % (i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+}
+
+function generateRandomAnswer() {
+  const pool = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const arr = new Uint8Array(8);
+  crypto.getRandomValues(arr);
+  let answer = '';
+  for (let i = 0; i < 8; i++) answer += pool[arr[i] % pool.length];
+  return answer;
+}
+
 // ── 아이디/비밀번호 유효성 검사 ──
 
 /** 아이디 검증: 영문 시작, 영문+숫자, 3~20자 */
@@ -181,7 +214,7 @@ export async function createUser({ displayName, role, username, password, securi
     username, password, display_name: displayName, role,
     security_question: securityQuestion, security_answer: securityAnswer,
     family_context: familyContext || null,
-  }).catch(() => {});
+  }).catch(e => console.warn("[authStore] serverRegister:", e.message));
 
   return account;
 }
@@ -210,7 +243,7 @@ export async function verifyPassword(username, password) {
         username, password, display_name: user.display_name, role: user.role,
         security_question: user.security_question, security_answer: null,
         family_context: user.family_context || null,
-      }).catch(() => {});
+      }).catch(e => console.warn("[authStore] serverRegister on login:", e.message));
       return { success: true, userId: user.user_id };
     }
     return { success: false, error: "비밀번호가 일치하지 않습니다" };
@@ -313,7 +346,7 @@ export function updateUserFamilyContext(userId, familyContext) {
   accounts[idx].family_context = familyContext;
   saveUserAccounts(accounts);
   if (accounts[idx].username) {
-    serverUpdateProfile(accounts[idx].username, { family_context: familyContext }).catch(() => {});
+    serverUpdateProfile(accounts[idx].username, { family_context: familyContext }).catch(e => console.warn("[authStore] serverUpdateProfile:", e.message));
   }
 }
 
@@ -412,17 +445,14 @@ export async function migrateToPasswordAuth() {
     if (acct.username && acct.password_hash) continue;
 
     let defaultUsername;
-    let defaultPassword;
     if (acct.role === "child") {
       defaultUsername = "child01";
-      defaultPassword = "Child1234!";
     } else if (acct.role === "parent") {
       defaultUsername = "parent01";
-      defaultPassword = "Parent1234!";
     } else {
       defaultUsername = "user01";
-      defaultPassword = "User12345!";
     }
+    const defaultPassword = generateRandomPassword();
 
     let suffix = 1;
     let candidate = defaultUsername;
@@ -439,7 +469,7 @@ export async function migrateToPasswordAuth() {
 
     const questionSalt = generateSalt();
     accounts[i].security_question = SECURITY_QUESTIONS[0];
-    accounts[i].security_answer_hash = await hashPassword("서울", questionSalt);
+    accounts[i].security_answer_hash = await hashPassword(generateRandomAnswer(), questionSalt);
     accounts[i].security_answer_salt = questionSalt;
 
     changed = true;

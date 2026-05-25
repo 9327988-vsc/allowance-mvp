@@ -120,7 +120,10 @@ export async function downloadFamilyData(familyCode) {
   const entries = await syncGet("fam", familyCode);
   const count = restoreEntries(entries);
   console.info("[dataSync] downloaded family data:", count, "keys for", familyCode, entries ? Object.keys(entries) : []);
-  if (count > 0) rebindDeviceId();
+  if (count > 0) {
+    rebindDeviceId();
+    window.dispatchEvent(new CustomEvent("sync-downloaded"));
+  }
   return count;
 }
 
@@ -200,5 +203,6 @@ export async function downloadUserData(username) {
   const keys = entries ? Object.keys(entries) : [];
   const calCount = keys.filter(k => k.startsWith("calendar_v1_") && !k.includes("_corrupted_")).length;
   console.info("[dataSync] downloaded user data:", count, "keys (cal:", calCount, ") for", username, keys);
+  if (count > 0) window.dispatchEvent(new CustomEvent("sync-downloaded"));
   return { total: count, calendar: calCount };
 }

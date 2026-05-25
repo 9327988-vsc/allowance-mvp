@@ -114,7 +114,7 @@ export default function App() {
           catch (e) { showToast({ type: "warning", message: `사용자 업로드 실패: ${e.message}`, duration: 5000 }); }
         }
         if (ctx && user?.username) {
-          serverUpdateProfile(user.username, { family_context: ctx }).catch(() => {});
+          serverUpdateProfile(user.username, { family_context: ctx }).catch(e => console.warn("[App] serverUpdateProfile:", e.message));
         }
         const usrDl = usrDlResult?.total || 0;
         const calDl = usrDlResult?.calendar || 0;
@@ -280,7 +280,7 @@ export default function App() {
     import("../utils/accountSwitcher").then(({ saveCurrentAccount }) => {
       saveCurrentAccount();
       initApp().then(result => { if (mountedRef.current) setBoot(result); });
-    }).catch(() => {});
+    }).catch(e => console.warn("[App] accountSwitcher:", e.message));
   }
 
   // 3. 부팅 중 표시

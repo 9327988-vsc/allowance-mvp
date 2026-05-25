@@ -76,8 +76,13 @@ export function useCalendar(settings) {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    const handler = () => setRevision(r => r + 1);
+    window.addEventListener("sync-downloaded", handler);
+    return () => window.removeEventListener("sync-downloaded", handler);
+  }, []);
+
   const calendar = useMemo(() => {
-    // revision을 의존성에 포함하여 저장 후 재로드
     void revision;
     return loadCalendarMonth(viewYear, viewMonth);
   }, [viewYear, viewMonth, revision]);
@@ -154,6 +159,7 @@ export function useCalendar(settings) {
     const result = saveCalendarMonth(cal);
     if (result.success) {
       setRevision(r => r + 1);
+      window.dispatchEvent(new CustomEvent("mock-data-mutated"));
       showToast({ type: "success", message: "✅ 저장되었습니다" });
     } else if (result.error === "QUOTA_EXCEEDED") {
       // S-108 트리거: pendingSave 정보 반환

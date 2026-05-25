@@ -69,6 +69,12 @@ export function useGeneralCalendar() {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    const handler = () => setRevision(r => r + 1);
+    window.addEventListener("sync-downloaded", handler);
+    return () => window.removeEventListener("sync-downloaded", handler);
+  }, []);
+
   const calendar = useMemo(() => {
     void revision;
     return loadCalendarMonth(viewYear, viewMonth);
@@ -136,6 +142,7 @@ export function useGeneralCalendar() {
     const result = saveCalendarMonth(cal);
     if (result.success) {
       setRevision(r => r + 1);
+      window.dispatchEvent(new CustomEvent("mock-data-mutated"));
       showToast({ type: "success", message: "저장되었습니다" });
     } else if (result.error === "QUOTA_EXCEEDED") {
       result.pendingSave = { fn: saveCalendarMonth, args: [cal] };

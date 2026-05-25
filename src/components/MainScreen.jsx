@@ -276,14 +276,6 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
     }
     if (isEmpty) return;
 
-    // 로컬 캐시에서 중복 확인
-    // Note: Local cache check only. Server also validates duplicates.
-    const existing = getSubmittedClaimForMonth(viewYear, viewMonth);
-    if (existing && (existing.status === "pending" || existing.status === "approved")) {
-      showToast({ type: "info", message: `${viewMonth}월 청구가 이미 검토 대기 중입니다` });
-      return;
-    }
-
     try {
       const snapshot = createClaimSnapshot(viewYear, viewMonth);
       setSubmitSnapshot(snapshot);

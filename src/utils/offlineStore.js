@@ -154,7 +154,7 @@ export async function replayQueue(fetchFn) {
       await removeFromQueue(item.id);
       success++;
     } catch (err) {
-      if (err.code === "CONFLICT" || err.code === "DUPLICATE_CLAIM" || err.code === "DUPLICATE_EXTRA_CLAIM") {
+      if (err.code === "CONFLICT" || err.code === "DUPLICATE_CLAIM" || err.code === "DUPLICATE_EXTRA_CLAIM" || err.code === "DUPLICATE_CLAIM_ID") {
         await removeFromQueue(item.id);
         failed++;
       } else {
