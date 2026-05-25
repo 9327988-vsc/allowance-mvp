@@ -9,6 +9,7 @@ const FAMILY_PREFIXES = [
   "user_accounts_v1", "saved_family_accounts_v1",
 ];
 const USER_PREFIXES = [
+  "family_context_v1", "active_user_v1",
   "calendar_v1_", "settings_v1", "settings_v1_u_", "custom_categories_v1",
   "submitted_claims_v1", "user_prefs_v1", "badges_earned_v1_u_",
   "badges_earned_v1", "notifications_v1_u_",
