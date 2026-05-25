@@ -58,29 +58,49 @@ export default function App() {
     if (import.meta.env.DEV) {
       window.openAdmin = () => setAdminMode(true);
     }
-    // 수동 동기화 + 디버그용 (운영 환경 포함)
     window.forceSync = async () => {
       const ctx = loadFamilyContext();
       const uid = getActiveUser();
       const user = uid ? findUserById(uid) : null;
-      console.info("[forceSync] family_context:", ctx);
-      console.info("[forceSync] user:", user?.username, "uid:", uid);
-      if (!ctx?.family_code) { console.warn("[forceSync] 가족 코드 없음"); return; }
+      console.info("[forceSync] family_code:", ctx?.family_code, "username:", user?.username, "uid:", uid);
+      if (!ctx?.family_code) { showToast({ type: "error", message: "동기화 불가: 가족 코드 없음", duration: 5000 }); return; }
       try {
-        await uploadFamilyData(ctx.family_code);
-        console.info("[forceSync] 가족 데이터 업로드 완료");
-        showToast({ type: "success", message: "가족 데이터 업로드 완료", duration: 3000 });
-      } catch (e) { console.error("[forceSync] 가족 업로드 실패:", e); }
-      if (user?.username) {
-        try {
-          await uploadUserData(user.username);
-          console.info("[forceSync] 사용자 데이터 업로드 완료");
-          showToast({ type: "success", message: "사용자 데이터 업로드 완료", duration: 3000 });
-        } catch (e) { console.error("[forceSync] 사용자 업로드 실패:", e); }
+        const up = await uploadFamilyData(ctx.family_code);
+        let usrUp = 0;
+        if (user?.username) usrUp = (await uploadUserData(user.username))?.total || 0;
+        const dl = await downloadFamilyData(ctx.family_code);
+        let usrDl = 0;
+        if (user?.username) usrDl = (await downloadUserData(user.username))?.total || 0;
+        showToast({ type: "success", message: `동기화 완료: ↑${up + usrUp} ↓${dl + usrDl}건`, duration: 5000 });
+      } catch (e) { showToast({ type: "error", message: `동기화 실패: ${e.message}`, duration: 5000 }); }
+    };
+    window.syncDiag = () => {
+      const ctx = loadFamilyContext();
+      const uid = getActiveUser();
+      const user = uid ? findUserById(uid) : null;
+      const famKeys = [];
+      const usrKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k?.startsWith("mock_kv:")) famKeys.push(k);
+        if (k?.startsWith("calendar_v1_")) usrKeys.push(k);
       }
+      const diag = {
+        family_code: ctx?.family_code || "❌ 없음",
+        family_id: ctx?.family_id || "❌ 없음",
+        member_role: ctx?.member_role || "❌ 없음",
+        username: user?.username || "❌ 없음",
+        user_id: uid || "❌ 없음",
+        mock_kv_keys: famKeys.length,
+        calendar_keys: usrKeys.length,
+        calendar_list: usrKeys,
+      };
+      console.table(diag);
+      alert(JSON.stringify(diag, null, 2));
+      return diag;
     };
     console.info("[App] v9.3-autosync loaded");
-    return () => { delete window.openAdmin; delete window.forceSync; };
+    return () => { delete window.openAdmin; delete window.forceSync; delete window.syncDiag; };
   }, []);
 
   // 1. 부팅 처리 (다운로드 → initApp → 업로드)
@@ -95,12 +115,15 @@ export default function App() {
         const ctx = loadFamilyContext();
         const uid = getActiveUser();
         const user = uid ? findUserById(uid) : null;
+        console.info("[App] boot sync 조건:", { family_code: ctx?.family_code, username: user?.username, uid });
         let famDl = 0, usrDlResult = null;
         if (ctx?.family_code) {
           try { famDl = await downloadFamilyData(ctx.family_code) || 0; }
           catch (e) { console.warn("[App] boot family dl:", e); }
           try { if (user?.username) usrDlResult = await downloadUserData(user.username) || null; }
           catch (e) { console.warn("[App] boot user dl:", e); }
+        } else if (uid) {
+          console.warn("[App] boot: 로그인됨 but 가족 코드 없음 → 동기화 스킵");
         }
         const result = await initApp();
         if (!mountedRef.current) return;
