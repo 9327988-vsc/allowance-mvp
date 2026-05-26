@@ -11,5 +11,5 @@ id = "86de71f6641049ada0ada9eb558e2609"
 # --- 환경변수 ---
 [vars]
 ENVIRONMENT = "production"
-ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,https://9327988-vsc.github.io"
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,https://9327988-vsc.github.io,https://allowance-mvp-git-master-9327988-9945s-projects.vercel.app,https://allowance-mvp.vercel.app"
 PBKDF2_ITERATIONS = "100000"
