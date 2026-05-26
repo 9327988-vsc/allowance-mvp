@@ -212,20 +212,42 @@ export default function App() {
     initInProgress.current = true;
     setActiveUser(userId);
     const user = findUserById(userId);
-    let famDl = 0, usrDlResult = null;
-    // 1단계: 개인 데이터 다운로드 (family_context_v1 포함)
-    if (user?.username) {
-      try {
-        usrDlResult = await downloadUserData(user.username) || null;
-      } catch (e) { console.warn("[App] auth user dl:", e.message); }
+    const knownCtx = loadFamilyContext() || user?.family_context;
+
+    if (knownCtx?.family_code) {
+      if (!loadFamilyContext()) saveFamilyContext(knownCtx);
+      applyPrefs(loadUserPrefs(userId));
+      const result = await initApp();
+      if (mountedRef.current) setBoot(result);
+      initInProgress.current = false;
+
+      Promise.all([
+        user?.username ? downloadUserData(user.username).catch(e => { console.warn("[App] auth user dl:", e.message); return null; }) : null,
+        downloadFamilyData(knownCtx.family_code).catch(e => { console.warn("[App] auth family dl:", e.message); return 0; }),
+      ]).then(([usrDlResult, famDl]) => {
+        const usrDl = usrDlResult?.total || 0;
+        const total = (famDl || 0) + usrDl;
+        if (total > 0) {
+          showToast({ type: "success", message: `동기화 완료: ${total}건 수신`, duration: 5000 });
+          initApp().then(r => { if (mountedRef.current) setBoot(r); });
+        }
+        uploadFamilyData(knownCtx.family_code).catch(() => {});
+        if (user?.username) uploadUserData(user.username).catch(() => {});
+      });
+      return;
     }
-    // 2단계: 다운로드된 family_context로 가족 데이터 동기화
+
+    let usrDlResult = null;
+    if (user?.username) {
+      try { usrDlResult = await downloadUserData(user.username) || null; }
+      catch (e) { console.warn("[App] auth user dl:", e.message); }
+    }
     const ctx = loadFamilyContext() || user?.family_context;
+    let famDl = 0;
     if (ctx?.family_code) {
       if (!loadFamilyContext()) saveFamilyContext(ctx);
-      try {
-        famDl = await downloadFamilyData(ctx.family_code) || 0;
-      } catch (e) { console.warn("[App] auth family dl:", e.message); }
+      try { famDl = await downloadFamilyData(ctx.family_code) || 0; }
+      catch (e) { console.warn("[App] auth family dl:", e.message); }
     }
     const usrDl = usrDlResult?.total || 0;
     if (famDl + usrDl > 0) {
@@ -236,7 +258,6 @@ export default function App() {
     applyPrefs(loadUserPrefs(userId));
     initApp().then(result => {
       if (mountedRef.current) setBoot(result);
-      // 백그라운드 업로드
       if (ctx?.family_code) {
         uploadFamilyData(ctx.family_code).catch(() => {});
         if (user?.username) uploadUserData(user.username).catch(() => {});
