@@ -115,38 +115,41 @@ export default function App() {
         const uid = getActiveUser();
         const user = uid ? findUserById(uid) : null;
         let famDl = 0, usrDlResult = null;
-        // 1단계: 개인 데이터 먼저 다운로드 (family_context 복원 포함)
-        if (user?.username) {
-          try { usrDlResult = await downloadUserData(user.username) || null; }
-          catch (e) { console.warn("[App] boot user dl:", e); }
-        }
-        // 2단계: 다운로드로 family_context가 복원됐을 수 있음 → 재로드
-        if (!ctx?.family_code) ctx = loadFamilyContext();
-        // 3단계: 가족 데이터 다운로드
-        if (ctx?.family_code) {
-          try { famDl = await downloadFamilyData(ctx.family_code) || 0; }
-          catch (e) { console.warn("[App] boot family dl:", e); }
+        // 다운로드: family_code가 이미 있으면 병렬, 없으면 순차
+        if (user?.username && ctx?.family_code) {
+          [usrDlResult, famDl] = await Promise.all([
+            downloadUserData(user.username).catch(e => { console.warn("[App] boot user dl:", e); return null; }),
+            downloadFamilyData(ctx.family_code).catch(e => { console.warn("[App] boot family dl:", e); return 0; }),
+          ]);
+          famDl = famDl || 0;
+        } else {
+          if (user?.username) {
+            try { usrDlResult = await downloadUserData(user.username) || null; }
+            catch (e) { console.warn("[App] boot user dl:", e); }
+          }
+          if (!ctx?.family_code) ctx = loadFamilyContext();
+          if (ctx?.family_code) {
+            try { famDl = await downloadFamilyData(ctx.family_code) || 0; }
+            catch (e) { console.warn("[App] boot family dl:", e); }
+          }
         }
         const result = await initApp();
         if (!mountedRef.current) return;
-        // 4단계: 업로드
-        if (ctx?.family_code) {
-          try { await uploadFamilyData(ctx.family_code); } catch {}
-        }
-        if (user?.username) {
-          try { await uploadUserData(user.username); } catch {}
-        }
-        if (ctx && user?.username) {
-          serverUpdateProfile(user.username, { family_context: ctx }).catch(e => console.warn("[App] serverUpdateProfile:", e.message));
-        }
+        // UI 즉시 표시
         const usrDl = usrDlResult?.total || 0;
-        const calDl = usrDlResult?.calendar || 0;
         if (famDl + usrDl > 0) {
           showToast({ type: "success", message: `동기화 완료: ${famDl + usrDl}건 수신`, duration: 5000 });
         }
         setBoot(result);
         if (result.migrationResult?.migrated) {
           setShowMigrationInfo(result.migrationResult.accounts);
+        }
+        // 백그라운드 업로드 (UI 차단 없음)
+        if (!ctx?.family_code) ctx = loadFamilyContext();
+        if (ctx?.family_code) uploadFamilyData(ctx.family_code).catch(() => {});
+        if (user?.username) uploadUserData(user.username).catch(() => {});
+        if (ctx && user?.username) {
+          serverUpdateProfile(user.username, { family_context: ctx }).catch(e => console.warn("[App] serverUpdateProfile:", e.message));
         }
       } finally { initInProgress.current = false; }
     })();
@@ -223,19 +226,22 @@ export default function App() {
       try {
         famDl = await downloadFamilyData(ctx.family_code) || 0;
       } catch (e) { console.warn("[App] auth family dl:", e.message); }
-      // 3단계: 로컬 데이터 업로드 (다운로드된 데이터와 머지됨)
-      try { await uploadFamilyData(ctx.family_code); } catch {}
-      if (user?.username) { try { await uploadUserData(user.username); } catch {} }
     }
     const usrDl = usrDlResult?.total || 0;
-    const calDl = usrDlResult?.calendar || 0;
     if (famDl + usrDl > 0) {
       showToast({ type: "success", message: `동기화 완료: ${famDl + usrDl}건 수신`, duration: 5000 });
     } else if (!ctx?.family_code) {
       showToast({ type: "info", message: "가족 연결 후 동기화됩니다", duration: 5000 });
     }
     applyPrefs(loadUserPrefs(userId));
-    initApp().then(result => { if (mountedRef.current) setBoot(result); }).finally(() => { initInProgress.current = false; });
+    initApp().then(result => {
+      if (mountedRef.current) setBoot(result);
+      // 백그라운드 업로드
+      if (ctx?.family_code) {
+        uploadFamilyData(ctx.family_code).catch(() => {});
+        if (user?.username) uploadUserData(user.username).catch(() => {});
+      }
+    }).finally(() => { initInProgress.current = false; });
   }, []);
 
   // 로그아웃 콜백 (전환 전 업로드 → 컨텍스트 정리)

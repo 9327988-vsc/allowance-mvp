@@ -52,6 +52,22 @@ export async function handleDataSyncUpload(request, env) {
 
   const existing = (await kvGetJson(kv, kvKey)) || {};
   const merged = { ...existing, ...entries };
+
+  // user_accounts_v1: 배열 머지 (user_id 기준, 계정 유실 방지)
+  if (entries["user_accounts_v1"] && existing["user_accounts_v1"]) {
+    try {
+      const oldArr = JSON.parse(existing["user_accounts_v1"]);
+      const newArr = JSON.parse(entries["user_accounts_v1"]);
+      if (Array.isArray(oldArr) && Array.isArray(newArr)) {
+        const ids = new Set(newArr.map(u => u.user_id));
+        for (const u of oldArr) {
+          if (u.user_id && !ids.has(u.user_id)) newArr.push(u);
+        }
+        merged["user_accounts_v1"] = JSON.stringify(newArr);
+      }
+    } catch { /* 파싱 실패 시 새 값 유지 */ }
+  }
+
   await kvPutJson(kv, kvKey, merged);
 
   return jsonResponse({ ok: true, count: entryKeys.length });

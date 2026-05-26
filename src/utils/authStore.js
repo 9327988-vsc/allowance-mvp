@@ -269,9 +269,9 @@ export async function verifyPassword(username, password) {
     if (existing) return { success: true, userId: existing.user_id };
   }
   if (serverResult.error === "NETWORK_ERROR") {
-    return { success: false, error: "존재하지 않는 아이디입니다" };
+    return { success: false, error: "서버에 연결할 수 없습니다. 이 기기에 저장된 계정만 로그인할 수 있어요." };
   }
-  return { success: false, error: serverResult.error || "존재하지 않는 아이디입니다" };
+  return { success: false, error: "아이디 또는 비밀번호가 올바르지 않습니다" };
 }
 
 /** 비밀번호 변경 */

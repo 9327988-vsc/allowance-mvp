@@ -227,7 +227,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
   async function handleQuickRejectSubmit(reason) {
     if (!quickRejectTarget) return;
     if (!isOnline()) {
-      showToast({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
+      showToastRef.current({ type: "error", message: "오프라인 상태에서는 처리할 수 없어요" });
       return;
     }
     setQuickActionId(quickRejectTarget.claim_id);
@@ -239,8 +239,8 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         decided_by_member_id: familyContext.member_id,
         expected_updated_at: quickRejectTarget.updated_at,
       });
-      showToast({ type: "success", message: "거절되었습니다" });
-      notify({ type: "claim_rejected", title: "청구 거절", message: `${getChildName(quickRejectTarget.child_member_id)}의 ${quickRejectTarget.month}월 청구가 거절되었어요` });
+      showToastRef.current({ type: "success", message: "거절되었습니다" });
+      notifyRef.current({ type: "claim_rejected", title: "청구 거절", message: `${getChildName(quickRejectTarget.child_member_id)}의 ${quickRejectTarget.month}월 청구가 거절되었어요` });
       sendServerNotification(familyContext.family_code, quickRejectTarget.child_member_id, {
         type: "claim_rejected", title: "청구 거절", message: `${quickRejectTarget.month}월 용돈 청구가 거절되었어요`,
       });
@@ -248,9 +248,9 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
       await fetchClaims();
     } catch (err) {
       if (err.code === "CONFLICT") {
-        showToast({ type: "error", message: "이미 처리된 청구입니다" });
+        showToastRef.current({ type: "error", message: "이미 처리된 청구입니다" });
       } else {
-        showToast({ type: "error", message: getMessageForError(err) });
+        showToastRef.current({ type: "error", message: getMessageForError(err) });
       }
     } finally {
       setQuickActionId(null);
@@ -259,7 +259,7 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
 
   async function handleSubmitGrant(input) {
     if (!isOnline()) {
-      showToast({ type: "error", message: "오프라인 상태에서는 등록할 수 없어요" });
+      showToastRef.current({ type: "error", message: "오프라인 상태에서는 등록할 수 없어요" });
       return;
     }
     setGrantLoading(true);
@@ -272,15 +272,15 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         amount: input.amount,
         reason: input.reason,
       });
-      showToast({ type: "success", message: `${getStatusEmoji("granted")} ${input.name} 지급 등록 완료!` });
-      notify({ type: "grant_received", title: "추가 지급", message: `${getChildName(input.child_member_id)}에게 ${input.name} 지급 완료` });
+      showToastRef.current({ type: "success", message: `${getStatusEmoji("granted")} ${input.name} 지급 등록 완료!` });
+      notifyRef.current({ type: "grant_received", title: "추가 지급", message: `${getChildName(input.child_member_id)}에게 ${input.name} 지급 완료` });
       sendServerNotification(familyContext.family_code, input.child_member_id, {
         type: "grant_received", title: "추가 지급", message: `${input.name || "추가 용돈"}이 지급되었어요!`,
       });
       setShowGrantModal(false);
       await fetchClaims();
     } catch (err) {
-      showToast({ type: "error", message: getMessageForError(err) });
+      showToastRef.current({ type: "error", message: getMessageForError(err) });
     } finally {
       setGrantLoading(false);
     }
@@ -305,13 +305,13 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         decided_by_member_id: familyContext.member_id,
         expected_updated_at: claim.updated_at,
       });
-      showToast({ type: "success", message: "거절이 취소되었습니다" });
+      showToastRef.current({ type: "success", message: "거절이 취소되었습니다" });
       await fetchClaims();
     } catch (err) {
       if (err.code === "CONFLICT") {
-        showToast({ type: "error", message: "이미 처리된 청구입니다" });
+        showToastRef.current({ type: "error", message: "이미 처리된 청구입니다" });
       } else {
-        showToast({ type: "error", message: getMessageForError(err) });
+        showToastRef.current({ type: "error", message: getMessageForError(err) });
       }
     } finally {
       setQuickActionId(null);
