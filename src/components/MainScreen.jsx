@@ -336,6 +336,29 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
               </div>
             )}
 
+            {/* 빠른 액션 (대시보드 바로 아래) */}
+            {!isEmpty && (
+              <div className="home-actions">
+                <button
+                  className="home-actions__btn"
+                  onClick={() => setShowCopyOptions(true)}
+                  disabled={copying}
+                >
+                  <span className="home-actions__btn-icon">{copying ? "⏳" : "📋"}</span>
+                  <span className="home-actions__btn-text">카톡 복사</span>
+                </button>
+                {inFamily && (
+                  <button
+                    className="home-actions__btn home-actions__btn--primary"
+                    onClick={handleSubmitClaim}
+                  >
+                    <span className="home-actions__btn-icon">📨</span>
+                    <span className="home-actions__btn-text">청구하기</span>
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* 빈 상태 */}
             {isEmpty && (
               <EmptyState onOpenSettings={() => setShowSettings(true)} />
@@ -381,29 +404,6 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
                 settings={settings}
                 startDay={startDay}
               />
-            )}
-
-            {/* 빠른 액션 */}
-            {!isEmpty && (
-              <div className="home-actions">
-                <button
-                  className="home-actions__btn"
-                  onClick={() => setShowCopyOptions(true)}
-                  disabled={copying}
-                >
-                  <span className="home-actions__btn-icon">{copying ? "⏳" : "📋"}</span>
-                  <span className="home-actions__btn-text">카톡 복사</span>
-                </button>
-                {inFamily && (
-                  <button
-                    className="home-actions__btn home-actions__btn--primary"
-                    onClick={handleSubmitClaim}
-                  >
-                    <span className="home-actions__btn-icon">📨</span>
-                    <span className="home-actions__btn-text">청구하기</span>
-                  </button>
-                )}
-              </div>
             )}
 
       </div>{/* /tab-content */}
