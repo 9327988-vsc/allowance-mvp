@@ -5,6 +5,7 @@ import { loadFamilyContext } from "./familyContext";
 import { isOnline, subscribeOnlineStatus } from "./onlineStatus";
 import { cacheGet, cacheSet, enqueueOffline, replayQueue } from "./offlineStore";
 import { showToast } from "./toastManager";
+import { getAccessToken } from "./tokenManager";
 
 class KVError extends Error {
   constructor(code, message) {
@@ -59,6 +60,12 @@ export class KVAdapter {
       "Content-Type": "application/json",
       "X-Device-Id": getDeviceId(),
     };
+
+    const token = await getAccessToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     if (this.familyCode) {
       headers["X-Family-Code"] = this.familyCode;
     }

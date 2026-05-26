@@ -1,7 +1,7 @@
 // src/utils/authStore.js — 로컬 유저 계정 + 아이디/비밀번호 인증
 
 import { nanoid } from "./idGenerator";
-import { serverRegister, serverLogin, serverUpdateProfile } from "./serverAuth";
+import { serverRegister, serverLogin, serverLogout, serverUpdateProfile } from "./serverAuth";
 
 const ACCOUNTS_KEY = "user_accounts_v1";
 const ACTIVE_KEY = "active_user_v1";
@@ -378,6 +378,11 @@ export function getActiveUser() {
 
 export function clearActiveUser() {
   localStorage.removeItem(ACTIVE_KEY);
+}
+
+export async function logoutUser() {
+  clearActiveUser();
+  await serverLogout().catch(() => {});
 }
 
 // ── 레거시 마이그레이션 ──
