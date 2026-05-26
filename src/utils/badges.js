@@ -1,6 +1,7 @@
 // src/utils/badges.js — 성취 배지 시스템
 
 import { getActiveUser } from "./authStore";
+import { loadSubmittedClaims } from "./submittedClaims";
 
 function getBadgesKey() {
   const userId = getActiveUser();
@@ -163,6 +164,45 @@ export function checkAndAwardBadges(stats) {
   }
 
   return { newBadges };
+}
+
+/**
+ * 배지 조건 판별용 통계 수집
+ */
+export function computeBadgeStats() {
+  const claims = loadSubmittedClaims();
+  const totalClaims = claims.length;
+
+  const sorted = [...claims]
+    .filter(c => c.status === "approved" || c.status === "rejected")
+    .sort((a, b) => (b.submitted_at || "").localeCompare(a.submitted_at || ""));
+  let consecutiveApprovals = 0;
+  for (const c of sorted) {
+    if (c.status === "approved") consecutiveApprovals++;
+    else break;
+  }
+
+  const streakKey = "badge_streak_v1";
+  let maxStreak = 0;
+  try {
+    const raw = localStorage.getItem(streakKey);
+    const data = raw ? JSON.parse(raw) : null;
+    const today = new Date().toISOString().slice(0, 10);
+    if (data && data.last === today) {
+      maxStreak = data.streak;
+    } else if (data) {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const newStreak = data.last === yesterday ? data.streak + 1 : 1;
+      const best = Math.max(data.best || 0, newStreak);
+      localStorage.setItem(streakKey, JSON.stringify({ last: today, streak: newStreak, best }));
+      maxStreak = best;
+    } else {
+      localStorage.setItem(streakKey, JSON.stringify({ last: today, streak: 1, best: 1 }));
+      maxStreak = 1;
+    }
+  } catch { /* ignored */ }
+
+  return { totalClaims, consecutiveApprovals, maxStreak };
 }
 
 /**

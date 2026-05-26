@@ -4,7 +4,7 @@ const DB_NAME = "allowance_offline_v1";
 const DB_VERSION = 1;
 const CACHE_STORE = "api_cache";
 const QUEUE_STORE = "offline_queue";
-const CACHE_TTL = 5 * 60 * 1000; // 5분
+const CACHE_TTL = 30 * 60 * 1000; // 30분
 
 let _db = null;
 let _dbPromise = null;
@@ -53,6 +53,20 @@ export async function cacheGet(path) {
         if (Date.now() - entry.cachedAt > CACHE_TTL) { resolve(null); return; }
         resolve(entry.data);
       };
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function cacheGetStale(path) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(CACHE_STORE, "readonly");
+      const req = tx.objectStore(CACHE_STORE).get(path);
+      req.onsuccess = () => resolve(req.result?.data ?? null);
       req.onerror = () => resolve(null);
     });
   } catch {

@@ -23,6 +23,7 @@ import EmptyState from "./widgets/EmptyState";
 import { useClaims } from "../hooks/useClaims";
 import { getUnreadCount } from "../utils/notifications";
 import { syncServerNotifications } from "../utils/serverNotifications";
+import { computeBadgeStats, checkAndAwardBadges } from "../utils/badges";
 
 const CellEditModal = lazy(() => import("./modals/CellEditModal"));
 const SettingsModal = lazy(() => import("./modals/SettingsModal"));
@@ -164,6 +165,12 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
       const updated = getSubmittedClaimForMonth(viewYear, viewMonth);
       if (updated?.status && updated.status !== claimStatusRef.current) {
         setSubmittedStatus(updated.status);
+        try {
+          const { newBadges } = checkAndAwardBadges(computeBadgeStats());
+          if (newBadges.length > 0) {
+            showToast({ type: "success", message: `${newBadges[0].icon} 배지 획득: ${newBadges[0].name}!`, duration: 5000 });
+          }
+        } catch { /* ignored */ }
       }
       const uid = getActiveUser();
       if (uid) {
@@ -287,6 +294,12 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
   function handleSubmitSuccess(claim) {
     setSubmitSnapshot(null);
     setSubmittedStatus(claim.status);
+    try {
+      const { newBadges } = checkAndAwardBadges(computeBadgeStats());
+      if (newBadges.length > 0) {
+        showToast({ type: "success", message: `${newBadges[0].icon} 배지 획득: ${newBadges[0].name}!`, duration: 5000 });
+      }
+    } catch { /* ignored */ }
   }
 
   return (

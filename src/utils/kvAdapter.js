@@ -3,7 +3,7 @@
 import { getDeviceId } from "./deviceId";
 import { loadFamilyContext } from "./familyContext";
 import { isOnline, subscribeOnlineStatus } from "./onlineStatus";
-import { cacheGet, cacheSet, enqueueOffline, replayQueue } from "./offlineStore";
+import { cacheGet, cacheGetStale, cacheSet, enqueueOffline, replayQueue } from "./offlineStore";
 import { showToast } from "./toastManager";
 import { getAccessToken } from "./tokenManager";
 
@@ -119,7 +119,7 @@ export class KVAdapter {
         cacheSet(path, data).catch(() => {});
         return data;
       } catch (err) {
-        const cached = await cacheGet(path);
+        const cached = await cacheGetStale(path);
         if (cached) return cached;
         throw err;
       }
