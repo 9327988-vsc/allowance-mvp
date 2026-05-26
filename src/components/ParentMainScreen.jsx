@@ -357,6 +357,20 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         )}
       </header>
 
+      {/* 상단 네비 버튼 */}
+      <div className="parent-screen__top-nav">
+        <button className="top-nav-btn" onClick={() => setShowSpendingStats(true)}>
+          <span>📊</span><span>통계</span>
+        </button>
+        <button className="top-nav-btn" onClick={() => setShowNotifs(true)}>
+          <span>🔔</span><span>알림</span>
+          {unreadCount > 0 && <span className="top-nav-btn__badge">{unreadCount}</span>}
+        </button>
+        <button className="top-nav-btn" onClick={() => setShowMyPopup(true)}>
+          <span>👤</span><span>마이</span>
+        </button>
+      </div>
+
       {/* 자녀 칩 선택기 */}
       {childMembers.length > 0 && (
         <div className="parent-screen__chips">
@@ -605,22 +619,6 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
         <span className="parent-fab__label">지급</span>
       </button>
 
-      {/* 탭 바 (fixed) */}
-      <nav className="tab-bar tab-bar--fixed">
-        <button className="tab-bar__item" onClick={() => setShowSpendingStats(true)}>
-          <span className="tab-bar__icon">📊</span>
-          <span className="tab-bar__label">통계</span>
-        </button>
-        <button className="tab-bar__item" onClick={() => setShowNotifs(true)}>
-          <span className="tab-bar__icon">🔔</span>
-          <span className="tab-bar__label">알림</span>
-          {unreadCount > 0 && <span className="tab-bar__badge">{unreadCount}</span>}
-        </button>
-        <button className="tab-bar__item" onClick={() => setShowMyPopup(true)}>
-          <span className="tab-bar__icon">👤</span>
-          <span className="tab-bar__label">마이</span>
-        </button>
-      </nav>
 
       {/* 마이 팝업 */}
       {showMyPopup && (

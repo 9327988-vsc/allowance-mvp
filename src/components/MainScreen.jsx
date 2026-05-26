@@ -304,7 +304,7 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
 
   return (
     <div className="app-container main-screen">
-      {/* 헤더 (월 네비) */}
+      {/* 헤더 (월 네비 + 알림/마이) */}
       <header className="main-header">
         <div className="main-header__nav">
           <MonthNavigator
@@ -315,6 +315,15 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
             onNext={goToNextMonth}
             onMonthClick={() => setShowMonthSelector(true)}
           />
+        </div>
+        <div className="main-header__actions">
+          <button className="header-icon-btn" onClick={() => setShowNotifs(true)} aria-label="알림">
+            🔔
+            {unreadCount > 0 && <span className="header-icon-btn__badge">{unreadCount}</span>}
+          </button>
+          <button className="header-icon-btn" onClick={() => setShowMyTab(true)} aria-label="마이">
+            👤
+          </button>
         </div>
       </header>
 
@@ -615,33 +624,6 @@ export default function MainScreen({ settings: initialSettings, onSettingsChange
         />
       )}
 
-      {/* 하단 탭바 */}
-      <nav className="tab-bar">
-        <button
-          className="tab-bar__item tab-bar__item--active"
-          aria-label="홈"
-        >
-          <span className="tab-bar__icon">🏠</span>
-          <span className="tab-bar__label">홈</span>
-        </button>
-        <button
-          className="tab-bar__item"
-          onClick={() => setShowNotifs(true)}
-          aria-label="알림"
-        >
-          <span className="tab-bar__icon">🔔</span>
-          <span className="tab-bar__label">알림</span>
-          {unreadCount > 0 && <span className="tab-bar__badge">{unreadCount}</span>}
-        </button>
-        <button
-          className="tab-bar__item"
-          onClick={() => setShowMyTab(true)}
-          aria-label="마이"
-        >
-          <span className="tab-bar__icon">👤</span>
-          <span className="tab-bar__label">마이</span>
-        </button>
-      </nav>
       </Suspense>
     </div>
   );

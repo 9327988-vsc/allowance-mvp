@@ -12,7 +12,7 @@ body.parent-main-active {
   background: var(--color-bg);
   max-width: 960px;
   margin: 0 auto;
-  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
 }
 
 .parent-screen__pending-badge {
@@ -53,6 +53,58 @@ body.parent-main-active {
   font-size: 1.15rem;
   color: rgba(255, 255, 255, 0.85);
   font-family: 'Jua', var(--font-family);
+}
+
+/* 상단 네비 버튼 */
+.parent-screen__top-nav {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+}
+
+.top-nav-btn {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.top-nav-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.top-nav-btn:active {
+  transform: scale(0.97);
+}
+
+.top-nav-btn__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--color-error);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: var(--font-weight-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
 }
 
 /* 자녀 칩 선택기 */
@@ -112,7 +164,7 @@ body.parent-main-active {
 /* FAB 버튼 */
 .parent-fab {
   position: fixed;
-  bottom: calc(60px + var(--space-4) + env(safe-area-inset-bottom));
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
   right: var(--space-4);
   display: flex;
   align-items: center;
