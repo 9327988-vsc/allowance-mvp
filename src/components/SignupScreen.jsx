@@ -6,7 +6,7 @@ import {
 } from "../utils/authStore";
 import ThemeToggle from "./widgets/ThemeToggle";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
 /**
  * @param {{
@@ -35,15 +35,9 @@ export default function SignupScreen({ onComplete, onBack }) {
     return () => { mountedRef.current = false; };
   }, []);
 
-  // Step 1: 계정 유형 선택
+  // Step 1: 계정 유형 + 이름
   function handleStep1() {
     if (!role) { setFormError("계정 유형을 선택하세요"); return; }
-    setFormError("");
-    setStep(2);
-  }
-
-  // Step 2: 개인정보 입력
-  function handleStep2() {
     const trimmed = name.trim();
     if (!trimmed) { setFormError("이름을 입력하세요"); return; }
     if (trimmed.length > 20) { setFormError("20자 이내로 입력하세요"); return; }
@@ -52,17 +46,17 @@ export default function SignupScreen({ onComplete, onBack }) {
     }
     if (birthDate) {
       const d = new Date(birthDate);
-      const [y, m, day] = birthDate.split("-").map(Number);
+      const [, m, day] = birthDate.split("-").map(Number);
       if (isNaN(d.getTime()) || d.getMonth() + 1 !== m || d.getDate() !== day || d > new Date()) {
         setFormError("올바른 생년월일을 입력하세요"); return;
       }
     }
     setFormError("");
-    setStep(3);
+    setStep(2);
   }
 
-  // Step 3: 아이디+비밀번호 설정
-  function handleStep3(e) {
+  // Step 2: 아이디+비밀번호 설정
+  function handleStep2(e) {
     e.preventDefault();
     const trimmedId = username.trim();
     const idCheck = validateUsername(trimmedId);
@@ -73,11 +67,11 @@ export default function SignupScreen({ onComplete, onBack }) {
     if (!pwCheck.valid) { setFormError(pwCheck.error); return; }
     if (password !== passwordConfirm) { setFormError("비밀번호가 일치하지 않습니다"); return; }
     setFormError("");
-    setStep(4);
+    setStep(3);
   }
 
-  // Step 4: 보안 질문 설정 + 계정 생성
-  async function handleStep4(e) {
+  // Step 3: 보안 질문 설정 + 계정 생성
+  async function handleStep3(e) {
     e.preventDefault();
     if (!securityAnswer.trim()) { setFormError("보안 답변을 입력하세요"); return; }
     if (securityAnswer.trim().length > 50) { setFormError("답변은 50자 이내로 입력하세요"); return; }
@@ -126,11 +120,11 @@ export default function SignupScreen({ onComplete, onBack }) {
           ))}
         </div>
 
-        {/* Step 1: 계정 유형 선택 */}
+        {/* Step 1: 계정 유형 + 이름 */}
         {step === 1 && (
           <div className="auth-form fade-in">
             <div className="auth-form__field">
-              <label className="auth-form__label">계정 유형을 선택하세요</label>
+              <label className="auth-form__label">계정 유형</label>
               <div className="auth-role-picker auth-role-picker--three">
                 <button
                   className={`auth-role-btn${role === "child" ? " auth-role-btn--active" : ""}`}
@@ -159,24 +153,6 @@ export default function SignupScreen({ onComplete, onBack }) {
               </div>
             </div>
 
-            {formError && <p className="auth-form__error">{formError}</p>}
-
-            <button onClick={handleStep1} className="btn btn--primary btn--full btn--lg">
-              다음
-            </button>
-            {onBack && (
-              <button onClick={onBack} className="btn btn--ghost" style={{ marginTop: "var(--space-2)" }}>
-                ← 돌아가기
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Step 2: 개인정보 입력 */}
-        {step === 2 && (
-          <div className="auth-form fade-in">
-            <p className="auth-form__step-label">{roleLabel} 계정</p>
-
             <div className="auth-form__field">
               <label className="auth-form__label">이름</label>
               <input
@@ -186,7 +162,6 @@ export default function SignupScreen({ onComplete, onBack }) {
                 placeholder="예: 민지"
                 maxLength={20}
                 className="auth-form__input"
-                autoFocus
               />
             </div>
 
@@ -205,22 +180,20 @@ export default function SignupScreen({ onComplete, onBack }) {
 
             {formError && <p className="auth-form__error">{formError}</p>}
 
-            <button onClick={handleStep2} className="btn btn--primary btn--full btn--lg">
+            <button onClick={handleStep1} className="btn btn--primary btn--full btn--lg">
               다음
             </button>
-            <button
-              onClick={() => { setStep(1); setFormError(""); }}
-              className="btn btn--ghost"
-              style={{ marginTop: "var(--space-2)" }}
-            >
-              ← 이전
-            </button>
+            {onBack && (
+              <button onClick={onBack} className="btn btn--ghost" style={{ marginTop: "var(--space-2)" }}>
+                ← 돌아가기
+              </button>
+            )}
           </div>
         )}
 
-        {/* Step 3: 아이디 + 비밀번호 설정 */}
-        {step === 3 && (
-          <form onSubmit={handleStep3} className="auth-form fade-in">
+        {/* Step 2: 아이디 + 비밀번호 설정 */}
+        {step === 2 && (
+          <form onSubmit={handleStep2} className="auth-form fade-in">
             <p className="auth-form__step-label">아이디 & 비밀번호 설정</p>
 
             <div className="auth-form__field">
@@ -297,7 +270,7 @@ export default function SignupScreen({ onComplete, onBack }) {
             </button>
             <button
               type="button"
-              onClick={() => { setStep(2); setFormError(""); }}
+              onClick={() => { setStep(1); setFormError(""); }}
               className="btn btn--ghost"
               style={{ marginTop: "var(--space-2)" }}
             >
@@ -306,9 +279,9 @@ export default function SignupScreen({ onComplete, onBack }) {
           </form>
         )}
 
-        {/* Step 4: 보안 질문 설정 */}
-        {step === 4 && (
-          <form onSubmit={handleStep4} className="auth-form fade-in">
+        {/* Step 3: 보안 질문 설정 */}
+        {step === 3 && (
+          <form onSubmit={handleStep3} className="auth-form fade-in">
             <p className="auth-form__step-label">보안 질문 설정</p>
             <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", marginBottom: "var(--space-3)" }}>
               비밀번호 분실 시 초기화에 사용됩니다
@@ -347,7 +320,7 @@ export default function SignupScreen({ onComplete, onBack }) {
             </button>
             <button
               type="button"
-              onClick={() => { setStep(3); setFormError(""); submittedRef.current = false; }}
+              onClick={() => { setStep(2); setFormError(""); submittedRef.current = false; }}
               className="btn btn--ghost"
               style={{ marginTop: "var(--space-2)" }}
             >

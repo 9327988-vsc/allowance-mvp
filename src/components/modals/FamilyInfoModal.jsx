@@ -133,6 +133,18 @@ export default function FamilyInfoModal({ onClose, onLeft }) {
     }
   }
 
+  async function handleShareCode() {
+    try {
+      await navigator.share({
+        title: "가족 용돈 관리 - 가족 코드",
+        text: `가족 코드: ${familyCode}\n\n이 코드로 가족에 참여하세요!`,
+        url: window.location.origin + window.location.pathname,
+      });
+    } catch (err) {
+      if (err.name !== "AbortError") handleCopyCode();
+    }
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
@@ -169,13 +181,24 @@ export default function FamilyInfoModal({ onClose, onLeft }) {
             }}>
               {familyCode}
             </div>
-            <button
-              onClick={handleCopyCode}
-              className="btn btn--secondary"
-              style={{ fontSize: "0.8rem", padding: "4px 12px" }}
-            >
-              📋 복사
-            </button>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              <button
+                onClick={handleCopyCode}
+                className="btn btn--secondary"
+                style={{ fontSize: "0.8rem", padding: "4px 12px" }}
+              >
+                📋 복사
+              </button>
+              {typeof navigator !== "undefined" && navigator.share && (
+                <button
+                  onClick={handleShareCode}
+                  className="btn btn--primary"
+                  style={{ fontSize: "0.8rem", padding: "4px 12px" }}
+                >
+                  📤 공유하기
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 멤버 목록 */}

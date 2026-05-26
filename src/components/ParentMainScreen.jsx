@@ -10,6 +10,7 @@ import { getMessageForError } from "../constants/errorMessages";
 import { getStatusEmoji } from "../constants/statusLabels";
 
 import ClaimCard from "./widgets/ClaimCard";
+import { formatAmountShort } from "../utils/formatAmount";
 import { getUnreadCount, addNotification } from "../utils/notifications";
 import { generateGrantId } from "../utils/idGenerator";
 import { getDueSchedules, markScheduleRun } from "../utils/autoGrant";
@@ -331,6 +332,18 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
   const inProgressClaims = useMemo(() => filteredClaims.filter((c) => c.status === "approved" || c.status === "granted"), [filteredClaims]);
   const completedClaims = useMemo(() => filteredClaims.filter((c) => c.status === "paid" || c.status === "received" || c.status === "rejected"), [filteredClaims]);
 
+  const childSummary = useMemo(() => {
+    if (childMembers.length === 0) return [];
+    return childMembers.map(child => {
+      const childClaims = claims.filter(c => c.child_member_id === child.member_id && c.type !== "grant");
+      const approved = childClaims.filter(c => c.status === "approved" || c.status === "paid" || c.status === "received")
+        .reduce((s, c) => s + (c.total || 0), 0);
+      const pending = childClaims.filter(c => c.status === "pending")
+        .reduce((s, c) => s + (c.total || 0), 0);
+      return { name: child.display_name, approved, pending };
+    });
+  }, [childMembers, claims]);
+
   return (
     <div className="parent-screen">
       {/* 인사 헤더 */}
@@ -363,6 +376,25 @@ export default function ParentMainScreen({ familyContext, onLogout }) {
             >
               {child.display_name}
             </button>
+          ))}
+        </div>
+      )}
+
+      {/* 자녀별 지출 요약 */}
+      {childSummary.length > 0 && (childSummary.some(c => c.approved > 0 || c.pending > 0)) && (
+        <div className="parent-screen__summary" style={{
+          display: "flex", gap: 8, padding: "0 var(--space-4)", marginBottom: "var(--space-2)",
+          overflowX: "auto", scrollbarWidth: "none",
+        }}>
+          {childSummary.map(c => (
+            <div key={c.name} style={{
+              flex: "0 0 auto", padding: "8px 12px", borderRadius: 8,
+              background: "var(--color-bg-card)", fontSize: "0.75rem", minWidth: 100,
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 2 }}>{c.name}</div>
+              {c.approved > 0 && <div style={{ color: "var(--color-success)" }}>승인 {formatAmountShort(c.approved)}원</div>}
+              {c.pending > 0 && <div style={{ color: "var(--color-warning)" }}>대기 {formatAmountShort(c.pending)}원</div>}
+            </div>
           ))}
         </div>
       )}
