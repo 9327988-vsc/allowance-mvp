@@ -50,8 +50,10 @@ export function jsonResponse(data, status = 200) {
 export function jsonError(err) {
   const status = err.status || 500;
   const code = err.code || "INTERNAL_ERROR";
+  const message = status >= 500 ? "서버 내부 오류" : err.message;
+  if (status >= 500) console.error("[ERROR]", err.code, err.message, err.stack);
   return new Response(
-    JSON.stringify({ error: code, message: err.message }),
+    JSON.stringify({ error: code, message }),
     { status, headers: { "Content-Type": "application/json" } }
   );
 }

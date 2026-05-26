@@ -11,7 +11,14 @@ export default defineConfig(({ mode }) => ({
   build: {
     target: "es2020",
     minify: "esbuild",
-    sourcemap: mode === "production" ? false : true
+    sourcemap: mode === "production" ? false : true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+        },
+      },
+    },
   },
   test: {
     globals: true,
