@@ -19,6 +19,7 @@
   max-width: 960px;
   margin: 0 auto;
   z-index: var(--z-sticky, 10);
+  padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
 }
 
 .tab-bar__item {

@@ -12,7 +12,7 @@ body.parent-main-active {
   background: var(--color-bg);
   max-width: 960px;
   margin: 0 auto;
-  padding-bottom: 60px;
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
 }
 
 .parent-screen__pending-badge {
@@ -112,7 +112,7 @@ body.parent-main-active {
 /* FAB 버튼 */
 .parent-fab {
   position: fixed;
-  bottom: calc(60px + var(--space-4));
+  bottom: calc(60px + var(--space-4) + env(safe-area-inset-bottom));
   right: var(--space-4);
   display: flex;
   align-items: center;
