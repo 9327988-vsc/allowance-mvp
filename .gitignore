@@ -47,3 +47,4 @@ claude.md.txt
 
 # Wrangler (Cloudflare Workers 로컬 상태)
 workers/.wrangler/
+workers/.dev.vars

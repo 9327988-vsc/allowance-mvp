@@ -22,6 +22,13 @@ import {
   handleReceiveGrant,
 } from "./routes/claims.js";
 import { handleMigrateFromLocal } from "./routes/migrations.js";
+import {
+  handleRegister,
+  handleLogin,
+  handleRefresh,
+  handleLogout,
+  handleMe,
+} from "./routes/auth.js";
 
 export default {
   async fetch(request, env) {
@@ -45,6 +52,48 @@ export default {
       const method = request.method;
 
       let response;
+
+      // --- 헬스체크 ---
+
+      if (method === "GET" && path === "/api/health") {
+        return withCorsHeaders(jsonResponse({
+          status: "ok",
+          version: "1.0.0",
+          timestamp: new Date().toISOString(),
+        }), request, env);
+      }
+
+      // --- 인증 라우트 (JWT) ---
+
+      // POST /api/auth/register
+      if (method === "POST" && path === "/api/auth/register") {
+        response = await handleRegister(request, env);
+        return withCorsHeaders(response, request, env);
+      }
+
+      // POST /api/auth/login
+      if (method === "POST" && path === "/api/auth/login") {
+        response = await handleLogin(request, env);
+        return withCorsHeaders(response, request, env);
+      }
+
+      // POST /api/auth/refresh
+      if (method === "POST" && path === "/api/auth/refresh") {
+        response = await handleRefresh(request, env);
+        return withCorsHeaders(response, request, env);
+      }
+
+      // POST /api/auth/logout
+      if (method === "POST" && path === "/api/auth/logout") {
+        response = await handleLogout(request, env);
+        return withCorsHeaders(response, request, env);
+      }
+
+      // GET /api/auth/me
+      if (method === "GET" && path === "/api/auth/me") {
+        response = await handleMe(request, env);
+        return withCorsHeaders(response, request, env);
+      }
 
       // --- 인증 불필요 라우트 ---
 

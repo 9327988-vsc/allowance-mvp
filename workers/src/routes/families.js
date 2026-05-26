@@ -4,6 +4,7 @@ import { kvGetJson, kvPutJson, kvAppendToList, kvRemoveFromList } from "../lib/k
 import { generateFamilyCode } from "../lib/codeGen.js";
 import { isValidDisplayName, isValidRole, isValidFamilyCode } from "../lib/validators.js";
 import { ValidationError, NotFoundError, ConflictError, jsonResponse } from "../lib/errors.js";
+import { optionalUserId } from "../middleware/auth.js";
 
 // --- Rate limiting for family code lookup ---
 const _rateLimits = new Map();
@@ -37,8 +38,10 @@ export async function handleFamiliesPost(request, env) {
   }
 
   const deviceId = request.headers.get("X-Device-Id");
-  if (!deviceId) {
-    throw new ValidationError("MISSING_DEVICE_ID", "X-Device-Id required");
+  const userId = await optionalUserId(request, env);
+
+  if (!deviceId && !userId) {
+    throw new ValidationError("MISSING_AUTH", "X-Device-Id 또는 Authorization이 필요합니다");
   }
 
   const kv = env.ALLOWANCE_KV;
@@ -74,7 +77,8 @@ export async function handleFamiliesPost(request, env) {
     family_id: familyId,
     role: creator_role,
     display_name: creator_display_name,
-    device_id: deviceId,
+    device_id: deviceId || null,
+    user_id: userId || null,
     joined_at: now,
     last_seen_at: now,
     schema_version: 1,
@@ -85,6 +89,10 @@ export async function handleFamiliesPost(request, env) {
   await kvPutJson(kv, `families/${familyId}`, family);
   await kvPutJson(kv, `families/${familyId}/members/${memberId}`, member);
   await kvPutJson(kv, `families/${familyId}/members/list`, [memberId]);
+
+  if (userId) {
+    await kvPutJson(kv, `user_families/${userId}`, [{ family_id: familyId, member_id: memberId }]);
+  }
 
   return jsonResponse({ family, member }, 201);
 }
@@ -156,8 +164,10 @@ export async function handleJoinFamily(request, env, code) {
   }
 
   const deviceId = request.headers.get("X-Device-Id");
-  if (!deviceId) {
-    throw new ValidationError("MISSING_DEVICE_ID", "X-Device-Id required");
+  const userId = await optionalUserId(request, env);
+
+  if (!deviceId && !userId) {
+    throw new ValidationError("MISSING_AUTH", "X-Device-Id 또는 Authorization이 필요합니다");
   }
 
   const kv = env.ALLOWANCE_KV;
@@ -168,10 +178,14 @@ export async function handleJoinFamily(request, env, code) {
 
   const memberIds = (await kvGetJson(kv, `families/${familyId}/members/list`)) || [];
 
-  // 같은 device_id + role 멱등 처리 (같은 기기에서 자녀/부모 각각 가입 허용)
+  // 멱등 처리: user_id 또는 device_id+role 매칭
   for (const mid of memberIds) {
     const m = await kvGetJson(kv, `families/${familyId}/members/${mid}`);
-    if (m && m.device_id === deviceId && m.role === role) {
+    if (!m) continue;
+    if (userId && m.user_id === userId && m.role === role) {
+      return jsonResponse({ family_id: familyId, member: m, already_member: true });
+    }
+    if (deviceId && m.device_id === deviceId && m.role === role) {
       return jsonResponse({ family_id: familyId, member: m, already_member: true });
     }
   }
@@ -199,7 +213,8 @@ export async function handleJoinFamily(request, env, code) {
     family_id: familyId,
     role,
     display_name,
-    device_id: deviceId,
+    device_id: deviceId || null,
+    user_id: userId || null,
     joined_at: now,
     last_seen_at: now,
     schema_version: 1,
@@ -207,6 +222,12 @@ export async function handleJoinFamily(request, env, code) {
 
   await kvPutJson(kv, `families/${familyId}/members/${memberId}`, member);
   await kvAppendToList(kv, `families/${familyId}/members/list`, memberId);
+
+  if (userId) {
+    const existing = (await kvGetJson(kv, `user_families/${userId}`)) || [];
+    existing.push({ family_id: familyId, member_id: memberId });
+    await kvPutJson(kv, `user_families/${userId}`, existing);
+  }
 
   return jsonResponse({ family_id: familyId, member, already_member: false }, 201);
 }
