@@ -29,6 +29,10 @@ import {
   handleLogout,
   handleMe,
 } from "./routes/auth.js";
+import {
+  handleDataSyncUpload,
+  handleDataSyncDownload,
+} from "./routes/dataSync.js";
 
 export default {
   async fetch(request, env) {
@@ -206,6 +210,20 @@ export default {
       if (method === "PATCH" && receiveGrantMatch) {
         const ctx = await withAuth(request, env);
         response = await handleReceiveGrant(request, env, ctx, receiveGrantMatch[1]);
+        return withCorsHeaders(response, request, env);
+      }
+
+      // --- 데이터 동기화 라우트 ---
+
+      // POST /api/data-sync
+      if (method === "POST" && path === "/api/data-sync") {
+        response = await handleDataSyncUpload(request, env);
+        return withCorsHeaders(response, request, env);
+      }
+
+      // GET /api/data-sync
+      if (method === "GET" && path === "/api/data-sync") {
+        response = await handleDataSyncDownload(request, env);
         return withCorsHeaders(response, request, env);
       }
 

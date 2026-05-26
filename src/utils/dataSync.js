@@ -1,8 +1,9 @@
 import { getDeviceId } from "./deviceId";
 import { loadFamilyContext } from "./familyContext";
 import { getActiveUser } from "./authStore";
+import { getAccessToken } from "./tokenManager";
 
-const BASE = import.meta.env.VITE_API_URL || "";
+const BASE = import.meta.env.VITE_API_BASE || "";
 const FAMILY_PREFIXES = [
   "mock_kv:", "chores_v1_f_", "chore_log_v1_f_",
   "auto_grant_schedules_v1_f_", "auto_grant_last_run_v1_f_", "qna_v1_f_",
@@ -87,10 +88,23 @@ function restoreEntries(entries) {
   return count;
 }
 
+async function buildHeaders() {
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Device-Id": getDeviceId(),
+  };
+  const token = await getAccessToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const ctx = loadFamilyContext();
+  if (ctx?.family_code) headers["X-Family-Code"] = ctx.family_code;
+  return headers;
+}
+
 async function syncPost(type, key, entries) {
+  const headers = await buildHeaders();
   const res = await fetch(`${BASE}/api/data-sync`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ type, key, entries }),
   });
   if (!res.ok) throw new Error(`서버 응답 ${res.status}`);
@@ -98,7 +112,8 @@ async function syncPost(type, key, entries) {
 
 async function syncGet(type, key) {
   try {
-    const res = await fetch(`${BASE}/api/data-sync?type=${encodeURIComponent(type)}&key=${encodeURIComponent(key)}`);
+    const headers = await buildHeaders();
+    const res = await fetch(`${BASE}/api/data-sync?type=${encodeURIComponent(type)}&key=${encodeURIComponent(key)}`, { headers });
     if (!res.ok) { console.warn("[dataSync] download failed:", res.status); return null; }
     const data = await res.json();
     return data.entries;

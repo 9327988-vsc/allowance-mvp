@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL || "";
+const BASE = import.meta.env.VITE_API_BASE || "";
 
 export async function sendServerNotification(familyCode, memberId, notification) {
   try {
