@@ -79,6 +79,7 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* ===== 홈 탭 레이아웃 ===== */

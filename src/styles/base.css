@@ -144,6 +144,7 @@ body {
     linear-gradient(160deg, #F8F9FF 0%, #FAFAFF 50%, #F9FAFE 100%);
   background-attachment: fixed;
   margin: 0;
+  padding-bottom: env(safe-area-inset-bottom);
   -webkit-font-smoothing: antialiased;
   height: 100vh;
   height: 100dvh;
