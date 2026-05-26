@@ -34,7 +34,6 @@ const TutorialScreen = lazy(() => import("./TutorialScreen"));
 const PasswordMigrationInfoModal = lazy(() => import("./modals/PasswordMigrationInfoModal"));
 
 function isAdminMode() {
-  if (!import.meta.env.DEV) return false;
   return new URLSearchParams(window.location.search).get("admin") === "1";
 }
 
@@ -387,12 +386,6 @@ export default function App() {
     <Suspense fallback={<Splash />}>
       <OfflineBanner />
       {content}
-      {boot && screen !== "login" && (
-        <button
-          onClick={() => window.syncDiag?.()}
-          style={{ position: "fixed", bottom: 8, right: 8, zIndex: 9999, fontSize: 11, padding: "4px 8px", opacity: 0.6, borderRadius: 6, border: "1px solid #aaa", background: "#fff" }}
-        >🔄 동기화 진단</button>
-      )}
       {showTutorialPicker && (
         <div className="modal-backdrop" onClick={() => setShowTutorialPicker(false)}>
           <div ref={tutorialPickerRef} className="modal-content" style={{ maxWidth: 320, width: "85%", padding: 0 }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="튜토리얼 선택">
