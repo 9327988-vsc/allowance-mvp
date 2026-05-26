@@ -1,10 +1,11 @@
 // src/components/widgets/StatusBadge.jsx — 청구 상태 배지
+import { memo } from "react";
 import { STATUS_CONFIG } from "../../constants/statusLabels";
 
 /**
  * @param {{ status: string, size?: "sm"|"md" }} props
  */
-export default function StatusBadge({ status, size = "sm" }) {
+export default memo(function StatusBadge({ status, size = "sm" }) {
   const config = STATUS_CONFIG[status];
   if (!config) return <span className="status-badge" role="status">⚪ 알 수 없음</span>;
 
@@ -22,4 +23,4 @@ export default function StatusBadge({ status, size = "sm" }) {
       {config.label}
     </span>
   );
-}
+});

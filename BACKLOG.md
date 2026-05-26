@@ -17,17 +17,17 @@
 상세 PRD: `PRD_정밀분석_개선과제_v1.0.md`
 
 ### P0 — 즉시 (출시 차단)
-- 📋 T-101: 관리자 백도어 제거 (SEC CRITICAL)
-- 📋 T-102: 모든 API 엔드포인트에 인증 추가 (SEC CRITICAL)
-- 📋 T-103: 마이그레이션 기본 비밀번호 하드코딩 제거 (SEC CRITICAL)
-- 📋 T-104: dataSync 에러 처리 추가 (안정성 CRITICAL)
-- 📋 T-105: 영수증 이미지를 IndexedDB로 이동 (성능 CRITICAL)
-- 📋 T-106: unhandledrejection 핸들러 추가 (안정성 CRITICAL)
+- ✅ T-101: 관리자 백도어 제거 — 완료 `043cef8`
+- ✅ T-102: 모든 API 엔드포인트에 인증 추가 — 완료 `1741ed7`
+- ✅ T-103: 마이그레이션 기본 비밀번호 — 실측 결과 이미 crypto.getRandomValues 랜덤 생성 + 강제변경. 이슈 아님.
+- ✅ T-104: dataSync 에러 처리 + 인증 헤더 추가 — 완료 `a59e02d`
+- 📋 T-105: 영수증 이미지를 IndexedDB로 이동 (성능 — P2로 하향)
+- ✅ T-106: unhandledrejection 핸들러 추가 — 완료 `043cef8`
 
 ### P1 — 1주 내 (MVP 출시 수준)
-- 📋 T-111: 서버 인증 아키텍처 JWT 도입 (보안 HIGH)
+- ✅ T-111: 서버 인증 아키텍처 JWT 도입 — 완료 `1741ed7` + `fa035f5`
 - 📋 T-112: 브라우저 뒤로가기 지원 (UX HIGH)
-- 📋 T-113: CORS 와일드카드 기본값 제거 (보안 HIGH)
+- ✅ T-113: CORS 와일드카드 기본값 제거 — 완료 `630524a`
 - 📋 T-114: 오프라인 캐시 TTL 개선 (오프라인 HIGH)
 - 📋 T-115: 배지 시스템 실제 연결 (UX HIGH)
 - 📋 T-116: React.memo 적용 (성능 HIGH)

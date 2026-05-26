@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 
 // Modal stack: 가장 마지막에 등록된(최상위) 모달만 ESC로 닫힘
 const _modalStack = [];
+let _skipPopstate = 0;
 // Scroll lock counter: ESC 스택과 분리 — noScrollLock 모달은 카운트하지 않음
 let _scrollLockCount = 0;
 let _scrollLockSavedY = 0;
@@ -76,6 +77,30 @@ export function useModalBase(onClose, options = {}) {
       document.removeEventListener("keydown", handleKey);
       const idx = _modalStack.indexOf(id);
       if (idx >= 0) _modalStack.splice(idx, 1);
+    };
+  }, [active]);
+
+  // Back button (popstate) — 최상위 모달을 뒤로가기로 닫기
+  useEffect(() => {
+    if (!active) return;
+    history.pushState({ _modal: true }, "");
+    let closedViaBack = false;
+
+    function handlePopstate() {
+      if (_skipPopstate > 0) { _skipPopstate--; return; }
+      const top = _modalStack[_modalStack.length - 1];
+      if (top === stackIdRef.current) {
+        closedViaBack = true;
+        onCloseRef.current();
+      }
+    }
+    window.addEventListener("popstate", handlePopstate);
+    return () => {
+      window.removeEventListener("popstate", handlePopstate);
+      if (!closedViaBack) {
+        _skipPopstate++;
+        history.back();
+      }
     };
   }, [active]);
 

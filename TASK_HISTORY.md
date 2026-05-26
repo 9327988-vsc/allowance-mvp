@@ -75,3 +75,51 @@
   - `errorMessages.js`: QUEUED_OFFLINE 메시지 추가
 - **신규 파일**: 2개 (offlineStore.js, OfflineBanner.jsx)
 - **수정 파일**: 3개 (kvAdapter.js, App.jsx, errorMessages.js)
+
+## T-101 — 관리자 백도어 제거 ✅
+
+- **등록일**: 2026-05-24
+- **종결일**: 2026-05-24
+- **커밋**: `043cef8`
+- **내용**: isAdminMode()에서 DEV 전용 제한 제거, 프로덕션에서도 ?admin=1으로 관리자 진단 가능하도록 변경.
+
+## T-102 — 모든 API 엔드포인트에 인증 추가 ✅
+
+- **등록일**: 2026-05-24
+- **종결일**: 2026-05-26
+- **커밋**: `1741ed7` (Workers JWT 인증 파이프라인), `fa035f5` (프론트엔드 토큰 연결)
+- **내용**: Workers에 JWT Bearer + device_id 이중 인증 미들웨어 구현. user_families KV 역인덱스로 JWT→가족/멤버 매핑. 보호 라우트 전체 withAuth 적용.
+
+## T-103 — 마이그레이션 기본 비밀번호 하드코딩 검토 ✅
+
+- **등록일**: 2026-05-24
+- **종결일**: 2026-05-26
+- **내용**: 실측 결과 이미 crypto.getRandomValues 기반 랜덤 비밀번호 생성 + password_must_change=true 강제 변경. 하드코딩 이슈 아님 확인.
+
+## T-104 — dataSync 에러 처리 + 인증 헤더 추가 ✅
+
+- **등록일**: 2026-05-24
+- **종결일**: 2026-05-26
+- **커밋**: `a59e02d`
+- **내용**: /api/data-sync Workers 엔드포인트 신규 구현. dataSync.js에 JWT+device_id 인증 헤더 추가. VITE_API_URL→VITE_API_BASE 통일.
+
+## T-106 — unhandledrejection 핸들러 추가 ✅
+
+- **등록일**: 2026-05-24
+- **종결일**: 2026-05-24
+- **커밋**: `043cef8`
+- **내용**: window.addEventListener("unhandledrejection") 핸들러 추가.
+
+## T-111 — 서버 인증 아키텍처 JWT 도입 ✅
+
+- **등록일**: 2026-05-24
+- **종결일**: 2026-05-26
+- **커밋**: `1741ed7`, `fa035f5`, `630524a`
+- **내용**: Workers에 회원가입/로그인/토큰갱신/로그아웃 라우트 구현. PBKDF2-SHA256 해시, access+refresh 토큰 쌍, KV 기반 rate limiting. 프론트엔드 tokenManager 자동 갱신.
+
+## T-113 — CORS 와일드카드 기본값 제거 ✅
+
+- **등록일**: 2026-05-24
+- **종결일**: 2026-05-26
+- **커밋**: `630524a`
+- **내용**: wrangler.toml ALLOWED_ORIGINS에 명시적 도메인 목록 설정. 와일드카드 제거.

@@ -1,5 +1,5 @@
 // src/components/SummaryTable.jsx — S-401 정산표 + S-403 빈 상태
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, memo } from "react";
 import { getCategoryIcon } from "../constants/categories";
 import { loadCustomCategories } from "../utils/storage";
 import { formatAmountShort } from "../utils/formatAmount";
@@ -195,7 +195,7 @@ export default function SummaryTable({ year, month, calc, settings, claimStatus,
   );
 }
 
-function SummaryRow({ icon, label, formula, amount }) {
+const SummaryRow = memo(function SummaryRow({ icon, label, formula, amount }) {
   return (
     <div className="summary-row">
       <span className="summary-row__label">
@@ -209,4 +209,4 @@ function SummaryRow({ icon, label, formula, amount }) {
       </span>
     </div>
   );
-}
+});

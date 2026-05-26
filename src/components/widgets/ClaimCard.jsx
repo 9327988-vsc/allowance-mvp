@@ -1,4 +1,5 @@
 // src/components/widgets/ClaimCard.jsx — 청구 카드 (부모/자녀 공용)
+import { memo } from "react";
 import StatusBadge from "./StatusBadge";
 import { formatAmountShort } from "../../utils/formatAmount";
 
@@ -16,7 +17,7 @@ import { formatAmountShort } from "../../utils/formatAmount";
  *   style?: object
  * }} props
  */
-export default function ClaimCard({ claim, childName, onClick, onQuickApprove, onQuickReject, onQuickUndoReject, onReceiveGrant, quickLoading, style }) {
+export default memo(function ClaimCard({ claim, childName, onClick, onQuickApprove, onQuickReject, onQuickUndoReject, onReceiveGrant, quickLoading, style }) {
   const isGrant = claim.type === "grant";
   const rawDate = isGrant ? (claim.granted_at || claim.updated_at) : claim.submitted_at;
   const dateStr = rawDate ? new Date(rawDate).toLocaleDateString("ko-KR", {
@@ -125,4 +126,4 @@ export default function ClaimCard({ claim, childName, onClick, onQuickApprove, o
       )}
     </div>
   );
-}
+});
