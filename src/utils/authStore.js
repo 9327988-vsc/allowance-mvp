@@ -2,6 +2,7 @@
 
 import { nanoid } from "./idGenerator";
 import { serverRegister, serverLogin, serverLogout, serverUpdateProfile } from "./serverAuth";
+import { loadFamilyContext } from "./familyContext";
 
 const ACCOUNTS_KEY = "user_accounts_v1";
 const ACTIVE_KEY = "active_user_v1";
@@ -242,7 +243,7 @@ export async function verifyPassword(username, password) {
       serverRegister({
         username, password, display_name: user.display_name, role: user.role,
         security_question: user.security_question, security_answer: null,
-        family_context: user.family_context || null,
+        family_context: loadFamilyContext() || user.family_context || null,
       }).catch(e => console.warn("[authStore] serverRegister on login:", e.message));
       return { success: true, userId: user.user_id };
     }

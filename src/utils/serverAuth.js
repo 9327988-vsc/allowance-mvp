@@ -4,12 +4,12 @@ import { saveTokens, clearTokens, getRefreshToken } from "./tokenManager";
 
 const getBase = () => import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
-export async function serverRegister({ username, password, display_name, role, security_question, security_answer }) {
+export async function serverRegister({ username, password, display_name, role, security_question, security_answer, family_context }) {
   try {
     const res = await fetch(`${getBase()}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, display_name, role, security_question, security_answer }),
+      body: JSON.stringify({ username, password, display_name, role, security_question, security_answer, family_context }),
     });
     const data = await res.json();
     if (data.access_token) {

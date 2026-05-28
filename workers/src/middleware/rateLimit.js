@@ -2,7 +2,7 @@
 
 const LIMITS = {
   "auth:login":    { max: 5,  windowSec: 60 },
-  "auth:register": { max: 3,  windowSec: 3600 },
+  "auth:register": { max: 10, windowSec: 3600 },
   "write":         { max: 30, windowSec: 60 },
   "read":          { max: 60, windowSec: 60 },
 };

@@ -98,12 +98,27 @@ export async function handleRegister(request, env) {
   const normalizedUsername = username.toLowerCase().trim();
   const userKey = `user:${normalizedUsername}`;
   const existing = await env.ALLOWANCE_KV.get(userKey);
+  const iterations = getIterations(env);
+  const familyContext = body.family_context;
 
   if (existing) {
-    throw new ConflictError("USERNAME_TAKEN", "이미 사용 중인 아이디입니다");
+    const existingUser = JSON.parse(existing);
+    const inputHash = await hashPassword(password, existingUser.password_salt, iterations);
+    if (inputHash !== existingUser.password_hash) {
+      throw new ConflictError("USERNAME_TAKEN", "이미 사용 중인 아이디입니다");
+    }
+    if (familyContext?.family_id && familyContext?.member_id) {
+      await syncUserFamily(env, existingUser.user_id, familyContext);
+    }
+    const { accessToken, refreshToken } = await issueTokens(env, existingUser);
+    return jsonResponse({
+      success: true,
+      user: { user_id: existingUser.user_id, username: existingUser.username, display_name: existingUser.display_name, role: existingUser.role },
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
   }
 
-  const iterations = getIterations(env);
   const salt = generateSalt();
   const passwordHash = await hashPassword(password, salt, iterations);
 
@@ -131,6 +146,10 @@ export async function handleRegister(request, env) {
   await env.ALLOWANCE_KV.put(userKey, JSON.stringify(user));
   await env.ALLOWANCE_KV.put(`userid:${user.user_id}`, normalizedUsername);
 
+  if (familyContext?.family_id && familyContext?.member_id) {
+    await syncUserFamily(env, user.user_id, familyContext);
+  }
+
   const { accessToken, refreshToken } = await issueTokens(env, user);
 
   return jsonResponse({
@@ -139,6 +158,22 @@ export async function handleRegister(request, env) {
     access_token: accessToken,
     refresh_token: refreshToken,
   }, 201);
+}
+
+async function syncUserFamily(env, userId, familyContext) {
+  try {
+    const kv = env.ALLOWANCE_KV;
+    const existing = await kv.get(`user_families/${userId}`);
+    const families = existing ? JSON.parse(existing) : [];
+    const already = families.some(f => f.family_id === familyContext.family_id);
+    if (!already) {
+      families.push({
+        family_id: familyContext.family_id,
+        member_id: familyContext.member_id,
+      });
+      await kv.put(`user_families/${userId}`, JSON.stringify(families));
+    }
+  } catch {}
 }
 
 // --- login ---
