@@ -1,0 +1,27 @@
+{
+  "name": "가족 용돈 관리",
+  "short_name": "용돈관리",
+  "description": "가족 용돈 청구 및 관리 시스템",
+  "start_url": "/allowance-mvp/",
+  "scope": "/allowance-mvp/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#6366F1",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "icons/icon-192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["finance", "utilities"]
+}
