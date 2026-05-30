@@ -1,5 +1,5 @@
 // sw.js — 서비스워커 (오프라인 캐시 + 앱 셸)
-const CACHE_NAME = "allowance-v10.8";
+const CACHE_NAME = "allowance-v10.9";
 const APP_SHELL = [
   "/allowance-mvp/",
   "/allowance-mvp/index.html",
